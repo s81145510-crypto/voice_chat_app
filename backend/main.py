@@ -1,8 +1,8 @@
 from flask import Flask, render_template, request, jsonify, Response, g
-import json, os, re, hmac, hashlib, time, uuid, base64, random
+import json, os, re, hmac, hashlib, time, uuid, base64, random, math
 from functools import wraps
 from urllib.parse import parse_qsl
-from datetime import datetime
+from datetime import datetime, timedelta
 from livekit import api as lkapi
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -26,32 +26,32 @@ WELCOME_COINS = 100
 RECEIVER_SHARE = 0.7
 WITHDRAW_RATE_ETB = 0.4
 MIN_WITHDRAW = 500
-REFERRAL_BONUS_PERCENT = 10
 
 ID_RE = re.compile(r'^[A-Za-z0-9_]{1,40}$')
 REF_RE = re.compile(r'^[A-Za-z0-9]{8,20}$')
 
+# ============ GIFTS ============
 GIFTS = {
-    'heart':    {'name': 'Heart',    'price': 5,     'icon': '❤️', 'rarity': 'common'},
-    'coffee':   {'name': 'Coffee',   'price': 10,    'icon': '☕', 'rarity': 'common'},
-    'candy':    {'name': 'Candy',    'price': 20,    'icon': '🍭', 'rarity': 'common'},
-    'rose':     {'name': 'Rose',     'price': 50,    'icon': '🌹', 'rarity': 'rare'},
-    'choco':    {'name': 'Chocolate','price': 80,    'icon': '🍫', 'rarity': 'rare'},
-    'bear':     {'name': 'Bear',     'price': 100,   'icon': '🧸', 'rarity': 'rare'},
-    'cake':     {'name': 'Cake',     'price': 200,   'icon': '🎂', 'rarity': 'epic'},
-    'champ':    {'name': 'Champagne','price': 300,   'icon': '🍾', 'rarity': 'epic'},
-    'diamond':  {'name': 'Diamond',  'price': 500,   'icon': '💎', 'rarity': 'epic'},
-    'crown':    {'name': 'Crown',    'price': 800,   'icon': '👑', 'rarity': 'legendary'},
-    'car':      {'name': 'Car',      'price': 1000,  'icon': '🚗', 'rarity': 'legendary'},
-    'ring':     {'name': 'Ring',     'price': 1500,  'icon': '💍', 'rarity': 'legendary'},
-    'watch':    {'name': 'Watch',    'price': 2000,  'icon': '⌚', 'rarity': 'legendary'},
-    'bike':     {'name': 'Motorbike','price': 3000,  'icon': '🏍️', 'rarity': 'mythic'},
-    'boat':     {'name': 'Boat',     'price': 4000,  'icon': '🛥️', 'rarity': 'mythic'},
-    'castle':   {'name': 'Castle',   'price': 5000,  'icon': '🏰', 'rarity': 'mythic'},
-    'plane':    {'name': 'Plane',    'price': 7500,  'icon': '✈️', 'rarity': 'mythic'},
-    'rocket':   {'name': 'Rocket',   'price': 10000, 'icon': '🚀', 'rarity': 'mythic'},
-    'island':   {'name': 'Island',   'price': 20000, 'icon': '🏝️', 'rarity': 'mythic'},
-    'universe': {'name': 'Universe', 'price': 50000, 'icon': '🌌', 'rarity': 'mythic'},
+    'heart':    {'name': 'Heart',    'price': 5,     'icon': '❤️', 'rarity': 'common', 'luxury': False},
+    'coffee':   {'name': 'Coffee',   'price': 10,    'icon': '☕', 'rarity': 'common', 'luxury': False},
+    'candy':    {'name': 'Candy',    'price': 20,    'icon': '🍭', 'rarity': 'common', 'luxury': False},
+    'rose':     {'name': 'Rose',     'price': 50,    'icon': '🌹', 'rarity': 'rare',   'luxury': False},
+    'choco':    {'name': 'Chocolate','price': 80,    'icon': '🍫', 'rarity': 'rare',   'luxury': False},
+    'bear':     {'name': 'Bear',     'price': 100,   'icon': '🧸', 'rarity': 'rare',   'luxury': False},
+    'cake':     {'name': 'Cake',     'price': 200,   'icon': '🎂', 'rarity': 'epic',   'luxury': True},
+    'champ':    {'name': 'Champagne','price': 300,   'icon': '🍾', 'rarity': 'epic',   'luxury': True},
+    'diamond':  {'name': 'Diamond',  'price': 500,   'icon': '💎', 'rarity': 'epic',   'luxury': True},
+    'crown':    {'name': 'Crown',    'price': 800,   'icon': '👑', 'rarity': 'legendary', 'luxury': True},
+    'car':      {'name': 'Car',      'price': 1000,  'icon': '🚗', 'rarity': 'legendary', 'luxury': True},
+    'ring':     {'name': 'Ring',     'price': 1500,  'icon': '💍', 'rarity': 'legendary', 'luxury': True},
+    'watch':    {'name': 'Watch',    'price': 2000,  'icon': '⌚', 'rarity': 'legendary', 'luxury': True},
+    'bike':     {'name': 'Motorbike','price': 3000,  'icon': '🏍️', 'rarity': 'mythic', 'luxury': True},
+    'boat':     {'name': 'Boat',     'price': 4000,  'icon': '🛥️', 'rarity': 'mythic', 'luxury': True},
+    'castle':   {'name': 'Castle',   'price': 5000,  'icon': '🏰', 'rarity': 'mythic', 'luxury': True},
+    'plane':    {'name': 'Plane',    'price': 7500,  'icon': '✈️', 'rarity': 'mythic', 'luxury': True},
+    'rocket':   {'name': 'Rocket',   'price': 10000, 'icon': '🚀', 'rarity': 'mythic', 'luxury': True},
+    'island':   {'name': 'Island',   'price': 20000, 'icon': '🏝️', 'rarity': 'mythic', 'luxury': True},
+    'universe': {'name': 'Universe', 'price': 50000, 'icon': '🌌', 'rarity': 'mythic', 'luxury': True},
 }
 
 COIN_PACKAGES = [
@@ -64,39 +64,108 @@ COIN_PACKAGES = [
     {'id': 'p7', 'coins': 50000, 'price': 21000},
 ]
 
-# ---- Games Configuration (70% RTP = 30% house edge) ----
-GAMES = {
-    'dice': {
-        'name': 'Dice Roll',
-        'min_bet': 10,
-        'max_bet': 10000,
-        'multiplier': 4.2,  # 1/6 * 4.2 = 70% RTP
-        'description': 'Pick a number 1-6. Win 4.2x your bet!'
-    },
-    'flip': {
-        'name': 'Coin Flip',
-        'min_bet': 10,
-        'max_bet': 50000,
-        'multiplier': 1.4,  # 1/2 * 1.4 = 70% RTP
-        'description': 'Heads or Tails. Win 1.4x your bet!'
-    },
-    'wheel': {
-        'name': 'Lucky Wheel',
-        'min_bet': 10,
-        'max_bet': 100000,
-        'segments': [
-            {'mult': 0,    'weight': 42, 'label': '0x',   'color': '#ff4757'},
-            {'mult': 0.5,  'weight': 25, 'label': '0.5x', 'color': '#ffa502'},
-            {'mult': 1,    'weight': 17, 'label': '1x',   'color': '#2ed573'},
-            {'mult': 2,    'weight': 10, 'label': '2x',   'color': '#1e90ff'},
-            {'mult': 3,    'weight': 4,  'label': '3x',   'color': '#a55eea'},
-            {'mult': 5,    'weight': 2,  'label': '5x',   'color': '#ffd700'},
-        ],
-        'description': 'Spin the wheel! Average 70% return.'
-    }
+# ============ AGENCY LEVELS ============
+AGENCY_LEVELS = {
+    'D':  {'min': 0,              'rate': 0.08, 'name': 'D', 'color': '#7bed9f'},
+    'C':  {'min': 20_000_000,     'rate': 0.12, 'name': 'C', 'color': '#1e90ff'},
+    'B':  {'min': 100_000_000,    'rate': 0.16, 'name': 'B', 'color': '#a55eea'},
+    'A':  {'min': 500_000_000,    'rate': 0.18, 'name': 'A', 'color': '#ffd700'},
+    'S':  {'min': 1_500_000_000,  'rate': 0.20, 'name': 'S', 'color': '#ff4757'},
+    'S+': {'min': 3_000_000_000,  'rate': 0.21, 'name': 'S+', 'color': '#ff6348', 'requirement': '2 S-level subs'},
 }
 
-# ---- Helper Functions ----
+# ============ HOST LEVELS ============
+HOST_LEVELS = {
+    'L': {'min': 0,            'daily': 6000,    'mic_hourly': 0},
+    'K': {'min': 500_000,      'daily': 12000,   'mic_hourly': 2},
+    'J': {'min': 1_000_000,    'daily': 20000,   'mic_hourly': 2},
+    'I': {'min': 1_500_000,    'daily': 30000,   'mic_hourly': 2},
+    'H': {'min': 3_000_000,    'daily': 45000,   'mic_hourly': 2},
+    'G': {'min': 9_000_000,    'daily': 90000,   'mic_hourly': 3},
+    'F': {'min': 12_000_000,   'daily': 120000,  'mic_hourly': 3},
+    'E': {'min': 20_000_000,   'daily': 150000,  'mic_hourly': 3},
+    'D': {'min': 40_000_000,   'daily': 300000,  'mic_hourly': 3},
+    'C': {'min': 70_000_000,   'daily': 350000,  'mic_hourly': 3},
+    'B': {'min': 100_000_000,  'daily': 500000,  'mic_hourly': 3},
+    'A': {'min': 200_000_000,  'daily': 1000000, 'mic_hourly': 3},
+    'S': {'min': 500_000_000,  'daily': 2000000, 'mic_hourly': 3},
+}
+
+# ============ GAME ROOM LEVELS ============
+GAME_ROOM_LEVELS = {
+    'I': {'min': 10_000_000,     'hourly': 100},
+    'H': {'min': 30_000_000,     'hourly': 200},
+    'G': {'min': 50_000_000,     'hourly': 300},
+    'F': {'min': 100_000_000,    'hourly': 500},
+    'E': {'min': 500_000_000,    'hourly': 2500},
+    'D': {'min': 1_000_000_000,  'hourly': 5000},
+    'C': {'min': 2_000_000_000,  'hourly': 10000},
+    'B': {'min': 5_000_000_000,  'hourly': 20000},
+    'A': {'min': 10_000_000_000, 'hourly': 40000},
+}
+
+# ============ COIN SELLER LEVELS ============
+COIN_SELLER_LEVELS = {
+    'beginner': {'min_payment': 100,  'rate': 96000,  'badge': '🥉 Beginner Seller'},
+    'standard': {'min_payment': 200,  'rate': 98000,  'badge': '🥈 Standard Seller'},
+    'senior':   {'min_payment': 1000, 'rate': 100000, 'badge': '🥇 Senior Seller'},
+}
+
+# ============ GAMES (70% RTP = 30% house profit) ============
+GAMES = {
+    'dice': {
+        'name': 'Dice Roll', 'icon': '🎲',
+        'min_bet': 10, 'max_bet': 10000,
+        'multiplier': 4.2,
+        'description': 'Pick 1-6. Win 4.2x!'
+    },
+    'flip': {
+        'name': 'Coin Flip', 'icon': '🪙',
+        'min_bet': 10, 'max_bet': 50000,
+        'multiplier': 1.4,
+        'description': 'Heads or Tails. Win 1.4x!'
+    },
+    'wheel': {
+        'name': 'Lucky Wheel', 'icon': '🎡',
+        'min_bet': 10, 'max_bet': 100000,
+        'segments': [
+            {'mult': 0,   'weight': 42, 'label': '0x',  'color': '#ff4757'},
+            {'mult': 0.5, 'weight': 25, 'label': '0.5x','color': '#ffa502'},
+            {'mult': 1,   'weight': 17, 'label': '1x',  'color': '#2ed573'},
+            {'mult': 2,   'weight': 10, 'label': '2x',  'color': '#1e90ff'},
+            {'mult': 3,   'weight': 4,  'label': '3x',  'color': '#a55eea'},
+            {'mult': 5,   'weight': 2,  'label': '5x',  'color': '#ffd700'},
+        ],
+        'description': 'Spin! Up to 5x!'
+    },
+    'race': {
+        'name': 'Horse Race', 'icon': '🏇',
+        'min_bet': 10, 'max_bet': 50000,
+        'horses': 6,
+        'multiplier': 4.5,
+        'description': 'Pick a horse. Win 4.5x!'
+    },
+    'box': {
+        'name': 'Mystery Box', 'icon': '📦',
+        'min_bet': 50, 'max_bet': 100000,
+        'boxes': [
+            {'mult': 0,   'weight': 50, 'label': 'Empty',  'icon': '💨'},
+            {'mult': 0.5, 'weight': 25, 'label': 'Small',  'icon': '🎁'},
+            {'mult': 2,   'weight': 15, 'label': 'Medium', 'icon': '🎊'},
+            {'mult': 5,   'weight': 7,  'label': 'Large',  'icon': '💎'},
+            {'mult': 10,  'weight': 3,  'label': 'Jackpot','icon': '👑'},
+        ],
+        'description': 'Open a box! Up to 10x!'
+    },
+    'p2p': {
+        'name': 'P2P Battle', 'icon': '⚔️',
+        'min_bet': 100, 'max_bet': 1000000,
+        'multiplier': 1.9,
+        'description': 'Bet against another player. Winner takes 1.9x!'
+    },
+}
+
+# ============ HELPERS ============
 def verify_init_data(init_data):
     try:
         if not BOT_TOKEN:
@@ -129,10 +198,11 @@ def load_data():
             data = {}
     for k, v in (('users', {}), ('rooms', {}), ('transactions', []), ('purchases', []),
                  ('withdrawals', []), ('posts', []), ('jobs', []), ('games', []),
-                 ('meta', {'fee_coins': 0, 'gift_count': 0, 'game_profit': 0, 'game_total_bet': 0})):
+                 ('p2p_games', []), ('agency_commissions', []), ('daily_tasks', []),
+                 ('meta', {'fee_coins': 0, 'gift_count': 0, 'game_profit': 0,
+                           'game_total_bet': 0, 'total_revenue': 0})):
         data.setdefault(k, v)
     data['gifts'] = GIFTS
-    data['games_config'] = GAMES
     return data
 
 def save_data(data):
@@ -250,7 +320,8 @@ def purge_user_from_rooms(data, uid):
         remove_user_seats(room, uid)
         room['members'].pop(uid, None)
 
-def get_level(coins):
+# ============ LEVEL CALCULATIONS ============
+def get_user_level(coins):
     if coins >= 100000: return {'name': 'King', 'icon': '👑', 'color': '#ffd700'}
     if coins >= 50000:  return {'name': 'Diamond', 'icon': '💎', 'color': '#b9f2ff'}
     if coins >= 10000:  return {'name': 'Gold', 'icon': '🥇', 'color': '#ffd700'}
@@ -258,20 +329,136 @@ def get_level(coins):
     if coins >= 1000:   return {'name': 'Bronze', 'icon': '🥉', 'color': '#cd7f32'}
     return {'name': 'Newbie', 'icon': '🌱', 'color': '#7bed9f'}
 
-def user_view(u):
-    level = get_level(u.get('coins', 0))
-    return {'username': u.get('username', ''), 'coins': u.get('coins', 0),
-            'earnings': u.get('earnings', 0), 'bio': u.get('bio', ''),
-            'phone': u.get('phone', ''), 'joined': u.get('joined', ''),
-            'photo': u.get('photo', ''), 'level': level,
-            'referrer': u.get('referrer', ''),
-            'referral_bonus': u.get('referral_bonus', 0),
-            'referral_count': u.get('referral_count', 0),
-            'total_gifts_sent': u.get('total_gifts_sent', 0),
-            'total_gifts_received': u.get('total_gifts_received', 0),
-            'gift_level': get_level(u.get('total_gifts_received', 0))}
+def get_host_level(earnings_7d):
+    for lvl in ['S','A','B','C','D','E','F','G','H','I','J','K','L']:
+        if earnings_7d >= HOST_LEVELS[lvl]['min']:
+            return lvl
+    return 'L'
 
-# ---- Routes ----
+def get_agency_level(total_income):
+    if total_income >= 3_000_000_000:
+        return 'S+'
+    for lvl in ['S','A','B','C','D']:
+        if total_income >= AGENCY_LEVELS[lvl]['min']:
+            return lvl
+    return 'D'
+
+def calc_agency_commission(data, uid):
+    """Calculate agency commission for a user based on their sub-agency chain"""
+    u = data['users'].get(uid)
+    if not u:
+        return {'level': 'D', 'rate': 0.08, 'salary': 0, 'total_income': 0, 'subs': []}
+    
+    # Find all direct subs
+    direct_subs = [sub_uid for sub_uid, sub in data['users'].items() 
+                   if sub.get('referrer') == uid]
+    
+    # Calculate total income from each sub (their purchases * rate)
+    def get_sub_income(sub_uid, depth=0, visited=None):
+        if visited is None:
+            visited = set()
+        if sub_uid in visited or depth > 100:
+            return 0
+        visited.add(sub_uid)
+        
+        sub = data['users'].get(sub_uid)
+        if not sub:
+            return 0
+        
+        # Get this sub's purchases
+        sub_purchases = [p for p in data['purchases'] 
+                        if p['uid'] == sub_uid and p['status'] == 'approved']
+        sub_income = sum(p['coins'] for p in sub_purchases)
+        
+        # Add income from sub's subs (recursive)
+        sub_subs = [ss for ss, s in data['users'].items() 
+                   if s.get('referrer') == sub_uid]
+        for ss in sub_subs:
+            sub_income += get_sub_income(ss, depth+1, visited)
+        
+        return sub_income
+    
+    # Calculate total chain income
+    total_income = 0
+    sub_details = []
+    for sub_uid in direct_subs:
+        sub_income = get_sub_income(sub_uid)
+        total_income += sub_income
+        sub_level = get_agency_level(sub_income)
+        sub_details.append({
+            'uid': sub_uid,
+            'username': data['users'][sub_uid].get('username', ''),
+            'income': sub_income,
+            'level': sub_level
+        })
+    
+    my_level = get_agency_level(total_income)
+    my_rate = AGENCY_LEVELS[my_level]['rate']
+    
+    # Calculate salary: (my_rate - sub_rate) * sub_income for each sub
+    salary = 0
+    for sub in sub_details:
+        sub_rate = AGENCY_LEVELS[sub['level']]['rate']
+        diff = my_rate - sub_rate
+        if diff > 0:
+            salary += int(diff * sub['income'])
+    
+    return {
+        'level': my_level,
+        'rate': my_rate,
+        'salary': salary,
+        'total_income': total_income,
+        'subs': sub_details[:20]
+    }
+
+def get_coin_seller_level(total_purchases_usd):
+    if total_purchases_usd >= 1000:
+        return 'senior'
+    if total_purchases_usd >= 200:
+        return 'standard'
+    if total_purchases_usd >= 100:
+        return 'beginner'
+    return None
+
+def user_view(u, data=None):
+    level = get_user_level(u.get('coins', 0))
+    
+    # Calculate agency info
+    agency_info = {'level': 'D', 'rate': 0.08, 'salary': 0, 'total_income': 0}
+    if data:
+        agency_info = calc_agency_commission(data, u.get('uid', ''))
+    
+    # Check if coin seller
+    seller_level = None
+    if data:
+        user_purchases = [p for p in data.get('purchases', []) 
+                         if p['uid'] == u.get('uid', '') and p['status'] == 'approved']
+        total_usd = sum(p['price'] for p in user_purchases) / 210  # Approx USD
+        seller_level = get_coin_seller_level(total_usd)
+    
+    return {
+        'username': u.get('username', ''),
+        'coins': u.get('coins', 0),
+        'earnings': u.get('earnings', 0),
+        'bio': u.get('bio', ''),
+        'phone': u.get('phone', ''),
+        'joined': u.get('joined', ''),
+        'photo': u.get('photo', ''),
+        'level': level,
+        'referrer': u.get('referrer', ''),
+        'referral_bonus': u.get('referral_bonus', 0),
+        'referral_count': u.get('referral_count', 0),
+        'total_gifts_sent': u.get('total_gifts_sent', 0),
+        'total_gifts_received': u.get('total_gifts_received', 0),
+        'gift_level': get_user_level(u.get('total_gifts_received', 0)),
+        'agency': agency_info,
+        'coin_seller': seller_level,
+        'coin_seller_badge': COIN_SELLER_LEVELS.get(seller_level, {}).get('badge', '') if seller_level else '',
+        'host_level': get_host_level(u.get('earnings_7d', 0)),
+        'earnings_7d': u.get('earnings_7d', 0),
+    }
+
+# ============ ROUTES ============
 @app.route('/')
 def index():
     return render_template('index.html')
@@ -291,7 +478,11 @@ def register():
             'earnings': 0, 'joined': now_iso(), 'bio': '', 'phone': '',
             'referrer': referrer if referrer and referrer != uid else '',
             'referral_bonus': 0, 'referral_count': 0,
-            'total_gifts_sent': 0, 'total_gifts_received': 0
+            'total_gifts_sent': 0, 'total_gifts_received': 0,
+            'earnings_7d': 0, 'last_task_day': '',
+            'coin_seller': False, 'coin_seller_level': None,
+            'mic_hours_today': 0, 'mic_hours_7d': 0,
+            'game_room_revenue_7d': 0,
         }
         changed = True
     u = data['users'][uid]
@@ -301,17 +492,29 @@ def register():
         changed = True
     if changed:
         save_data(data)
+    
     gifts = [dict(id=k, **v) for k, v in GIFTS.items()]
+    games_cfg = {k: {kk: vv for kk, vv in v.items() if kk != 'segments' and kk != 'boxes' and kk != 'horses'} 
+                 for k, v in GAMES.items()}
+    
+    agency_info = calc_agency_commission(data, uid)
+    
     return jsonify({
-        'success': True, 'user_id': uid, 'user': user_view(u),
+        'success': True, 'user_id': uid, 'user': user_view(u, data),
         'admin': is_admin(uid),
         'config': {
             'gifts': gifts, 'packages': COIN_PACKAGES,
             'telebirr': {'number': TELEBIRR_NUMBER, 'name': TELEBIRR_NAME},
             'rate': WITHDRAW_RATE_ETB, 'min_withdraw': MIN_WITHDRAW,
             'fee_percent': int(round((1 - RECEIVER_SHARE) * 100)),
-            'seats': MAX_SEATS, 'referral_bonus': REFERRAL_BONUS_PERCENT,
-            'games': {k: {kk: vv for kk, vv in v.items() if kk != 'segments'} for k, v in GAMES.items()}
+            'seats': MAX_SEATS, 'referral_bonus': 10,
+            'games': games_cfg,
+            'agency_levels': {k: {kk: vv for kk, vv in v.items() if kk != 'requirement'} 
+                             for k, v in AGENCY_LEVELS.items()},
+            'host_levels': HOST_LEVELS,
+            'game_room_levels': GAME_ROOM_LEVELS,
+            'coin_seller_levels': COIN_SELLER_LEVELS,
+            'app_name': 'Twenty One Party',
         }
     })
 
@@ -338,7 +541,7 @@ def profile():
     else:
         u['phone'] = ''
     save_data(data)
-    return jsonify({'success': True, 'user': user_view(u)})
+    return jsonify({'success': True, 'user': user_view(u, data)})
 
 @app.route('/api/profile/photo', methods=['POST'])
 def profile_photo():
@@ -357,7 +560,7 @@ def profile_photo():
     except Exception:
         return err('Photo decode failed')
     if len(raw) < 500 or len(raw) > 2_500_000:
-        return err('Photo too large or too small')
+        return err('Photo too large')
     if raw[:2] == b'\xff\xd8':
         ext = 'jpg'
     elif raw[:4] == b'\x89PNG':
@@ -388,7 +591,7 @@ def get_profile_photo(uid):
                 return Response(f.read(), mimetype=mime)
     return jsonify({'error': 'No photo'}), 404
 
-# ---- Rooms ----
+# ============ ROOMS ============
 @app.route('/api/rooms', methods=['GET'])
 def get_rooms():
     data = load_data()
@@ -408,7 +611,8 @@ def get_rooms():
             'name': room['name'], 'creator': room['creator'],
             'creator_name': room.get('creator_name', ''),
             'count': len(room['members']),
-            'category': room.get('category', 'chat')
+            'category': room.get('category', 'chat'),
+            'is_game_room': room.get('is_game_room', False),
         }
     if dirty:
         save_data(data)
@@ -423,6 +627,7 @@ def create_room():
     room_id = str(body.get('room_id', ''))
     room_name = str(body.get('room_name', '')).strip()[:50]
     category = str(body.get('category', 'chat')).strip()[:20]
+    is_game = body.get('is_game_room', False)
     if not ID_RE.match(room_id) or not room_name:
         return err('Invalid room')
     data = load_data()
@@ -430,7 +635,8 @@ def create_room():
         'name': room_name, 'creator': uid,
         'creator_name': display_name(tg), 'created': now_iso(), 'active': time.time(),
         'seats': {}, 'members': {}, 'known': [],
-        'messages': [], 'msg_seq': 0, 'category': category
+        'messages': [], 'msg_seq': 0, 'category': category,
+        'is_game_room': is_game, 'game_revenue_7d': 0,
     }
     save_data(data)
     return jsonify({'success': True, 'room_id': room_id})
@@ -462,7 +668,8 @@ def room_state(rid):
         'success': True, 'name': room['name'], 'host': room['creator'],
         'count': len(room['members']), 'seats': room['seats'],
         'messages': msgs, 'coins': u.get('coins', 0),
-        'earnings': u.get('earnings', 0), 'category': room.get('category', 'chat')
+        'earnings': u.get('earnings', 0), 'category': room.get('category', 'chat'),
+        'is_game_room': room.get('is_game_room', False),
     })
 
 @app.route('/api/rooms/<rid>/seat', methods=['POST'])
@@ -490,20 +697,6 @@ def take_seat(rid):
     remove_user_seats(room, uid)
     room['seats'][str(idx)] = {'uid': uid, 'name': display_name(tg), 'photo': photo_of(tg)}
     room['members'][uid] = {'seen': time.time(), 'name': display_name(tg)}
-    save_data(data)
-    return jsonify({'success': True})
-
-@app.route('/api/rooms/<rid>/leave-seat', methods=['POST'])
-def leave_seat(rid):
-    uid, tg = current_user_id()
-    if not uid:
-        return unauthorized()
-    data = load_data()
-    room = data['rooms'].get(rid)
-    if not room:
-        return err('Room not found')
-    room.setdefault('seats', {})
-    remove_user_seats(room, uid)
     save_data(data)
     return jsonify({'success': True})
 
@@ -565,13 +758,25 @@ def room_gift(rid):
     sender = data['users'][uid]
     if sender.get('coins', 0) < gift['price']:
         return jsonify({'success': False, 'error': 'Not enough coins', 'need_coins': True})
-    share = int(gift['price'] * RECEIVER_SHARE)
+    
+    # Gift commission: luxury 70%, lucky 4%, super lucky 2%
+    if gift.get('luxury'):
+        receiver_share = 0.70
+    elif gift['rarity'] in ('legendary', 'mythic'):
+        receiver_share = 0.04
+    else:
+        receiver_share = 0.02
+    
+    share = int(gift['price'] * receiver_share)
     fee = gift['price'] - share
+    
     sender['coins'] -= gift['price']
     sender['total_gifts_sent'] = sender.get('total_gifts_sent', 0) + 1
     rec = data['users'][to]
     rec['earnings'] = rec.get('earnings', 0) + share
     rec['total_gifts_received'] = rec.get('total_gifts_received', 0) + 1
+    rec['earnings_7d'] = rec.get('earnings_7d', 0) + share
+    
     data['meta']['fee_coins'] = data['meta'].get('fee_coins', 0) + fee
     data['meta']['gift_count'] = data['meta'].get('gift_count', 0) + 1
     data['transactions'].append({
@@ -579,17 +784,19 @@ def room_gift(rid):
         'amount': gift['price'], 'share': share, 'fee': fee, 'timestamp': now_iso()
     })
     data['transactions'] = data['transactions'][-2000:]
+    
     to_name = room['members'][to].get('name', '')
-    sender_level = get_level(sender.get('total_gifts_sent', 0))
-    rec_level = get_level(rec.get('total_gifts_received', 0))
+    sender_level = get_user_level(sender.get('total_gifts_sent', 0))
+    rec_level = get_user_level(rec.get('total_gifts_received', 0))
+    
     add_message(
-        room, '', f'🎁 {display_name(tg)} [{sender_level["icon"]}{sender_level["name"]}] → {to_name} [{rec_level["icon"]}{rec_level["name"]}] {gift["icon"]} {gift["name"]}',
+        room, '', f'🎁 {display_name(tg)} [{sender_level["icon"]}] → {to_name} [{rec_level["icon"]}] {gift["icon"]} {gift["name"]}',
         sys=True,
         gift={'type': gift_type, 'icon': gift['icon'], 'to': to, 'price': gift['price'], 'rarity': gift['rarity']})
     save_data(data)
     return jsonify({'success': True, 'remaining_coins': sender['coins']})
 
-# ---- Wallet ----
+# ============ WALLET ============
 @app.route('/api/wallet', methods=['GET'])
 def wallet():
     uid, _ = current_user_id()
@@ -602,7 +809,7 @@ def wallet():
     strip = lambda p: {k: v for k, v in p.items() if k != 'shot'}
     mine_p = [strip(p) for p in data['purchases'] if p['uid'] == uid][-10:][::-1]
     mine_w = [w for w in data['withdrawals'] if w['uid'] == uid][-10:][::-1]
-    return jsonify({'success': True, 'user': user_view(u),
+    return jsonify({'success': True, 'user': user_view(u, data),
                     'purchases': mine_p, 'withdrawals': mine_w})
 
 @app.route('/api/coins/buy', methods=['POST'])
@@ -616,19 +823,19 @@ def coins_buy():
     if not pkg:
         return err('Package not selected')
     if not REF_RE.match(ref):
-        return err('Invalid Telebirr transaction ref (8-20 chars)')
+        return err('Invalid ref (8-20 chars)')
     data = load_data()
     if uid not in data['users']:
         return err('User not found')
     pending = [p for p in data['purchases'] if p['uid'] == uid and p['status'] == 'pending']
     if len(pending) >= 3:
-        return err('Too many pending requests')
+        return err('Too many pending')
     if any(p['ref'].upper() == ref for p in data['purchases']):
-        return err('This ref already used')
+        return err('Ref already used')
     pid = uuid.uuid4().hex[:10]
     shot = save_shot(pid, body.get('shot'))
     if not shot:
-        return err('Please attach payment screenshot')
+        return err('Attach screenshot')
     data['purchases'].append({
         'id': pid, 'uid': uid, 'name': display_name(tg),
         'coins': pkg['coins'], 'price': pkg['price'], 'ref': ref, 'shot': shot,
@@ -654,7 +861,7 @@ def withdraw():
     if not u:
         return err('User not found')
     if not phone:
-        return err('Invalid Telebirr number (09xxxxxxxx)')
+        return err('Invalid Telebirr number')
     if not acc_name:
         return err('Enter name on Telebirr')
     if amount < MIN_WITHDRAW:
@@ -662,7 +869,7 @@ def withdraw():
     if amount > u.get('earnings', 0):
         return err('Not enough earnings')
     if len([w for w in data['withdrawals'] if w['uid'] == uid and w['status'] == 'pending']) >= 3:
-        return err('Too many pending requests')
+        return err('Too many pending')
     u['earnings'] -= amount
     data['withdrawals'].append({
         'id': uuid.uuid4().hex[:10], 'uid': uid, 'name': display_name(tg),
@@ -672,21 +879,14 @@ def withdraw():
     save_data(data)
     return jsonify({'success': True, 'earnings': u['earnings']})
 
-# ---- Community ----
-def post_view(p, uid):
-    likes = p.get('likes', [])
-    return {'id': p['id'], 'name': p['name'], 'photo': p.get('photo', ''), 'text': p['text'],
-            'created': p['created'], 'likes': len(likes), 'liked': uid in likes,
-            'mine': p['uid'] == uid, 'photo_url': p.get('photo_url', '')}
-
+# ============ COMMUNITY ============
 @app.route('/api/posts', methods=['GET'])
 def posts_list():
     uid, _ = current_user_id()
     if not uid:
         return unauthorized()
     data = load_data()
-    return jsonify({'success': True,
-                    'posts': [post_view(p, uid) for p in data['posts'][::-1][:50]]})
+    return jsonify({'success': True, 'posts': data['posts'][::-1][:50]})
 
 @app.route('/api/posts/create', methods=['POST'])
 def posts_create():
@@ -695,37 +895,16 @@ def posts_create():
         return unauthorized()
     body = request.get_json(silent=True) or {}
     text = str(body.get('text', '')).strip()[:500]
-    photo_data = body.get('photo')
-    if not text and not photo_data:
+    if not text:
         return err('Empty')
     data = load_data()
-    mine = [p for p in data['posts'] if p['uid'] == uid]
-    if mine and time.time() - mine[-1].get('ts', 0) < 8:
-        return err('Please wait before posting')
-    photo_url = ''
-    if photo_data:
-        pid = uuid.uuid4().hex[:8]
-        shot = save_shot(pid, photo_data)
-        if shot:
-            photo_url = f'/api/posts/photo/{pid}'
     data['posts'].append({
         'id': uuid.uuid4().hex[:8], 'uid': uid, 'name': display_name(tg),
-        'photo': photo_of(tg), 'text': text, 'photo_url': photo_url,
-        'likes': [], 'created': now_iso(), 'ts': time.time()
+        'text': text, 'likes': [], 'created': now_iso()
     })
     data['posts'] = data['posts'][-300:]
     save_data(data)
     return jsonify({'success': True})
-
-@app.route('/api/posts/photo/<pid>', methods=['GET'])
-def get_post_photo(pid):
-    for ext in ['jpg', 'png', 'webp']:
-        path = os.path.join(SHOT_DIR, f'{pid}.{ext}')
-        if os.path.exists(path):
-            mime = {'jpg': 'image/jpeg', 'png': 'image/png', 'webp': 'image/webp'}[ext]
-            with open(path, 'rb') as f:
-                return Response(f.read(), mimetype=mime)
-    return jsonify({'error': 'No photo'}), 404
 
 @app.route('/api/posts/<pid>/like', methods=['POST'])
 def posts_like(pid):
@@ -744,91 +923,7 @@ def posts_like(pid):
     save_data(data)
     return jsonify({'success': True})
 
-@app.route('/api/posts/<pid>/delete', methods=['POST'])
-def posts_delete(pid):
-    uid, _ = current_user_id()
-    if not uid:
-        return unauthorized()
-    data = load_data()
-    p = next((x for x in data['posts'] if x['id'] == pid), None)
-    if not p:
-        return err('Not found')
-    if p['uid'] != uid and not is_admin(uid):
-        return forbidden()
-    data['posts'].remove(p)
-    save_data(data)
-    return jsonify({'success': True})
-
-# ---- Jobs ----
-def job_view(j, uid):
-    return {'id': j['id'], 'title': j['title'], 'desc': j['desc'], 'contact': j['contact'],
-            'name': j['name'], 'created': j['created'], 'mine': j['uid'] == uid,
-            'photo_url': j.get('photo_url', '')}
-
-@app.route('/api/jobs', methods=['GET'])
-def jobs_list():
-    uid, _ = current_user_id()
-    if not uid:
-        return unauthorized()
-    data = load_data()
-    return jsonify({'success': True, 'jobs': [job_view(j, uid) for j in data['jobs'][::-1][:60]]})
-
-@app.route('/api/jobs/create', methods=['POST'])
-def jobs_create():
-    uid, tg = current_user_id()
-    if not uid:
-        return unauthorized()
-    body = request.get_json(silent=True) or {}
-    title = str(body.get('title', '')).strip()[:80]
-    desc = str(body.get('desc', '')).strip()[:500]
-    contact = str(body.get('contact', '')).strip()[:100]
-    photo_data = body.get('photo')
-    if not title or not contact:
-        return err('Title and contact required')
-    data = load_data()
-    if not is_admin(uid) and len([j for j in data['jobs'] if j['uid'] == uid]) >= 5:
-        return err('Maximum 5 jobs allowed')
-    photo_url = ''
-    if photo_data:
-        jid = uuid.uuid4().hex[:8]
-        shot = save_shot(jid, photo_data)
-        if shot:
-            photo_url = f'/api/jobs/photo/{jid}'
-    data['jobs'].append({
-        'id': uuid.uuid4().hex[:8], 'uid': uid, 'name': display_name(tg),
-        'title': title, 'desc': desc, 'contact': contact,
-        'photo_url': photo_url, 'created': now_iso()
-    })
-    data['jobs'] = data['jobs'][-200:]
-    save_data(data)
-    return jsonify({'success': True})
-
-@app.route('/api/jobs/photo/<jid>', methods=['GET'])
-def get_job_photo(jid):
-    for ext in ['jpg', 'png', 'webp']:
-        path = os.path.join(SHOT_DIR, f'{jid}.{ext}')
-        if os.path.exists(path):
-            mime = {'jpg': 'image/jpeg', 'png': 'image/png', 'webp': 'image/webp'}[ext]
-            with open(path, 'rb') as f:
-                return Response(f.read(), mimetype=mime)
-    return jsonify({'error': 'No photo'}), 404
-
-@app.route('/api/jobs/<jid>/delete', methods=['POST'])
-def jobs_delete(jid):
-    uid, _ = current_user_id()
-    if not uid:
-        return unauthorized()
-    data = load_data()
-    j = next((x for x in data['jobs'] if x['id'] == jid), None)
-    if not j:
-        return err('Not found')
-    if j['uid'] != uid and not is_admin(uid):
-        return forbidden()
-    data['jobs'].remove(j)
-    save_data(data)
-    return jsonify({'success': True})
-
-# ---- GAMES (70% RTP, 30% house edge) ----
+# ============ GAMES (70% RTP) ============
 @app.route('/api/games', methods=['GET'])
 def games_list():
     uid, _ = current_user_id()
@@ -836,15 +931,20 @@ def games_list():
         return unauthorized()
     data = load_data()
     u = data['users'].get(uid, {})
-    my_games = [g for g in data.get('games', []) if g['uid'] == uid][-20:][::-1]
+    my_games = [g for g in data.get('games', []) if g['uid'] == uid][-30:][::-1]
+    my_p2p = [g for g in data.get('p2p_games', []) if g.get('player1') == uid or g.get('player2') == uid][-20:][::-1]
     return jsonify({
         'success': True,
-        'games_config': {k: {kk: vv for kk, vv in v.items() if kk != 'segments'} for k, v in GAMES.items()},
+        'games_config': {k: {kk: vv for kk, vv in v.items() 
+                            if kk not in ('segments', 'boxes', 'horses')} 
+                        for k, v in GAMES.items()},
         'my_games': my_games,
+        'my_p2p': my_p2p,
         'user_coins': u.get('coins', 0),
         'house_stats': {
             'total_bet': data['meta'].get('game_total_bet', 0),
-            'house_profit': data['meta'].get('game_profit', 0)
+            'house_profit': data['meta'].get('game_profit', 0),
+            'rtp': 70 if data['meta'].get('game_total_bet', 0) > 0 else 70
         }
     })
 
@@ -860,10 +960,10 @@ def play_dice():
     except (TypeError, ValueError):
         return err('Invalid input')
     if number < 1 or number > 6:
-        return err('Number must be 1-6')
+        return err('Number 1-6')
     game = GAMES['dice']
     if bet < game['min_bet'] or bet > game['max_bet']:
-        return err(f'Bet must be {game["min_bet"]}-{game["max_bet"]}')
+        return err(f'Bet {game["min_bet"]}-{game["max_bet"]}')
     data = load_data()
     u = data['users'].get(uid)
     if not u or u.get('coins', 0) < bet:
@@ -872,13 +972,10 @@ def play_dice():
     data['meta']['game_total_bet'] = data['meta'].get('game_total_bet', 0) + bet
     result = random.randint(1, 6)
     won = (result == number)
-    payout = 0
+    payout = int(bet * game['multiplier']) if won else 0
     if won:
-        payout = int(bet * game['multiplier'])
         u['coins'] += payout
-        profit = -payout + bet  # negative = house loss
-    else:
-        profit = bet  # house keeps bet
+    profit = bet - payout
     data['meta']['game_profit'] = data['meta'].get('game_profit', 0) + profit
     data['games'].append({
         'id': uuid.uuid4().hex[:8], 'uid': uid, 'game': 'dice',
@@ -887,10 +984,8 @@ def play_dice():
     })
     data['games'] = data['games'][-5000:]
     save_data(data)
-    return jsonify({
-        'success': True, 'won': won, 'result': result, 'payout': payout,
-        'remaining_coins': u['coins'], 'profit': profit
-    })
+    return jsonify({'success': True, 'won': won, 'result': result, 
+                    'payout': payout, 'remaining_coins': u['coins']})
 
 @app.route('/api/games/flip', methods=['POST'])
 def play_flip():
@@ -904,10 +999,10 @@ def play_flip():
     except (TypeError, ValueError):
         return err('Invalid input')
     if choice not in ('heads', 'tails'):
-        return err('Choice must be heads or tails')
+        return err('heads or tails')
     game = GAMES['flip']
     if bet < game['min_bet'] or bet > game['max_bet']:
-        return err(f'Bet must be {game["min_bet"]}-{game["max_bet"]}')
+        return err(f'Bet {game["min_bet"]}-{game["max_bet"]}')
     data = load_data()
     u = data['users'].get(uid)
     if not u or u.get('coins', 0) < bet:
@@ -916,13 +1011,10 @@ def play_flip():
     data['meta']['game_total_bet'] = data['meta'].get('game_total_bet', 0) + bet
     result = random.choice(['heads', 'tails'])
     won = (result == choice)
-    payout = 0
+    payout = int(bet * game['multiplier']) if won else 0
     if won:
-        payout = int(bet * game['multiplier'])
         u['coins'] += payout
-        profit = -payout + bet
-    else:
-        profit = bet
+    profit = bet - payout
     data['meta']['game_profit'] = data['meta'].get('game_profit', 0) + profit
     data['games'].append({
         'id': uuid.uuid4().hex[:8], 'uid': uid, 'game': 'flip',
@@ -931,10 +1023,8 @@ def play_flip():
     })
     data['games'] = data['games'][-5000:]
     save_data(data)
-    return jsonify({
-        'success': True, 'won': won, 'result': result, 'payout': payout,
-        'remaining_coins': u['coins'], 'profit': profit
-    })
+    return jsonify({'success': True, 'won': won, 'result': result,
+                    'payout': payout, 'remaining_coins': u['coins']})
 
 @app.route('/api/games/wheel', methods=['POST'])
 def play_wheel():
@@ -948,14 +1038,13 @@ def play_wheel():
         return err('Invalid bet')
     game = GAMES['wheel']
     if bet < game['min_bet'] or bet > game['max_bet']:
-        return err(f'Bet must be {game["min_bet"]}-{game["max_bet"]}')
+        return err(f'Bet {game["min_bet"]}-{game["max_bet"]}')
     data = load_data()
     u = data['users'].get(uid)
     if not u or u.get('coins', 0) < bet:
         return err('Not enough coins')
     u['coins'] -= bet
     data['meta']['game_total_bet'] = data['meta'].get('game_total_bet', 0) + bet
-    # Weighted random selection
     total_weight = sum(s['weight'] for s in game['segments'])
     r = random.randint(1, total_weight)
     cumulative = 0
@@ -978,13 +1067,268 @@ def play_wheel():
     })
     data['games'] = data['games'][-5000:]
     save_data(data)
-    return jsonify({
-        'success': True, 'won': multiplier > 0, 'multiplier': multiplier,
-        'segment': selected['label'], 'payout': payout,
-        'remaining_coins': u['coins'], 'profit': profit
-    })
+    return jsonify({'success': True, 'won': multiplier > 0, 'multiplier': multiplier,
+                    'segment': selected['label'], 'payout': payout,
+                    'remaining_coins': u['coins']})
 
-# ---- Admin ----
+@app.route('/api/games/race', methods=['POST'])
+def play_race():
+    uid, _ = current_user_id()
+    if not uid:
+        return unauthorized()
+    body = request.get_json(silent=True) or {}
+    try:
+        bet = int(body.get('bet', 0))
+        horse = int(body.get('horse', 0))
+    except (TypeError, ValueError):
+        return err('Invalid input')
+    if horse < 1 or horse > 6:
+        return err('Horse 1-6')
+    game = GAMES['race']
+    if bet < game['min_bet'] or bet > game['max_bet']:
+        return err(f'Bet {game["min_bet"]}-{game["max_bet"]}')
+    data = load_data()
+    u = data['users'].get(uid)
+    if not u or u.get('coins', 0) < bet:
+        return err('Not enough coins')
+    u['coins'] -= bet
+    data['meta']['game_total_bet'] = data['meta'].get('game_total_bet', 0) + bet
+    winner = random.randint(1, 6)
+    won = (winner == horse)
+    payout = int(bet * game['multiplier']) if won else 0
+    if won:
+        u['coins'] += payout
+    profit = bet - payout
+    data['meta']['game_profit'] = data['meta'].get('game_profit', 0) + profit
+    data['games'].append({
+        'id': uuid.uuid4().hex[:8], 'uid': uid, 'game': 'race',
+        'bet': bet, 'horse': horse, 'winner': winner,
+        'won': won, 'payout': payout, 'created': now_iso()
+    })
+    data['games'] = data['games'][-5000:]
+    save_data(data)
+    return jsonify({'success': True, 'won': won, 'winner': winner,
+                    'payout': payout, 'remaining_coins': u['coins']})
+
+@app.route('/api/games/box', methods=['POST'])
+def play_box():
+    uid, _ = current_user_id()
+    if not uid:
+        return unauthorized()
+    body = request.get_json(silent=True) or {}
+    try:
+        bet = int(body.get('bet', 0))
+    except (TypeError, ValueError):
+        return err('Invalid bet')
+    game = GAMES['box']
+    if bet < game['min_bet'] or bet > game['max_bet']:
+        return err(f'Bet {game["min_bet"]}-{game["max_bet"]}')
+    data = load_data()
+    u = data['users'].get(uid)
+    if not u or u.get('coins', 0) < bet:
+        return err('Not enough coins')
+    u['coins'] -= bet
+    data['meta']['game_total_bet'] = data['meta'].get('game_total_bet', 0) + bet
+    total_weight = sum(b['weight'] for b in game['boxes'])
+    r = random.randint(1, total_weight)
+    cumulative = 0
+    selected = game['boxes'][0]
+    for box in game['boxes']:
+        cumulative += box['weight']
+        if r <= cumulative:
+            selected = box
+            break
+    multiplier = selected['mult']
+    payout = int(bet * multiplier)
+    if payout > 0:
+        u['coins'] += payout
+    profit = bet - payout
+    data['meta']['game_profit'] = data['meta'].get('game_profit', 0) + profit
+    data['games'].append({
+        'id': uuid.uuid4().hex[:8], 'uid': uid, 'game': 'box',
+        'bet': bet, 'multiplier': multiplier, 'box': selected['label'],
+        'icon': selected['icon'], 'won': multiplier > 0,
+        'payout': payout, 'created': now_iso()
+    })
+    data['games'] = data['games'][-5000:]
+    save_data(data)
+    return jsonify({'success': True, 'won': multiplier > 0, 'multiplier': multiplier,
+                    'box': selected['label'], 'icon': selected['icon'],
+                    'payout': payout, 'remaining_coins': u['coins']})
+
+@app.route('/api/games/p2p/create', methods=['POST'])
+def p2p_create():
+    uid, _ = current_user_id()
+    if not uid:
+        return unauthorized()
+    body = request.get_json(silent=True) or {}
+    try:
+        bet = int(body.get('bet', 100))
+    except (TypeError, ValueError):
+        return err('Invalid bet')
+    game = GAMES['p2p']
+    if bet < game['min_bet'] or bet > game['max_bet']:
+        return err(f'Bet {game["min_bet"]}-{game["max_bet"]}')
+    data = load_data()
+    u = data['users'].get(uid)
+    if not u or u.get('coins', 0) < bet:
+        return err('Not enough coins')
+    # Reserve coins
+    u['coins'] -= bet
+    game_id = uuid.uuid4().hex[:8]
+    data['p2p_games'].append({
+        'id': game_id, 'player1': uid, 'player1_name': display_name(None),
+        'player2': None, 'player2_name': None,
+        'bet': bet, 'status': 'waiting', 'created': now_iso()
+    })
+    data['p2p_games'] = data['p2p_games'][-1000:]
+    save_data(data)
+    return jsonify({'success': True, 'game_id': game_id})
+
+@app.route('/api/games/p2p/join', methods=['POST'])
+def p2p_join():
+    uid, _ = current_user_id()
+    if not uid:
+        return unauthorized()
+    body = request.get_json(silent=True) or {}
+    game_id = str(body.get('game_id', ''))
+    data = load_data()
+    game = next((g for g in data['p2p_games'] if g['id'] == game_id), None)
+    if not game:
+        return err('Game not found')
+    if game['status'] != 'waiting':
+        return err('Game not available')
+    if game['player1'] == uid:
+        return err('Cannot play against yourself')
+    u = data['users'].get(uid)
+    if not u or u.get('coins', 0) < game['bet']:
+        return err('Not enough coins')
+    u['coins'] -= game['bet']
+    game['player2'] = uid
+    game['player2_name'] = display_name(None)
+    game['status'] = 'playing'
+    # Play: random winner, 1.9x payout (house keeps 10% as fee)
+    winner_is_p1 = random.random() < 0.5
+    winner_uid = game['player1'] if winner_is_p1 else game['player2']
+    loser_uid = game['player2'] if winner_is_p1 else game['player1']
+    payout = int(game['bet'] * 1.9)  # 1.9x = 90% RTP for P2P
+    data['users'][winner_uid]['coins'] = data['users'][winner_uid].get('coins', 0) + payout
+    house_fee = game['bet'] * 2 - payout  # 10% of total pot
+    data['meta']['game_profit'] = data['meta'].get('game_profit', 0) + int(house_fee)
+    game['winner'] = winner_uid
+    game['status'] = 'finished'
+    game['payout'] = payout
+    game['finished'] = now_iso()
+    data['p2p_games'] = data['p2p_games'][-1000:]
+    save_data(data)
+    return jsonify({'success': True, 'won': winner_uid == uid, 
+                    'payout': payout if winner_uid == uid else 0,
+                    'remaining_coins': data['users'][uid]['coins']})
+
+# ============ AGENCY ============
+@app.route('/api/agency', methods=['GET'])
+def agency_info():
+    uid, _ = current_user_id()
+    if not uid:
+        return unauthorized()
+    data = load_data()
+    info = calc_agency_commission(data, uid)
+    # Get my referrer info
+    referrer = data['users'].get(uid, {}).get('referrer', '')
+    ref_info = None
+    if referrer and referrer in data['users']:
+        ref_u = data['users'][referrer]
+        ref_info = {'uid': referrer, 'username': ref_u.get('username', ''),
+                   'level': get_agency_level(ref_u.get('total_income', 0))}
+    return jsonify({'success': True, 'agency': info, 'referrer': ref_info,
+                    'levels': AGENCY_LEVELS})
+
+@app.route('/api/agency/claim', methods=['POST'])
+def agency_claim():
+    uid, _ = current_user_id()
+    if not uid:
+        return unauthorized()
+    data = load_data()
+    info = calc_agency_commission(data, uid)
+    if info['salary'] <= 0:
+        return err('No commission to claim')
+    u = data['users'][uid]
+    u['coins'] = u.get('coins', 0) + info['salary']
+    u['agency_claimed'] = u.get('agency_claimed', 0) + info['salary']
+    data['agency_commissions'].append({
+        'uid': uid, 'amount': info['salary'], 'level': info['level'],
+        'timestamp': now_iso()
+    })
+    save_data(data)
+    return jsonify({'success': True, 'claimed': info['salary'], 
+                    'new_balance': u['coins']})
+
+# ============ DAILY TASKS ============
+@app.route('/api/tasks', methods=['GET'])
+def daily_tasks():
+    uid, _ = current_user_id()
+    if not uid:
+        return unauthorized()
+    data = load_data()
+    u = data['users'].get(uid, {})
+    today = datetime.now().strftime('%Y-%m-%d')
+    last_task = u.get('last_task_day', '')
+    tasks = [
+        {'id': 'login', 'name': 'Daily Login', 'reward': 1000, 
+         'done': last_task == today, 'icon': '📅'},
+        {'id': 'gift', 'name': 'Receive a Lucky Gift', 'reward': 1000,
+         'done': u.get('got_lucky_gift_today', False), 'icon': '🎁'},
+        {'id': 'follow', 'name': 'Get 1000 Followers', 'reward': 1000,
+         'done': u.get('followers', 0) >= 1000, 'icon': '👥'},
+        {'id': 'mic', 'name': 'On Mic 1 Hour', 'reward': 3000,
+         'done': u.get('mic_hours_today', 0) >= 1, 'icon': '🎙️'},
+    ]
+    # New host bonus (first 7 days)
+    joined = u.get('joined', '')
+    if joined:
+        try:
+            join_date = datetime.fromisoformat(joined)
+            days_since = (datetime.now() - join_date).days
+            if days_since < 7:
+                tasks.append({'id': 'new_host', 'name': 'New Host Bonus (7 days)',
+                             'reward': 80000, 'done': False, 'icon': '🌟'})
+        except:
+            pass
+    return jsonify({'success': True, 'tasks': tasks, 'host_level': get_host_level(u.get('earnings_7d', 0))})
+
+@app.route('/api/tasks/claim', methods=['POST'])
+def task_claim():
+    uid, _ = current_user_id()
+    if not uid:
+        return unauthorized()
+    body = request.get_json(silent=True) or {}
+    task_id = body.get('task_id', '')
+    data = load_data()
+    u = data['users'].get(uid)
+    if not u:
+        return err('User not found')
+    today = datetime.now().strftime('%Y-%m-%d')
+    
+    rewards = {
+        'login': 1000, 'gift': 1000, 'follow': 1000, 'mic': 3000, 'new_host': 80000
+    }
+    if task_id not in rewards:
+        return err('Invalid task')
+    
+    # Check if already claimed today
+    if task_id == 'login' and u.get('last_task_day') == today:
+        return err('Already claimed today')
+    
+    reward = rewards[task_id]
+    u['coins'] = u.get('coins', 0) + reward
+    
+    if task_id == 'login':
+        u['last_task_day'] = today
+    
+    save_data(data)
+    return jsonify({'success': True, 'reward': reward, 'new_balance': u['coins']})
+
+# ============ ADMIN ============
 @app.route('/api/admin/overview', methods=['GET'])
 @admin_only
 def admin_overview(aid):
@@ -997,28 +1341,23 @@ def admin_overview(aid):
     for rid, r in data['rooms'].items():
         cleanup_room(r)
         rooms.append({'id': rid, 'name': r['name'], 'creator_name': r.get('creator_name', ''),
-                      'count': len(r['members']), 'category': r.get('category', 'chat')})
-    handled_p = sorted([strip(p) for p in data['purchases'] if p['status'] != 'pending'],
-                       key=lambda x: x.get('handled', ''), reverse=True)[:15]
-    handled_w = sorted([w for w in data['withdrawals'] if w['status'] != 'pending'],
-                       key=lambda x: x.get('handled', ''), reverse=True)[:15]
+                      'count': len(r['members']), 'category': r.get('category', 'chat'),
+                      'is_game_room': r.get('is_game_room', False)})
     return jsonify({
         'success': True,
         'stats': {
             'users': len(users), 'banned': sum(1 for u in users.values() if u.get('banned')),
-            'rooms': len(rooms), 'posts': len(data['posts']), 'jobs': len(data['jobs']),
-            'coins': sum(u.get('coins', 0) for u in users.values()),
-            'earnings': sum(u.get('earnings', 0) for u in users.values()),
+            'rooms': len(rooms), 'posts': len(data['posts']),
             'revenue': sum(p['price'] for p in approved),
             'paid_out': round(sum(w['birr'] for w in paid), 2),
             'fee_coins': data['meta'].get('fee_coins', 0),
             'gifts': data['meta'].get('gift_count', 0),
             'game_total_bet': data['meta'].get('game_total_bet', 0),
-            'game_profit': data['meta'].get('game_profit', 0)
+            'game_profit': data['meta'].get('game_profit', 0),
         },
         'purchases': [strip(p) for p in data['purchases'] if p['status'] == 'pending'],
         'withdrawals': [w for w in data['withdrawals'] if w['status'] == 'pending'],
-        'rooms': rooms, 'history_p': handled_p, 'history_w': handled_w
+        'rooms': rooms,
     })
 
 @app.route('/api/admin/users', methods=['GET'])
@@ -1030,25 +1369,17 @@ def admin_users(aid):
     for k, u in data['users'].items():
         if q and q not in k.lower() and q not in u.get('username', '').lower():
             continue
-        rows.append(dict(uid=k, banned=bool(u.get('banned')), joined=u.get('joined', ''),
-                         **user_view(u)))
+        agency = calc_agency_commission(data, k)
+        rows.append({
+            'uid': k, 'banned': bool(u.get('banned')), 'joined': u.get('joined', ''),
+            'username': u.get('username', ''), 'coins': u.get('coins', 0),
+            'earnings': u.get('earnings', 0),
+            'agency_level': agency['level'],
+            'agency_salary': agency['salary'],
+            'referrer': u.get('referrer', ''),
+        })
     rows.sort(key=lambda r: r['joined'], reverse=True)
-    return jsonify({'success': True, 'users': rows[:40]})
-
-@app.route('/api/admin/shot/<pid>', methods=['GET'])
-@admin_only
-def admin_shot(aid, pid):
-    data = load_data()
-    p = next((x for x in data['purchases'] if x['id'] == pid), None)
-    if not p or not p.get('shot'):
-        return err('Not found')
-    path = os.path.join(SHOT_DIR, os.path.basename(p['shot']))
-    if not os.path.exists(path):
-        return err('Photo deleted')
-    ext = path.rsplit('.', 1)[-1]
-    mime = {'jpg': 'image/jpeg', 'png': 'image/png', 'webp': 'image/webp'}.get(ext, 'image/jpeg')
-    with open(path, 'rb') as f:
-        return Response(f.read(), mimetype=mime)
+    return jsonify({'success': True, 'users': rows[:50]})
 
 @app.route('/api/admin/purchase', methods=['POST'])
 @admin_only
@@ -1061,10 +1392,10 @@ def admin_purchase(aid):
     if body.get('action') == 'approve':
         if p['uid'] in data['users']:
             data['users'][p['uid']]['coins'] = data['users'][p['uid']].get('coins', 0) + p['coins']
-            # REFERRAL BONUS: 10% to referrer
+            # REFERRAL BONUS 10%
             referrer = data['users'][p['uid']].get('referrer', '')
             if referrer and referrer in data['users'] and referrer != p['uid']:
-                bonus = int(p['coins'] * REFERRAL_BONUS_PERCENT / 100)
+                bonus = int(p['coins'] * 0.10)
                 data['users'][referrer]['coins'] = data['users'][referrer].get('coins', 0) + bonus
                 data['users'][referrer]['referral_bonus'] = data['users'][referrer].get('referral_bonus', 0) + bonus
                 data['users'][referrer]['referral_count'] = data['users'][referrer].get('referral_count', 0) + 1
@@ -1106,45 +1437,19 @@ def admin_user_action(aid):
     if not u:
         return err('User not found')
     if is_admin(target) and action in ('ban', 'delete'):
-        return err('Cannot ban or delete admin')
+        return err('Cannot ban admin')
     if action == 'ban':
         u['banned'] = True
-        purge_user_from_rooms(data, target)
     elif action == 'unban':
         u['banned'] = False
     elif action == 'delete':
         data['users'].pop(target)
-        purge_user_from_rooms(data, target)
-        data['posts'] = [p for p in data['posts'] if p['uid'] != target]
-        data['jobs'] = [j for j in data['jobs'] if j['uid'] != target]
-        for p in data['purchases']:
-            if p['uid'] == target and p['status'] == 'pending':
-                p['status'] = 'rejected'
-                p['handled'] = now_iso()
-        for w in data['withdrawals']:
-            if w['uid'] == target and w['status'] == 'pending':
-                w['status'] = 'rejected'
-                w['handled'] = now_iso()
     elif action == 'grant':
         try:
             amount = int(body.get('amount'))
-        except (TypeError, ValueError):
+        except:
             return err('Invalid amount')
-        if abs(amount) > 10000000:
-            return err('Amount too large')
         u['coins'] = max(0, u.get('coins', 0) + amount)
-    else:
-        return err('Invalid action')
-    save_data(data)
-    return jsonify({'success': True, 'coins': u.get('coins', 0)})
-
-@app.route('/api/admin/room', methods=['POST'])
-@admin_only
-def admin_room(aid):
-    body = request.get_json(silent=True) or {}
-    data = load_data()
-    if data['rooms'].pop(str(body.get('id', '')), None) is None:
-        return err('Not found')
     save_data(data)
     return jsonify({'success': True})
 
