@@ -10,224 +10,250 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <style>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:linear-gradient(160deg,#1a0533 0%,#2d1b69 50%,#1a0533 100%);color:#fff;min-height:100vh;overflow-x:hidden;padding-bottom:75px}
-.hdr{background:linear-gradient(135deg,#667eea,#764ba2);padding:12px 16px;display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:100;box-shadow:0 4px 20px rgba(0,0,0,.3)}
-.hdr-l{display:flex;align-items:center;gap:10px}
-.av{width:42px;height:42px;border-radius:50%;background:linear-gradient(135deg,#f093fb,#f5576c);display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:bold;border:2px solid rgba(255,255,255,.3);cursor:pointer}
-.hdr-l h3{font-size:15px}.hdr-l p{font-size:11px;opacity:.8}
-.coin{background:linear-gradient(135deg,#ffd700,#ffed4e);color:#333;padding:7px 14px;border-radius:22px;font-weight:bold;display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;box-shadow:0 4px 15px rgba(255,215,0,.4)}
-.page{display:none;animation:fi .3s}.page.active{display:block}
-@keyframes fi{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
-.nav{position:fixed;bottom:0;left:0;right:0;background:rgba(20,4,40,.96);backdrop-filter:blur(20px);display:flex;justify-content:space-around;padding:8px 0;border-top:1px solid rgba(255,255,255,.08);z-index:1000}
-.ni{display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;padding:4px 12px}
-.ni i{font-size:20px;opacity:.5;transition:.3s}.ni span{font-size:10px;opacity:.5}
-.ni.on i{opacity:1;color:#f093fb;transform:scale(1.1)}.ni.on span{opacity:1;color:#f093fb}
-.sec{padding:16px}
-.st{font-size:18px;font-weight:bold;margin-bottom:12px;display:flex;align-items:center;gap:8px}
-.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-.card{background:linear-gradient(135deg,rgba(102,126,234,.25),rgba(118,75,162,.25));border-radius:14px;padding:14px;cursor:pointer;border:1px solid rgba(255,255,255,.1);position:relative;overflow:hidden;transition:.3s}
-.card:active{transform:scale(.97)}
-.card h4{font-size:15px;margin-bottom:6px}.card .host{font-size:12px;opacity:.8;margin-bottom:8px}
-.card .row{display:flex;justify-content:space-between;align-items:center;font-size:12px;opacity:.8}
-.live{background:#ff4757;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:bold;animation:pu 2s infinite}
-@keyframes pu{0%,100%{opacity:1}50%{opacity:.5}}
-.chips{display:flex;gap:8px;overflow-x:auto;padding:0 16px 16px;scrollbar-width:none}.chips::-webkit-scrollbar{display:none}
-.chip{background:rgba(255,255,255,.1);padding:7px 14px;border-radius:18px;font-size:12px;white-space:nowrap;cursor:pointer}
-.chip.on{background:linear-gradient(135deg,#667eea,#764ba2)}
-.btn{background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;border:none;padding:13px;border-radius:24px;font-size:15px;font-weight:600;cursor:pointer;width:100%;margin:8px 0;transition:.3s}
-.btn:active{transform:scale(.97)}
-.btn.red{background:linear-gradient(135deg,#ff4757,#ff6348)}
-.btn.grn{background:linear-gradient(135deg,#2ed573,#7bed9f);color:#0a3d1f}
-.btn.gold{background:linear-gradient(135deg,#ffd700,#ffed4e);color:#333}
-.btn.sm{padding:8px 14px;font-size:13px;width:auto;display:inline-block;margin:0}
-.wh{background:linear-gradient(135deg,#ffd700,#ffed4e);padding:26px 16px;text-align:center;color:#333}
-.wh .bal{font-size:44px;font-weight:bold}.wh .lbl{font-size:13px;opacity:.8}
-.pkg{background:rgba(255,255,255,.08);border-radius:14px;padding:16px;text-align:center;cursor:pointer;border:2px solid transparent;transition:.2s}
-.pkg:active{border-color:#ffd700;transform:scale(.97)}
-.pkg .c{font-size:22px;font-weight:bold;color:#ffd700}.pkg .p{font-size:12px;opacity:.7;margin-top:4px}
-.rh{background:linear-gradient(135deg,#667eea,#764ba2);padding:16px;text-align:center}
-.rh h2{font-size:20px}.rh p{font-size:12px;opacity:.9}
-.seats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;padding:16px}
-.seat{background:rgba(255,255,255,.1);border-radius:14px;padding:16px 8px;text-align:center;cursor:pointer;border:2px solid transparent;transition:.2s;position:relative}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:linear-gradient(160deg,#0f0518 0%,#1a0a2e 50%,#0f0518 100%);color:#fff;min-height:100vh;overflow-x:hidden;padding-bottom:75px}
+.hdr{background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);padding:14px 18px;display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:100;box-shadow:0 4px 25px rgba(102,126,234,.4)}
+.hdr-l{display:flex;align-items:center;gap:12px}
+.av{width:46px;height:46px;border-radius:50%;background:linear-gradient(135deg,#f093fb,#f5576c);display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:bold;border:3px solid rgba(255,255,255,.3);cursor:pointer;overflow:hidden;box-shadow:0 4px 15px rgba(240,147,251,.4)}
+.av img{width:100%;height:100%;object-fit:cover}
+.hdr-l h3{font-size:16px;font-weight:700}.hdr-l p{font-size:11px;opacity:.85}
+.coin{background:linear-gradient(135deg,#ffd700,#ffed4e);color:#333;padding:8px 16px;border-radius:24px;font-weight:bold;display:flex;align-items:center;gap:7px;font-size:14px;cursor:pointer;box-shadow:0 4px 18px rgba(255,215,0,.5);transition:.3s}
+.coin:active{transform:scale(.95)}
+.page{display:none;animation:fi .4s}.page.active{display:block}
+@keyframes fi{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+.nav{position:fixed;bottom:0;left:0;right:0;background:rgba(15,5,24,.98);backdrop-filter:blur(25px);display:flex;justify-content:space-around;padding:10px 0;border-top:1px solid rgba(255,255,255,.1);z-index:1000;box-shadow:0 -4px 20px rgba(0,0,0,.5)}
+.ni{display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer;padding:6px 14px;transition:.3s}
+.ni i{font-size:22px;opacity:.5;transition:.3s}.ni span{font-size:11px;opacity:.5;transition:.3s}
+.ni.on i{opacity:1;color:#f093fb;transform:scale(1.15)}.ni.on span{opacity:1;color:#f093fb}
+.sec{padding:18px}
+.st{font-size:20px;font-weight:bold;margin-bottom:14px;display:flex;align-items:center;gap:10px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.card{background:linear-gradient(135deg,rgba(102,126,234,.3),rgba(118,75,162,.3));border-radius:16px;padding:16px;cursor:pointer;border:1px solid rgba(255,255,255,.12);position:relative;overflow:hidden;transition:.3s;box-shadow:0 4px 20px rgba(102,126,234,.2)}
+.card:active{transform:scale(.97);box-shadow:0 8px 30px rgba(102,126,234,.4)}
+.card h4{font-size:16px;margin-bottom:8px}.card .host{font-size:13px;opacity:.85;margin-bottom:10px}
+.card .row{display:flex;justify-content:space-between;align-items:center;font-size:13px;opacity:.85}
+.live{background:#ff4757;padding:3px 10px;border-radius:12px;font-size:11px;font-weight:bold;animation:pu 2s infinite}
+@keyframes pu{0%,100%{opacity:1}50%{opacity:.6}}
+.chips{display:flex;gap:10px;overflow-x:auto;padding:0 18px 18px;scrollbar-width:none}.chips::-webkit-scrollbar{display:none}
+.chip{background:rgba(255,255,255,.1);padding:8px 16px;border-radius:20px;font-size:13px;white-space:nowrap;cursor:pointer;transition:.3s}
+.chip.on{background:linear-gradient(135deg,#667eea,#764ba2);box-shadow:0 4px 15px rgba(102,126,234,.4)}
+.btn{background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;border:none;padding:14px;border-radius:26px;font-size:16px;font-weight:700;cursor:pointer;width:100%;margin:10px 0;transition:.3s;box-shadow:0 6px 20px rgba(102,126,234,.4)}
+.btn:active{transform:scale(.97);box-shadow:0 8px 25px rgba(102,126,234,.6)}
+.btn.red{background:linear-gradient(135deg,#ff4757,#ff6348);box-shadow:0 6px 20px rgba(255,71,87,.4)}
+.btn.grn{background:linear-gradient(135deg,#2ed573,#7bed9f);color:#0a3d1f;box-shadow:0 6px 20px rgba(46,213,115,.4)}
+.btn.gold{background:linear-gradient(135deg,#ffd700,#ffed4e);color:#333;box-shadow:0 6px 20px rgba(255,215,0,.5)}
+.btn.sm{padding:9px 16px;font-size:14px;width:auto;display:inline-block;margin:0}
+.wh{background:linear-gradient(135deg,#ffd700,#ffed4e);padding:30px 18px;text-align:center;color:#333;box-shadow:0 8px 30px rgba(255,215,0,.3)}
+.wh .bal{font-size:48px;font-weight:bold;text-shadow:0 2px 10px rgba(0,0,0,.1)}.wh .lbl{font-size:14px;opacity:.85}
+.pkg{background:rgba(255,255,255,.1);border-radius:16px;padding:18px;text-align:center;cursor:pointer;border:2px solid transparent;transition:.3s;box-shadow:0 4px 20px rgba(0,0,0,.2)}
+.pkg:active{border-color:#ffd700;transform:scale(.97);box-shadow:0 8px 30px rgba(255,215,0,.3)}
+.pkg .c{font-size:24px;font-weight:bold;color:#ffd700}.pkg .p{font-size:13px;opacity:.8;margin-top:6px}
+.rh{background:linear-gradient(135deg,#667eea,#764ba2);padding:18px;text-align:center;box-shadow:0 4px 25px rgba(102,126,234,.4)}
+.rh h2{font-size:22px}.rh p{font-size:13px;opacity:.9}
+.seats{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;padding:18px}
+.seat{background:rgba(255,255,255,.1);border-radius:16px;padding:18px 10px;text-align:center;cursor:pointer;border:2px solid transparent;transition:.3s;position:relative;box-shadow:0 4px 15px rgba(0,0,0,.2)}
 .seat:active{transform:scale(.95)}
-.seat.host{background:linear-gradient(135deg,#ffd700,#ffed4e);border-color:#ffd700;color:#333}
-.seat.occ{background:linear-gradient(135deg,#667eea,#764ba2);border-color:#667eea}
-.seat .ic{font-size:26px;margin-bottom:6px}.seat .nm{font-size:11px;font-weight:600;word-break:break-word}.seat .no{font-size:10px;opacity:.6;margin-top:3px}
-.chat{background:rgba(0,0,0,.25);border-radius:12px;margin:0 16px 12px;padding:12px;max-height:220px;overflow-y:auto;font-size:13px}
-.msg{margin-bottom:6px;padding:6px 10px;background:rgba(255,255,255,.08);border-radius:8px}
-.msg.sys{background:rgba(240,147,251,.15);font-style:italic}
-.msg.gift{background:linear-gradient(135deg,rgba(255,215,0,.2),rgba(240,147,251,.2));font-weight:600}
-.ci{display:flex;gap:8px;padding:0 16px 12px}
-.ci input{flex:1;background:rgba(255,255,255,.1);border:none;padding:11px 14px;border-radius:22px;color:#fff;font-size:14px}
-.ci input::placeholder{color:rgba(255,255,255,.4)}
-.send{background:linear-gradient(135deg,#667eea,#764ba2);border:none;padding:11px 16px;border-radius:22px;color:#fff;cursor:pointer}
-.ph{background:linear-gradient(135deg,#667eea,#764ba2);padding:30px 16px;text-align:center}
-.pav{width:90px;height:90px;border-radius:50%;background:linear-gradient(135deg,#f093fb,#f5576c);display:flex;align-items:center;justify-content:center;font-size:36px;font-weight:bold;margin:0 auto 12px;border:4px solid rgba(255,255,255,.3)}
-.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;padding:16px}
-.stat{background:rgba(255,255,255,.08);border-radius:12px;padding:14px;text-align:center}
-.stat b{font-size:20px;color:#ffd700}.stat span{font-size:11px;opacity:.7;display:block;margin-top:4px}
-.modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:2000;justify-content:center;align-items:center;padding:16px}
-.modal.on{display:flex}
-.mc{background:linear-gradient(160deg,#2d1b69,#1a0533);border-radius:18px;padding:22px;max-width:420px;width:100%;max-height:85vh;overflow-y:auto;border:1px solid rgba(255,255,255,.1)}
-.mt{font-size:18px;font-weight:bold;margin-bottom:16px;text-align:center}
-.in{width:100%;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.15);padding:11px 14px;border-radius:10px;color:#fff;font-size:14px;margin-bottom:12px}
-.in::placeholder{color:rgba(255,255,255,.4)}
-textarea.in{min-height:80px;resize:vertical}
-.ggrid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
-.gi{background:rgba(255,255,255,.08);border-radius:10px;padding:10px 4px;text-align:center;cursor:pointer;border:2px solid transparent;transition:.2s}
-.gi:active,.gi.sel{border-color:#ffd700;background:rgba(255,215,0,.15)}
-.gi .e{font-size:22px}.gi .n{font-size:9px;margin-top:3px}.gi .pr{font-size:10px;color:#ffd700;font-weight:bold}
-.post{background:rgba(255,255,255,.07);border-radius:14px;padding:14px;margin-bottom:12px}
-.post .hd{display:flex;align-items:center;gap:10px;margin-bottom:8px}
-.post .hd .av{width:34px;height:34px;font-size:14px}
-.post .tx{font-size:14px;line-height:1.5;margin-bottom:10px;white-space:pre-wrap}
-.post .ft{display:flex;justify-content:space-between;align-items:center;font-size:12px;opacity:.7}
-.post .ft i{cursor:pointer;font-size:15px;margin-right:14px}
+.seat.host{background:linear-gradient(135deg,#ffd700,#ffed4e);border-color:#ffd700;color:#333;box-shadow:0 6px 25px rgba(255,215,0,.5)}
+.seat.occ{background:linear-gradient(135deg,#667eea,#764ba2);border-color:#667eea;box-shadow:0 6px 25px rgba(102,126,234,.5)}
+.seat .ic{font-size:28px;margin-bottom:8px}.seat .nm{font-size:12px;font-weight:700;word-break:break-word}.seat .no{font-size:11px;opacity:.7;margin-top:4px}
+.chat{background:rgba(0,0,0,.3);border-radius:14px;margin:0 18px 14px;padding:14px;max-height:240px;overflow-y:auto;font-size:14px;box-shadow:0 4px 20px rgba(0,0,0,.3)}
+.msg{margin-bottom:8px;padding:8px 12px;background:rgba(255,255,255,.1);border-radius:10px}
+.msg.sys{background:rgba(240,147,251,.2);font-style:italic}
+.msg.gift{background:linear-gradient(135deg,rgba(255,215,0,.25),rgba(240,147,251,.25));font-weight:700}
+.ci{display:flex;gap:10px;padding:0 18px 14px}
+.ci input{flex:1;background:rgba(255,255,255,.12);border:none;padding:12px 16px;border-radius:24px;color:#fff;font-size:15px}
+.ci input::placeholder{color:rgba(255,255,255,.5)}
+.send{background:linear-gradient(135deg,#667eea,#764ba2);border:none;padding:12px 18px;border-radius:24px;color:#fff;cursor:pointer;box-shadow:0 4px 15px rgba(102,126,234,.4)}
+.ph{background:linear-gradient(135deg,#667eea,#764ba2);padding:35px 18px;text-align:center;box-shadow:0 8px 30px rgba(102,126,234,.4)}
+.pav{width:100px;height:100px;border-radius:50%;background:linear-gradient(135deg,#f093fb,#f5576c);display:flex;align-items:center;justify-content:center;font-size:40px;font-weight:bold;margin:0 auto 14px;border:4px solid rgba(255,255,255,.3);overflow:hidden;box-shadow:0 8px 30px rgba(240,147,251,.5)}
+.pav img{width:100%;height:100%;object-fit:cover}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;padding:18px}
+.stat{background:rgba(255,255,255,.1);border-radius:14px;padding:16px;text-align:center;box-shadow:0 4px 20px rgba(0,0,0,.2)}
+.stat b{font-size:22px;color:#ffd700}.stat span{font-size:12px;opacity:.75;display:block;margin-top:6px}
+.modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.9);z-index:2000;justify-content:center;align-items:center;padding:18px;backdrop-filter:blur(10px)}
+.modal.on{display:flex;animation:fi .3s}
+.mc{background:linear-gradient(160deg,#1a0a2e,#0f0518);border-radius:20px;padding:24px;max-width:440px;width:100%;max-height:88vh;overflow-y:auto;border:1px solid rgba(255,255,255,.15);box-shadow:0 12px 40px rgba(0,0,0,.6)}
+.mt{font-size:20px;font-weight:bold;margin-bottom:18px;text-align:center}
+.in{width:100%;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);padding:12px 16px;border-radius:12px;color:#fff;font-size:15px;margin-bottom:14px;transition:.3s}
+.in:focus{border-color:#667eea;box-shadow:0 0 15px rgba(102,126,234,.3)}
+.in::placeholder{color:rgba(255,255,255,.5)}
+textarea.in{min-height:90px;resize:vertical}
+.ggrid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.gi{background:rgba(255,255,255,.1);border-radius:12px;padding:12px 6px;text-align:center;cursor:pointer;border:2px solid transparent;transition:.3s}
+.gi:active,.gi.sel{border-color:#ffd700;background:rgba(255,215,0,.2);transform:scale(1.05)}
+.gi .e{font-size:24px}.gi .n{font-size:10px;margin-top:4px}.gi .pr{font-size:11px;color:#ffd700;font-weight:bold}
+.post{background:rgba(255,255,255,.08);border-radius:16px;padding:16px;margin-bottom:14px;box-shadow:0 4px 20px rgba(0,0,0,.2)}
+.post .hd{display:flex;align-items:center;gap:12px;margin-bottom:10px}
+.post .hd .av{width:38px;height:38px;font-size:16px}
+.post .tx{font-size:15px;line-height:1.6;margin-bottom:12px;white-space:pre-wrap}
+.post .ft{display:flex;justify-content:space-between;align-items:center;font-size:13px;opacity:.75}
+.post .ft i{cursor:pointer;font-size:16px;margin-right:16px;transition:.3s}
+.post .ft i:active{transform:scale(1.2)}
 .post .ft .lk{color:#ff4757}
-.job{background:rgba(255,255,255,.07);border-radius:14px;padding:14px;margin-bottom:12px}
-.job h4{margin-bottom:6px}.job p{font-size:13px;opacity:.85;margin-bottom:8px}
-.job .ct{font-size:12px;color:#7bed9f}
-.subtabs{display:flex;gap:8px;padding:16px 16px 0}
-.subtab{flex:1;text-align:center;padding:10px;border-radius:10px;background:rgba(255,255,255,.08);cursor:pointer;font-size:14px;font-weight:600}
-.subtab.on{background:linear-gradient(135deg,#667eea,#764ba2)}
-.astat{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:16px}
-.astat .stat b{font-size:16px}
-.arow{background:rgba(255,255,255,.07);border-radius:12px;padding:12px;margin-bottom:10px;font-size:13px}
-.arow .top{display:flex;justify-content:space-between;margin-bottom:6px}
-.arow .btns{display:flex;gap:6px;margin-top:8px}
+.post .img{width:100%;border-radius:12px;margin-bottom:12px;max-height:300px;object-fit:cover}
+.job{background:rgba(255,255,255,.08);border-radius:16px;padding:16px;margin-bottom:14px;box-shadow:0 4px 20px rgba(0,0,0,.2)}
+.job h4{margin-bottom:8px;font-size:17px}.job p{font-size:14px;opacity:.9;margin-bottom:10px}
+.job .ct{font-size:13px;color:#7bed9f}
+.job .img{width:100%;border-radius:12px;margin-bottom:12px;max-height:250px;object-fit:cover}
+.subtabs{display:flex;gap:10px;padding:18px 18px 0}
+.subtab{flex:1;text-align:center;padding:12px;border-radius:12px;background:rgba(255,255,255,.1);cursor:pointer;font-size:15px;font-weight:700;transition:.3s}
+.subtab.on{background:linear-gradient(135deg,#667eea,#764ba2);box-shadow:0 4px 15px rgba(102,126,234,.4)}
+.astat{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:18px}
+.astat .stat b{font-size:18px}
+.arow{background:rgba(255,255,255,.08);border-radius:14px;padding:14px;margin-bottom:12px;font-size:14px;box-shadow:0 4px 15px rgba(0,0,0,.2)}
+.arow .top{display:flex;justify-content:space-between;margin-bottom:8px}
+.arow .btns{display:flex;gap:8px;margin-top:10px}
 .arow .btns .btn{margin:0}
-.shotimg{width:100%;border-radius:10px;margin:10px 0}
-.info{background:rgba(255,215,0,.12);border:1px solid rgba(255,215,0,.3);border-radius:10px;padding:12px;font-size:13px;margin-bottom:12px;line-height:1.6}
+.shotimg{width:100%;border-radius:12px;margin:12px 0}
+.info{background:rgba(255,215,0,.15);border:1px solid rgba(255,215,0,.4);border-radius:12px;padding:14px;font-size:14px;margin-bottom:14px;line-height:1.7}
 .info b{color:#ffd700}
-.voice{display:flex;align-items:center;gap:10px;padding:10px 16px;background:rgba(46,213,115,.15);border:1px solid rgba(46,213,115,.4);border-radius:12px;margin:0 16px 12px;font-size:13px}
-.voice .dot{width:10px;height:10px;border-radius:50%;background:#2ed573;animation:pu 1s infinite}
-.load{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;gap:16px}
-.sp{width:44px;height:44px;border:4px solid rgba(255,255,255,.1);border-top-color:#667eea;border-radius:50%;animation:sp 1s linear infinite}
+.voice{display:flex;align-items:center;gap:12px;padding:12px 18px;background:rgba(46,213,115,.2);border:1px solid rgba(46,213,115,.5);border-radius:14px;margin:0 18px 14px;font-size:14px;box-shadow:0 4px 20px rgba(46,213,115,.3)}
+.voice .dot{width:12px;height:12px;border-radius:50%;background:#2ed573;animation:pu 1s infinite}
+.load{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;gap:18px}
+.sp{width:48px;height:48px;border:4px solid rgba(255,255,255,.15);border-top-color:#667eea;border-radius:50%;animation:sp 1s linear infinite}
 @keyframes sp{to{transform:rotate(360deg)}}
-.gpop{position:fixed;top:45%;left:50%;transform:translate(-50%,-50%);font-size:90px;z-index:3000;pointer-events:none;animation:gp 1.6s ease-out forwards;text-shadow:0 0 40px rgba(255,215,0,.8)}
-@keyframes gp{0%{transform:translate(-50%,-50%) scale(0) rotate(-30deg);opacity:0}20%{transform:translate(-50%,-50%) scale(1.4) rotate(10deg);opacity:1}60%{transform:translate(-50%,-60%) scale(1.1);opacity:1}100%{transform:translate(-50%,-120%) scale(.6);opacity:0}}
+.gpop{position:fixed;top:45%;left:50%;transform:translate(-50%,-50%);font-size:100px;z-index:3000;pointer-events:none;animation:gp 1.8s ease-out forwards;text-shadow:0 0 50px rgba(255,215,0,.9)}
+@keyframes gp{0%{transform:translate(-50%,-50%) scale(0) rotate(-30deg);opacity:0}20%{transform:translate(-50%,-50%) scale(1.5) rotate(10deg);opacity:1}60%{transform:translate(-50%,-60%) scale(1.2);opacity:1}100%{transform:translate(-50%,-120%) scale(.7);opacity:0}}
+.photo-input{display:none}
+.photo-btn{background:rgba(255,255,255,.12);border:2px dashed rgba(255,255,255,.3);border-radius:12px;padding:12px;text-align:center;cursor:pointer;margin-bottom:14px;transition:.3s}
+.photo-btn:active{background:rgba(255,255,255,.2);border-color:#667eea}
+.photo-btn i{font-size:22px;color:#667eea;margin-right:8px}
+.photo-preview{width:100%;max-height:200px;object-fit:cover;border-radius:12px;margin-bottom:14px}
+.lang-switch{position:fixed;top:70px;right:14px;background:rgba(255,255,255,.15);padding:8px 14px;border-radius:20px;cursor:pointer;z-index:1001;font-size:13px;backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,.2)}
+.lang-switch:active{transform:scale(.95)}
 </style>
 </head>
 <body>
-<div id="loading" class="load"><div class="sp"></div><span>እየተጫነ ነው...</span></div>
+<div class="lang-switch" onclick="toggleLang()">🌐 <span id="langTxt">EN</span></div>
+
+<div id="loading" class="load"><div class="sp"></div><span data-am="እየተጫነ ነው..." data-en="Loading...">እየተጫነ ነው...</span></div>
 
 <div id="app" style="display:none">
 <div class="hdr">
   <div class="hdr-l"><div class="av" id="hAv" onclick="go('profile')">T</div>
-  <div><h3 id="hName">User</h3><p id="hSub">Level 1</p></div></div>
+  <div><h3 id="hName">User</h3><p id="hSub" data-am="ደረጃ 1" data-en="Level 1">ደረጃ 1</p></div></div>
   <div class="coin" onclick="go('wallet')"><i class="fas fa-coins"></i><span id="hCoins">0</span></div>
 </div>
 
-<!-- HOME -->
 <div id="p-home" class="page active">
-  <div class="sec"><div class="st"><i class="fas fa-fire" style="color:#ff4757"></i> ተወዳጅ ክፍሎች</div><div class="grid2" id="featRooms"></div></div>
-  <div class="st" style="padding:0 16px"><i class="fas fa-layer-group" style="color:#667eea"></i> ምድቦች</div>
-  <div class="chips"><div class="chip on">🎵 ሙዚቃ</div><div class="chip">💬 ውይይት</div><div class="chip">🎮 ጌሚንግ</div><div class="chip">📚 ትምህርት</div><div class="chip">❤️ ፍቅር</div><div class="chip">🎭 መዝናኛ</div></div>
-  <div class="sec"><button class="btn" onclick="go('rooms')"><i class="fas fa-door-open"></i> ሁሉንም ክፍሎች ይመልከቱ</button></div>
+  <div class="sec"><div class="st"><i class="fas fa-fire" style="color:#ff4757"></i> <span data-am="ተወዳጅ ክፍሎች" data-en="Featured Rooms">ተወዳጅ ክፍሎች</span></div><div class="grid2" id="featRooms"></div></div>
+  <div class="st" style="padding:0 18px"><i class="fas fa-layer-group" style="color:#667eea"></i> <span data-am="ምድቦች" data-en="Categories">ምድቦች</span></div>
+  <div class="chips"><div class="chip on">🎵 <span data-am="ሙዚቃ" data-en="Music">ሙዚቃ</span></div><div class="chip">💬 <span data-am="ውይይት" data-en="Chat">ውይይት</span></div><div class="chip">🎮 <span data-am="ጌሚንግ" data-en="Gaming">ጌሚንግ</span></div><div class="chip">📚 <span data-am="ትምህርት" data-en="Education">ትምህርት</span></div><div class="chip">❤️ <span data-am="ፍቅር" data-en="Love">ፍቅር</span></div><div class="chip">🎭 <span data-am="መዝናኛ" data-en="Entertainment">መዝናኛ</span></div></div>
+  <div class="sec"><button class="btn" onclick="go('rooms')"><i class="fas fa-door-open"></i> <span data-am="ሁሉንም ክፍሎች ይመልከቱ" data-en="View All Rooms">ሁሉንም ክፍሎች ይመልከቱ</span></button></div>
 </div>
 
-<!-- ROOMS -->
-<div id="p-rooms" class="page"><div class="sec"><div class="st"><i class="fas fa-door-open" style="color:#667eea"></i> ክፍሎች</div><div id="allRooms"></div><button class="btn grn" onclick="openM('mRoom')"><i class="fas fa-plus"></i> አዲስ ክፍል</button></div></div>
+<div id="p-rooms" class="page"><div class="sec"><div class="st"><i class="fas fa-door-open" style="color:#667eea"></i> <span data-am="ክፍሎች" data-en="Rooms">ክፍሎች</span></div><div id="allRooms"></div><button class="btn grn" onclick="openM('mRoom')"><i class="fas fa-plus"></i> <span data-am="አዲስ ክፍል" data-en="New Room">አዲስ ክፍል</span></button></div></div>
 
-<!-- WALLET -->
 <div id="p-wallet" class="page">
-  <div class="wh"><div class="lbl">የእርስዎ ሳንቲሞች</div><div class="bal" id="wCoins">0</div><div class="lbl">🪙 Coins</div>
-  <div style="margin-top:14px;display:flex;gap:8px;justify-content:center"><div style="background:rgba(0,0,0,.15);padding:8px 16px;border-radius:14px;font-size:13px">ገቢ: <b id="wEarn">0</b></div></div></div>
-  <div class="sec"><div class="st"><i class="fas fa-shopping-cart" style="color:#ffd700"></i> ሳንቲም ይግዙ</div><div class="grid2" id="pkgs"></div>
-  <button class="btn gold" onclick="openM('mWith')"><i class="fas fa-money-bill-wave"></i> ገቢ ያውጡ</button></div>
-  <div class="sec"><div class="st"><i class="fas fa-history" style="color:#667eea"></i> ታሪክ</div><div id="hist"></div></div>
+  <div class="wh"><div class="lbl" data-am="የእርስዎ ሳንቲሞች" data-en="Your Coins">የእርስዎ ሳንቲሞች</div><div class="bal" id="wCoins">0</div><div class="lbl">🪙 Coins</div>
+  <div style="margin-top:16px;display:flex;gap:10px;justify-content:center"><div style="background:rgba(0,0,0,.2);padding:10px 18px;border-radius:16px;font-size:14px"><span data-am="ገቢ" data-en="Earnings">ገቢ</span>: <b id="wEarn">0</b></div></div></div>
+  <div class="sec"><div class="st"><i class="fas fa-shopping-cart" style="color:#ffd700"></i> <span data-am="ሳንቲም ይግዙ" data-en="Buy Coins">ሳንቲም ይግዙ</span></div><div class="grid2" id="pkgs"></div>
+  <button class="btn gold" onclick="openM('mWith')"><i class="fas fa-money-bill-wave"></i> <span data-am="ገቢ ያውጡ" data-en="Withdraw">ገቢ ያውጡ</span></button></div>
+  <div class="sec"><div class="st"><i class="fas fa-history" style="color:#667eea"></i> <span data-am="ታሪክ" data-en="History">ታሪክ</span></div><div id="hist"></div></div>
 </div>
 
-<!-- COMMUNITY -->
 <div id="p-community" class="page">
-  <div class="subtabs"><div class="subtab on" onclick="subTab('posts',this)">📝 ጽሑፎች</div><div class="subtab" onclick="subTab('jobs',this)">💼 ሥራዎች</div></div>
-  <div class="sec" id="sub-posts"><div id="posts"></div><button class="btn" onclick="openM('mPost')"><i class="fas fa-pen"></i> ጽሑፍ ይለጥፉ</button></div>
-  <div class="sec" id="sub-jobs" style="display:none"><div id="jobs"></div><button class="btn" onclick="openM('mJob')"><i class="fas fa-briefcase"></i> ሥራ ይለጥፉ</button></div>
+  <div class="subtabs"><div class="subtab on" onclick="subTab('posts',this)">📝 <span data-am="ጽሑፎች" data-en="Posts">ጽሑፎች</span></div><div class="subtab" onclick="subTab('jobs',this)">💼 <span data-am="ሥራዎች" data-en="Jobs">ሥራዎች</span></div></div>
+  <div class="sec" id="sub-posts"><div id="posts"></div><button class="btn" onclick="openM('mPost')"><i class="fas fa-pen"></i> <span data-am="ጽሑፍ ይለጥፉ" data-en="Create Post">ጽሑፍ ይለጥፉ</span></button></div>
+  <div class="sec" id="sub-jobs" style="display:none"><div id="jobs"></div><button class="btn" onclick="openM('mJob')"><i class="fas fa-briefcase"></i> <span data-am="ሥራ ይለጥፉ" data-en="Post Job">ሥራ ይለጥፉ</span></button></div>
 </div>
 
-<!-- PROFILE -->
 <div id="p-profile" class="page">
-  <div class="ph"><div class="pav" id="pAv">T</div><h2 id="pName">User</h2><p id="pId" style="opacity:.8;font-size:13px"></p><p id="pBio" style="font-size:13px;opacity:.85;margin-top:8px"></p></div>
-  <div class="stats"><div class="stat"><b id="sCoins">0</b><span>ሳንቲሞች</span></div><div class="stat"><b id="sEarn">0</b><span>ገቢ</span></div><div class="stat"><b id="sPhone">—</b><span>Telebirr</span></div></div>
+  <div class="ph"><div class="pav" id="pAv">T</div><h2 id="pName">User</h2><p id="pId" style="opacity:.85;font-size:14px"></p><p id="pBio" style="font-size:14px;opacity:.9;margin-top:10px"></p></div>
+  <div class="stats"><div class="stat"><b id="sCoins">0</b><span data-am="ሳንቲሞች" data-en="Coins">ሳንቲሞች</span></div><div class="stat"><b id="sEarn">0</b><span data-am="ገቢ" data-en="Earnings">ገቢ</span></div><div class="stat"><b id="sPhone">—</b><span>Telebirr</span></div></div>
   <div class="sec">
-    <button class="btn" onclick="openEdit()"><i class="fas fa-edit"></i> ፕሮፋይል ያርቱ</button>
-    <button class="btn gold" onclick="openM('mWith')"><i class="fas fa-money-bill-wave"></i> ገቢ ያውጡ</button>
-    <button class="btn red" id="admBtn" style="display:none" onclick="go('admin')"><i class="fas fa-shield-halved"></i> የአድሚን ፓነል</button>
+    <button class="btn" onclick="openEdit()"><i class="fas fa-edit"></i> <span data-am="ፕሮፋይል ያርቱ" data-en="Edit Profile">ፕሮፋይል ያርቱ</span></button>
+    <button class="btn gold" onclick="openM('mWith')"><i class="fas fa-money-bill-wave"></i> <span data-am="ገቢ ያውጡ" data-en="Withdraw">ገቢ ያውጡ</span></button>
+    <button class="btn red" id="admBtn" style="display:none" onclick="go('admin')"><i class="fas fa-shield-halved"></i> <span data-am="የአድሚን ፓነል" data-en="Admin Panel">የአድሚን ፓነል</span></button>
   </div>
 </div>
 
-<!-- ADMIN -->
 <div id="p-admin" class="page">
-  <div class="sec"><div class="st"><i class="fas fa-shield-halved" style="color:#ffd700"></i> አድሚን</div>
+  <div class="sec"><div class="st"><i class="fas fa-shield-halved" style="color:#ffd700"></i> <span data-am="አድሚን" data-en="Admin">አድሚን</span></div>
   <div class="astat" id="admStats"></div></div>
-  <div class="subtabs"><div class="subtab on" onclick="admTab('purch',this)">🧾 ግዢ</div><div class="subtab" onclick="admTab('with',this)">💸 ማውጫ</div><div class="subtab" onclick="admTab('users',this)">👥 ተጠቃሚ</div><div class="subtab" onclick="admTab('rooms',this)">🚪 ክፍሎች</div></div>
+  <div class="subtabs"><div class="subtab on" onclick="admTab('purch',this)">🧾 <span data-am="ግዢ" data-en="Purchases">ግዢ</span></div><div class="subtab" onclick="admTab('with',this)">💸 <span data-am="ማውጫ" data-en="Withdrawals">ማውጫ</span></div><div class="subtab" onclick="admTab('users',this)">👥 <span data-am="ተጠቃሚ" data-en="Users">ተጠቃሚ</span></div><div class="subtab" onclick="admTab('rooms',this)">🚪 <span data-am="ክፍሎች" data-en="Rooms">ክፍሎች</span></div></div>
   <div class="sec"><div id="admPurch"></div><div id="admWith" style="display:none"></div><div id="admUsers" style="display:none"><input class="in" id="uSearch" placeholder="ፍለጋ ስም/ID" oninput="admUsers()"></div><div id="admRooms" style="display:none"></div></div>
 </div>
 
-<!-- ROOM VIEW -->
 <div id="roomView" style="display:none">
   <div class="rh"><h2 id="rvName">Room</h2><p id="rvHost"></p></div>
-  <div class="voice" id="voiceBar" style="display:none"><div class="dot"></div><span id="voiceTxt">በድምጽ ላይ...</span><button class="btn sm red" style="margin-left:auto" onclick="leaveVoice()">ቅጠር</button></div>
-  <button class="btn grn" style="margin:12px 16px;width:calc(100% - 32px)" id="voiceBtn" onclick="joinVoice()"><i class="fas fa-microphone"></i> ድምጽ ይጀምሩ</button>
+  <div class="voice" id="voiceBar" style="display:none"><div class="dot"></div><span id="voiceTxt" data-am="በድምጽ ላይ..." data-en="On voice...">በድምጽ ላይ...</span><button class="btn sm red" style="margin-left:auto" onclick="leaveVoice()" data-am="ቅጠር" data-en="Leave">ቅጠር</button></div>
+  <button class="btn grn" style="margin:14px 18px;width:calc(100% - 36px)" id="voiceBtn" onclick="joinVoice()"><i class="fas fa-microphone"></i> <span data-am="ድምጽ ይጀምሩ" data-en="Start Voice">ድምጽ ይጀምሩ</span></button>
   <div class="seats" id="seatGrid"></div>
   <div class="chat" id="chatBox"></div>
   <div class="ci"><input id="chatIn" placeholder="መልዕክት ይጻፉ..." onkeydown="if(event.key==='Enter')sendChat()"><button class="send" onclick="sendChat()"><i class="fas fa-paper-plane"></i></button></div>
-  <div style="padding:0 16px 16px"><button class="btn red" onclick="exitRoom()"><i class="fas fa-sign-out-alt"></i> ውጣ</button></div>
+  <div style="padding:0 18px 18px"><button class="btn red" onclick="exitRoom()"><i class="fas fa-sign-out-alt"></i> <span data-am="ውጣ" data-en="Exit">ውጣ</span></button></div>
 </div>
 </div>
 
-<!-- NAV -->
 <div class="nav" id="navBar" style="display:none">
-  <div class="ni on" onclick="go('home')"><i class="fas fa-home"></i><span>መነሻ</span></div>
-  <div class="ni" onclick="go('rooms')"><i class="fas fa-door-open"></i><span>ክፍሎች</span></div>
-  <div class="ni" onclick="go('wallet')"><i class="fas fa-wallet"></i><span>ኪስ</span></div>
-  <div class="ni" onclick="go('community')"><i class="fas fa-users"></i><span>ማኅበረሰብ</span></div>
-  <div class="ni" onclick="go('profile')"><i class="fas fa-user"></i><span>ፕሮፋይል</span></div>
+  <div class="ni on" onclick="go('home')"><i class="fas fa-home"></i><span data-am="መነሻ" data-en="Home">መነሻ</span></div>
+  <div class="ni" onclick="go('rooms')"><i class="fas fa-door-open"></i><span data-am="ክፍሎች" data-en="Rooms">ክፍሎች</span></div>
+  <div class="ni" onclick="go('wallet')"><i class="fas fa-wallet"></i><span data-am="ኪስ" data-en="Wallet">ኪስ</span></div>
+  <div class="ni" onclick="go('community')"><i class="fas fa-users"></i><span data-am="ማኅበረሰብ" data-en="Community">ማኅበረሰብ</span></div>
+  <div class="ni" onclick="go('profile')"><i class="fas fa-user"></i><span data-am="ፕሮፋይል" data-en="Profile">ፕሮፋይል</span></div>
 </div>
 
-<!-- MODALS -->
-<div class="modal" id="mRoom"><div class="mc"><div class="mt">አዲስ ክፍል</div><input class="in" id="nrId" placeholder="Room ID (A-Z a-z 0-9 _)"><input class="in" id="nrName" placeholder="የክፍሉ ስም"><button class="btn" onclick="createRoom()">ፍጠር</button><button class="btn red" onclick="closeM('mRoom')">ይቅር</button></div></div>
+<div class="modal" id="mRoom"><div class="mc"><div class="mt" data-am="አዲስ ክፍል" data-en="New Room">አዲስ ክፍል</div><input class="in" id="nrId" placeholder="Room ID (A-Z a-z 0-9 _)"><input class="in" id="nrName" placeholder="የክፍሉ ስም"><button class="btn" onclick="createRoom()" data-am="ፍጠር" data-en="Create">ፍጠር</button><button class="btn red" onclick="closeM('mRoom')" data-am="ይቅር" data-en="Cancel">ይቅር</button></div></div>
 
-<div class="modal" id="mBuy"><div class="mc"><div class="mt">ሳንቲም ግዢ</div>
-<div class="info">በ<b>Telebirr</b> ይክፈሉ፡<br>ቁጥር፡ <b id="tbNum"></b> (<span id="tbName"></span>)<br>መጠን፡ <b id="tbAmt"></b> ብር<br>ከገቢዎ በኋላ የግብይት ቁጥር (Ref) እና ስክሪንሾት ይላኩ።</div>
+<div class="modal" id="mBuy"><div class="mc"><div class="mt" data-am="ሳንቲም ግዢ" data-en="Buy Coins">ሳንቲም ግዢ</div>
+<div class="info"><span data-am="በ" data-en="Pay with">በ</span> <b>Telebirr</b> <span data-am="ይክፈሉ" data-en="">ይክፈሉ</span><br><span data-am="ቁጥር" data-en="Number">ቁጥር</span>: <b id="tbNum"></b> (<span id="tbName"></span>)<br><span data-am="መጠን" data-en="Amount">መጠን</span>: <b id="tbAmt"></b> <span data-am="ብር" data-en="Birr">ብር</span><br><span data-am="ከገቢዎ በኋላ የግብይት ቁጥር (Ref) እና ስክሪንሾት ይላኩ" data-en="After payment, send Ref number and screenshot">ከገቢዎ በኋላ የግብይት ቁጥር (Ref) እና ስክሪንሾት ይላኩ</span></div>
 <input class="in" id="buyRef" placeholder="የግብይት ቁጥር (Ref No.)">
-<input type="file" id="buyShot" accept="image/*" class="in" style="padding:8px">
-<div id="shotPrev" style="margin-bottom:10px"></div>
-<button class="btn gold" onclick="submitBuy()">ላክ</button><button class="btn red" onclick="closeM('mBuy')">ይቅር</button></div></div>
+<input type="file" id="buyShot" accept="image/*" class="photo-input" onchange="previewBuyShot(event)">
+<div class="photo-btn" onclick="document.getElementById('buyShot').click()"><i class="fas fa-camera"></i> <span data-am="ስክሪንሾት ይምረጡ" data-en="Select Screenshot">ስክሪንሾት ይምረጡ</span></div>
+<div id="shotPrev"></div>
+<button class="btn gold" onclick="submitBuy()" data-am="ላክ" data-en="Send">ላክ</button><button class="btn red" onclick="closeM('mBuy')" data-am="ይቅር" data-en="Cancel">ይቅር</button></div></div>
 
-<div class="modal" id="mWith"><div class="mc"><div class="mt">ገቢ ማውጣት</div>
-<div class="info">ዝቅተኛ፡ <b id="wMin"></b> ገቢ ሳንቲም። መጠን × <b id="wRate"></b> ብር ይከፈልዎታል።</div>
+<div class="modal" id="mWith"><div class="mc"><div class="mt" data-am="ገቢ ማውጣት" data-en="Withdraw">ገቢ ማውጣት</div>
+<div class="info"><span data-am="ዝቅተኛ" data-en="Minimum">ዝቅተኛ</span>: <b id="wMin"></b> <span data-am="ገቢ ሳንቲም" data-en="earnings coins">ገቢ ሳንቲም</span>. <span data-am="መጠን ×" data-en="Amount ×">መጠን ×</span> <b id="wRate"></b> <span data-am="ብር ይከፈልዎታል" data-en="Birr paid">ብር ይከፈልዎታል</span></div>
 <input class="in" id="wPhone" placeholder="Telebirr ቁጥር (09xxxxxxxx)">
 <input class="in" id="wAcc" placeholder="በTelebirr ላይ ያለው ስም">
 <input class="in" id="wAmt" type="number" placeholder="መጠን (ገቢ ሳንቲም)">
-<button class="btn grn" onclick="submitWith()">ጠይቅ</button><button class="btn red" onclick="closeM('mWith')">ይቅር</button></div></div>
+<button class="btn grn" onclick="submitWith()" data-am="ጠይቅ" data-en="Request">ጠይቅ</button><button class="btn red" onclick="closeM('mWith')" data-am="ይቅር" data-en="Cancel">ይቅር</button></div></div>
 
-<div class="modal" id="mEdit"><div class="mc"><div class="mt">ፕሮፋይል ያርቱ</div>
+<div class="modal" id="mEdit"><div class="mc"><div class="mt" data-am="ፕሮፋይል ያርቱ" data-en="Edit Profile">ፕሮፋይል ያርቱ</div>
+<div style="text-align:center;margin-bottom:16px">
+  <div id="photoPreview" style="width:110px;height:110px;border-radius:50%;background:linear-gradient(135deg,#f093fb,#f5576c);margin:0 auto 12px;display:flex;align-items:center;justify-content:center;font-size:44px;overflow:hidden;border:3px solid rgba(255,255,255,.3);box-shadow:0 6px 25px rgba(240,147,251,.5)">T</div>
+  <input type="file" id="ePhoto" accept="image/*" class="photo-input" onchange="previewPhoto(event)">
+  <button class="btn sm" onclick="document.getElementById('ePhoto').click()" style="width:auto"><i class="fas fa-camera"></i> <span data-am="ፎቶ ቀይር" data-en="Change Photo">ፎቶ ቀይር</span></button>
+</div>
 <input class="in" id="eName" placeholder="ስም"><textarea class="in" id="eBio" placeholder="Bio (150 ቁምፊ)"></textarea><input class="in" id="ePhone" placeholder="Telebirr ቁጥር (09...)">
-<button class="btn" onclick="saveProfile()">አስቀምጥ</button><button class="btn red" onclick="closeM('mEdit')">ይቅር</button></div></div>
+<button class="btn" onclick="saveProfile()" data-am="አስቀምጥ" data-en="Save">አስቀምጥ</button><button class="btn red" onclick="closeM('mEdit')" data-am="ይቅር" data-en="Cancel">ይቅር</button></div></div>
 
-<div class="modal" id="mGift"><div class="mc"><div class="mt">🎁 ስጦታ ላክ</div><div id="gRec" style="font-size:13px;opacity:.8;text-align:center;margin-bottom:12px"></div><div class="ggrid" id="gGrid"></div><button class="btn gold" onclick="sendGift()">ላክ</button><button class="btn red" onclick="closeM('mGift')">ይቅር</button></div></div>
+<div class="modal" id="mGift"><div class="mc"><div class="mt">🎁 <span data-am="ስጦታ ላክ" data-en="Send Gift">ስጦታ ላክ</span></div><div id="gRec" style="font-size:14px;opacity:.85;text-align:center;margin-bottom:14px"></div><div class="ggrid" id="gGrid"></div><button class="btn gold" onclick="sendGift()" data-am="ላክ" data-en="Send">ላክ</button><button class="btn red" onclick="closeM('mGift')" data-am="ይቅር" data-en="Cancel">ይቅር</button></div></div>
 
-<div class="modal" id="mPost"><div class="mc"><div class="mt">ጽሑፍ ይለጥፉ</div><textarea class="in" id="postTx" placeholder="ምን አዲስ? (500 ቁምፊ)"></textarea><button class="btn" onclick="createPost()">ለጥፍ</button><button class="btn red" onclick="closeM('mPost')">ይቅር</button></div></div>
+<div class="modal" id="mPost"><div class="mc"><div class="mt" data-am="ጽሑፍ ይለጥፉ" data-en="Create Post">ጽሑፍ ይለጥፉ</div>
+<textarea class="in" id="postTx" placeholder="ምን አዲስ? (500 ቁምፊ)"></textarea>
+<input type="file" id="postPhoto" accept="image/*" class="photo-input" onchange="previewPostPhoto(event)">
+<div class="photo-btn" onclick="document.getElementById('postPhoto').click()"><i class="fas fa-camera"></i> <span data-am="ፎቶ ይምረጡ (አማራጭ)" data-en="Select Photo (Optional)">ፎቶ ይምረጡ (አማራጭ)</span></div>
+<div id="postPhotoPrev"></div>
+<button class="btn" onclick="createPost()" data-am="ለጥፍ" data-en="Post">ለጥፍ</button><button class="btn red" onclick="closeM('mPost')" data-am="ይቅር" data-en="Cancel">ይቅር</button></div></div>
 
-<div class="modal" id="mJob"><div class="mc"><div class="mt">ሥራ ይለጥፉ</div><input class="in" id="jTitle" placeholder="ርዕስ"><textarea class="in" id="jDesc" placeholder="መግለጫ"></textarea><input class="in" id="jContact" placeholder="ማግኛ (ስልክ/@username)"><button class="btn" onclick="createJob()">ለጥፍ</button><button class="btn red" onclick="closeM('mJob')">ይቅር</button></div></div>
+<div class="modal" id="mJob"><div class="mc"><div class="mt" data-am="ሥራ ይለጥፉ" data-en="Post Job">ሥራ ይለጥፉ</div>
+<input class="in" id="jTitle" placeholder="ርዕስ">
+<textarea class="in" id="jDesc" placeholder="መግለጫ"></textarea>
+<input class="in" id="jContact" placeholder="ማግኛ (ስልክ/@username)">
+<input type="file" id="jobPhoto" accept="image/*" class="photo-input" onchange="previewJobPhoto(event)">
+<div class="photo-btn" onclick="document.getElementById('jobPhoto').click()"><i class="fas fa-camera"></i> <span data-am="ፎቶ ይምረጡ (አማራጭ)" data-en="Select Photo (Optional)">ፎቶ ይምረጡ (አማራጭ)</span></div>
+<div id="jobPhotoPrev"></div>
+<button class="btn" onclick="createJob()" data-am="ለጥፍ" data-en="Post">ለጥፍ</button><button class="btn red" onclick="closeM('mJob')" data-am="ይቅር" data-en="Cancel">ይቅር</button></div></div>
 
-<div class="modal" id="mShot"><div class="mc"><div class="mt">ስክሪንሾት</div><img id="shotImg" class="shotimg"><button class="btn red" onclick="closeM('mShot')">ዝጋ</button></div></div>
+<div class="modal" id="mShot"><div class="mc"><div class="mt" data-am="ስክሪንሾት" data-en="Screenshot">ስክሪንሾት</div><img id="shotImg" class="shotimg"><button class="btn red" onclick="closeM('mShot')" data-am="ዝጋ" data-en="Close">ዝጋ</button></div></div>
 
-<div class="modal" id="mGrant"><div class="mc"><div class="mt">ሳንቲም ስጥ</div><input class="in" id="grUid" readonly><input class="in" id="grAmt" type="number" placeholder="መጠን (አሉታዊ = መቀነስ)"><button class="btn gold" onclick="doGrant()">አረጋግጥ</button><button class="btn red" onclick="closeM('mGrant')">ይቅር</button></div></div>
+<div class="modal" id="mGrant"><div class="mc"><div class="mt" data-am="ሳንቲም ስጥ" data-en="Give Coins">ሳንቲም ስጥ</div><input class="in" id="grUid" readonly><input class="in" id="grAmt" type="number" placeholder="መጠን (አሉታዊ = መቀነስ)"><button class="btn gold" onclick="doGrant()" data-am="አረጋግጥ" data-en="Confirm">አረጋግጥ</button><button class="btn red" onclick="closeM('mGrant')" data-am="ይቅር" data-en="Cancel">ይቅር</button></div></div>
 
 <script>
 const tg=window.Telegram?.WebApp; if(tg)tg.ready();
-let U=null,C=null,init='',CR=null,RS=null,lkRoom=null,selGift=null,giftTo=null,shotData='';
+let U=null,C=null,init='',CR=null,RS=null,lkRoom=null,selGift=null,giftTo=null,shotData='',postShotData='',jobShotData='',photoShotData='',lang='am';
 
 async function api(u,m='GET',b=null){const h={'Content-Type':'application/json'};if(init)h['X-Telegram-Init-Data']=init;const o={method:m,headers:h};if(b)o.body=JSON.stringify(b);const r=await fetch(u,o);return r.json()}
 function openM(i){document.getElementById(i).classList.add('on')}
 function closeM(i){document.getElementById(i).classList.remove('on')}
+function toggleLang(){lang=lang==='am'?'en':'am';document.getElementById('langTxt').textContent=lang.toUpperCase();document.querySelectorAll('[data-am]').forEach(el=>{el.textContent=el.getAttribute('data-'+lang)})}
 
 async function initApp(){
   init=tg?.initData||'';
   const d=await api('/api/register','POST');
-  if(!d.success){document.getElementById('loading').innerHTML='<div style="text-align:center;padding:30px"><i class="fas fa-exclamation-triangle" style="font-size:44px;color:#ff4757"></i><p style="margin-top:14px">'+(d.error||'ስህተት')+'</p></div>';return}
+  if(!d.success){document.getElementById('loading').innerHTML='<div style="text-align:center;padding:30px"><i class="fas fa-exclamation-triangle" style="font-size:48px;color:#ff4757"></i><p style="margin-top:16px">'+(d.error||'Error')+'</p></div>';return}
   U=d.user;C=d.config;U.admin=d.admin;U.uid=d.user_id;
   document.getElementById('loading').style.display='none';
   document.getElementById('app').style.display='block';
@@ -238,8 +264,10 @@ async function initApp(){
 
 function paint(){
   const ini=(U.username||'U')[0].toUpperCase();
-  hAv.textContent=ini;pAv.textContent=ini;hName.textContent=U.username;
-  pName.textContent=U.username;pId.textContent=U.uid;pBio.textContent=U.bio||'';
+  hAv.innerHTML=U.photo?`<img src="${U.photo}" onerror="this.parentElement.textContent='${ini}'">`:ini;
+  pAv.innerHTML=U.photo?`<img src="${U.photo}" onerror="this.parentElement.textContent='${ini}'">`:ini;
+  photoPreview.innerHTML=U.photo?`<img src="${U.photo}" style="width:100%;height:100%;object-fit:cover" onerror="this.parentElement.textContent='${ini}'">`:ini;
+  hName.textContent=U.username;pName.textContent=U.username;pId.textContent=U.uid;pBio.textContent=U.bio||'';
   hCoins.textContent=U.coins;wCoins.textContent=U.coins;sCoins.textContent=U.coins;
   wEarn.textContent=U.earnings;sEarn.textContent=U.earnings;
   sPhone.textContent=U.phone||'—';
@@ -262,20 +290,19 @@ function go(p){
 
 function subTab(t,el){document.querySelectorAll('.subtab').forEach(x=>x.classList.remove('on'));el.classList.add('on');document.getElementById('sub-posts').style.display=t==='posts'?'block':'none';document.getElementById('sub-jobs').style.display=t==='jobs'?'block':'none'}
 
-/* ROOMS */
 async function loadRooms(){const r=await api('/api/rooms');const c=document.getElementById('featRooms');c.innerHTML='';const ks=Object.keys(r);if(!ks.length){c.innerHTML='<div style="grid-column:1/-1;text-align:center;padding:30px;opacity:.6">ምንም ክፍል የለም</div>';return}ks.slice(0,6).forEach(rid=>{const rm=r[rid];c.innerHTML+=card(rid,rm)})}
-async function loadAll(){const r=await api('/api/rooms');const c=document.getElementById('allRooms');c.innerHTML='';const ks=Object.keys(r);if(!ks.length){c.innerHTML='<div style="text-align:center;padding:30px;opacity:.6">ምንም ክፍል የለም</div>';return}ks.forEach(rid=>{const d=document.createElement('div');d.className='card';d.style.marginBottom='10px';d.onclick=()=>joinRoom(rid);d.innerHTML=`<h4>${esc(r[rid].name)}</h4><div class="host">👤 ${esc(r[rid].creator_name)}</div><div class="row"><span>👥 ${r[rid].count}</span><span class="live">LIVE</span></div>`;c.appendChild(d)})}
+async function loadAll(){const r=await api('/api/rooms');const c=document.getElementById('allRooms');c.innerHTML='';const ks=Object.keys(r);if(!ks.length){c.innerHTML='<div style="text-align:center;padding:30px;opacity:.6">ምንም ክፍል የለም</div>';return}ks.forEach(rid=>{const d=document.createElement('div');d.className='card';d.style.marginBottom='12px';d.onclick=()=>joinRoom(rid);d.innerHTML=`<h4>${esc(r[rid].name)}</h4><div class="host">👤 ${esc(r[rid].creator_name)}</div><div class="row"><span>👥 ${r[rid].count}</span><span class="live">LIVE</span></div>`;c.appendChild(d)})}
 function card(rid,rm){return `<div class="card" onclick="joinRoom('${rid}')"><h4>${esc(rm.name)}</h4><div class="host">👤 ${esc(rm.creator_name)}</div><div class="row"><span>👥 ${rm.count}</span><span class="live">LIVE</span></div></div>`}
 function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
 
 async function createRoom(){const id=nrId.value.trim(),nm=nrName.value.trim();if(!id||!nm){alert('ሁለቱንም ይሙሉ');return}const d=await api('/api/rooms/create','POST',{room_id:id,room_name:nm});if(d.success){closeM('mRoom');nrId.value='';nrName.value='';joinRoom(id)}else alert(d.error)}
 
-/* ROOM VIEW */
 async function joinRoom(rid){
   const d=await api(`/api/rooms/${rid}/state`);
   if(!d.success){alert(d.error);return}
   CR=rid;RS=d;
-  document.getElementById('app').style.display='none';document.getElementById('navBar').style.display='none';
+  document.querySelectorAll('.page').forEach(p=>p.style.display='none');
+  document.getElementById('navBar').style.display='none';
   document.getElementById('roomView').style.display='block';
   rvName.textContent=d.name;rvHost.textContent='👑 Host: '+esc(d.host||'');
   U.coins=d.coins;U.earnings=d.earnings;paint();
@@ -299,13 +326,12 @@ async function seatTap(i,st){
 }
 function renderGifts(){const g=document.getElementById('gGrid');g.innerHTML='';selGift=null;C.gifts.forEach(x=>{const d=document.createElement('div');d.className='gi';d.innerHTML=`<div class="e">${x.icon}</div><div class="n">${x.name}</div><div class="pr">${x.price}</div>`;d.onclick=()=>{document.querySelectorAll('.gi').forEach(y=>y.classList.remove('sel'));d.classList.add('sel');selGift=x.id};g.appendChild(d)})}
 async function sendGift(){if(!selGift||!giftTo){alert('ስጦታ ይምረጡ');return}const d=await api(`/api/rooms/${CR}/gift`,'POST',{gift_type:selGift,recipient_id:giftTo});if(d.success){closeM('mGift');U.coins=d.remaining_coins;paint();const gf=C.gifts.find(x=>x.id===selGift);pop(gf.icon);const s=await api(`/api/rooms/${CR}/state`);RS=s;renderMsgs(s.messages)}else alert(d.error)}
-function pop(ic){const e=document.createElement('div');e.className='gpop';e.textContent=ic;document.body.appendChild(e);setTimeout(()=>e.remove(),1600)}
+function pop(ic){const e=document.createElement('div');e.className='gpop';e.textContent=ic;document.body.appendChild(e);setTimeout(()=>e.remove(),1800)}
 
 function renderMsgs(ms){const b=document.getElementById('chatBox');b.innerHTML='';let last=0;(ms||[]).forEach(m=>{last=m.id;const d=document.createElement('div');d.className='msg'+(m.sys?' sys':'')+(m.gift?' gift':'');d.textContent=m.sys?m.text:m.name+': '+m.text;b.appendChild(d)});if(RS)RS.lastId=last;b.scrollTop=b.scrollHeight}
 async function sendChat(){const t=chatIn.value.trim();if(!t)return;await api(`/api/rooms/${CR}/chat`,'POST',{text:t});chatIn.value='';const s=await api(`/api/rooms/${CR}/state?since=${RS.lastId||0}`);if(s.success){RS=s;renderMsgs(s.messages)}}
-async function exitRoom(){await api(`/api/rooms/${CR}/exit`,'POST');leaveVoice();clearInterval(poll);CR=null;document.getElementById('roomView').style.display='none';document.getElementById('app').style.display='block';document.getElementById('navBar').style.display='flex';go('rooms')}
+async function exitRoom(){await api(`/api/rooms/${CR}/exit`,'POST');leaveVoice();clearInterval(poll);CR=null;document.getElementById('roomView').style.display='none';document.querySelectorAll('.page').forEach(p=>p.style.display='');document.getElementById('navBar').style.display='flex';go('rooms')}
 
-/* LIVEKIT VOICE */
 async function joinVoice(){
   try{
     const d=await api('/api/livekit-token','POST',{room_id:CR});
@@ -322,42 +348,48 @@ async function joinVoice(){
 function updVoice(){if(lkRoom)voiceTxt.textContent='🎙️ በድምጽ ላይ ('+lkRoom.connectedParticipants.size+' ሰዎች)'}
 async function leaveVoice(){if(lkRoom){try{await lkRoom.disconnect()}catch(e){}lkRoom=null}voiceBar.style.display='none';voiceBtn.style.display='block'}
 
-/* WALLET */
 function renderPkgs(){const c=document.getElementById('pkgs');c.innerHTML='';C.packages.forEach(p=>{const d=document.createElement('div');d.className='pkg';d.innerHTML=`<div class="c">🪙 ${p.coins.toLocaleString()}</div><div class="p">${p.price} ብር</div>`;d.onclick=()=>{document.getElementById('tbAmt').textContent=p.price;openM('mBuy')};c.appendChild(d)})}
-document.getElementById('buyShot')?.addEventListener('change',e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=ev=>{shotData=ev.target.result;document.getElementById('shotPrev').innerHTML='<img src="'+shotData+'" style="width:100%;max-height:160px;object-fit:cover;border-radius:10px">'};r.readAsDataURL(f)});
+function previewBuyShot(e){const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=ev=>{shotData=ev.target.result;document.getElementById('shotPrev').innerHTML='<img src="'+shotData+'" class="photo-preview">'};r.readAsDataURL(f)}
 async function submitBuy(){const ref=buyRef.value.trim();if(!ref){alert('Ref ቁጥር ያስገቡ');return}if(!shotData){alert('ስክሪንሾት ይምረጡ');return}const pkg=C.packages.find(p=>p.price==tbAmt.textContent);const d=await api('/api/coins/buy','POST',{package_id:pkg.id,ref,shot:shotData});if(d.success){alert('✅ ጥያቄዎ ተልኳል! አድሚን ሲያጸድቅ ሳንቲሙ ይጨምራል።');closeM('mBuy');buyRef.value='';shotData='';shotPrev.innerHTML='';loadHist()}else alert(d.error)}
 async function submitWith(){const ph=wPhone.value,ac=wAcc.value,am=parseInt(wAmt.value);if(!ph||!ac||!am){alert('ሁሉንም ይሙሉ');return}const d=await api('/api/withdraw','POST',{phone:ph,acc_name:ac,amount:am});if(d.success){alert('✅ ጥያቄ ተልኳል');U.earnings=d.earnings;paint();closeM('mWith');loadHist()}else alert(d.error)}
 async function loadHist(){const d=await api('/api/wallet');if(!d.success)return;const c=document.getElementById('hist');c.innerHTML='';
-  d.purchases.forEach(p=>{c.innerHTML+=`<div class="arow"><div class="top"><span>🪙 ${p.coins} → ${p.price} ብር</span><b style="color:${p.status==='approved'?'#2ed573':p.status==='rejected'?'#ff4757':'#ffd700'}">${p.status}</b></div><div style="font-size:11px;opacity:.6">Ref: ${p.ref}</div></div>`});
+  d.purchases.forEach(p=>{c.innerHTML+=`<div class="arow"><div class="top"><span>🪙 ${p.coins} → ${p.price} ብር</span><b style="color:${p.status==='approved'?'#2ed573':p.status==='rejected'?'#ff4757':'#ffd700'}">${p.status}</b></div><div style="font-size:12px;opacity:.6">Ref: ${p.ref}</div></div>`});
   d.withdrawals.forEach(w=>{c.innerHTML+=`<div class="arow"><div class="top"><span>💸 ${w.amount} ገቢ = ${w.birr} ብር</span><b style="color:${w.status==='paid'?'#2ed573':w.status==='rejected'?'#ff4757':'#ffd700'}">${w.status}</b></div></div>`});
   if(!d.purchases.length&&!d.withdrawals.length)c.innerHTML='<div style="opacity:.6;text-align:center;padding:20px">ታሪክ የለም</div>'}
 
-/* PROFILE */
 function openEdit(){eName.value=U.username||'';eBio.value=U.bio||'';ePhone.value=U.phone||'';openM('mEdit')}
-async function saveProfile(){const d=await api('/api/profile','POST',{name:eName.value,bio:eBio.value,phone:ePhone.value});if(d.success){U=d.user;paint();closeM('mEdit');alert('✅ ተቀምጧል')}else alert(d.error)}
+function previewPhoto(e){const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=ev=>{photoShotData=ev.target.result;document.getElementById('photoPreview').innerHTML='<img src="'+photoShotData+'" style="width:100%;height:100%;object-fit:cover">'};r.readAsDataURL(f)}
+async function saveProfile(){
+  if(photoShotData){
+    const d=await api('/api/profile/photo','POST',{photo:photoShotData});
+    if(d.success){U.photo=d.photo}
+  }
+  const d=await api('/api/profile','POST',{name:eName.value,bio:eBio.value,phone:ePhone.value});
+  if(d.success){U=d.user;paint();closeM('mEdit');photoShotData='';alert('✅ Saved')}else alert(d.error)
+}
 
-/* COMMUNITY */
 async function loadPosts(){const d=await api('/api/posts');if(!d.success)return;const c=document.getElementById('posts');c.innerHTML='';if(!d.posts.length){c.innerHTML='<div style="opacity:.6;text-align:center;padding:20px">ጽሑፍ የለም</div>';return}
-  d.posts.forEach(p=>{const el=document.createElement('div');el.className='post';el.innerHTML=`<div class="hd"><div class="av">${esc((p.name||'U')[0].toUpperCase())}</div><div><b>${esc(p.name)}</b><div style="font-size:10px;opacity:.6">${p.created}</div></div>${p.mine?`<i class="fas fa-trash" style="margin-left:auto;color:#ff4757" onclick="delPost('${p.id}')"></i>`:''}</div><div class="tx">${esc(p.text)}</div><div class="ft"><span><i class="fa${p.liked?'s':'r'} fa-heart ${p.liked?'lk':''}" onclick="likePost('${p.id}')"></i>${p.likes}</span></div>`;c.appendChild(el)})}
-async function createPost(){const t=postTx.value.trim();if(!t)return;const d=await api('/api/posts/create','POST',{text:t});if(d.success){closeM('mPost');postTx.value='';loadPosts()}else alert(d.error)}
+  d.posts.forEach(p=>{const el=document.createElement('div');el.className='post';el.innerHTML=`<div class="hd"><div class="av">${esc((p.name||'U')[0].toUpperCase())}</div><div><b>${esc(p.name)}</b><div style="font-size:11px;opacity:.6">${p.created}</div></div>${p.mine?`<i class="fas fa-trash" style="margin-left:auto;color:#ff4757" onclick="delPost('${p.id}')"></i>`:''}</div>${p.photo_url?`<img src="${p.photo_url}" class="img">`:''}<div class="tx">${esc(p.text)}</div><div class="ft"><span><i class="fa${p.liked?'s':'r'} fa-heart ${p.liked?'lk':''}" onclick="likePost('${p.id}')"></i>${p.likes}</span></div>`;c.appendChild(el)})}
+function previewPostPhoto(e){const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=ev=>{postShotData=ev.target.result;document.getElementById('postPhotoPrev').innerHTML='<img src="'+postShotData+'" class="photo-preview">'};r.readAsDataURL(f)}
+async function createPost(){const t=postTx.value.trim();if(!t&&!postShotData)return;const d=await api('/api/posts/create','POST',{text:t,photo:postShotData});if(d.success){closeM('mPost');postTx.value='';postShotData='';postPhotoPrev.innerHTML='';loadPosts()}else alert(d.error)}
 async function likePost(id){await api(`/api/posts/${id}/like`,'POST');loadPosts()}
 async function delPost(id){if(confirm('ይሰረዝ?')){await api(`/api/posts/${id}/delete`,'POST');loadPosts()}}
 async function loadJobs(){const d=await api('/api/jobs');if(!d.success)return;const c=document.getElementById('jobs');c.innerHTML='';if(!d.jobs.length){c.innerHTML='<div style="opacity:.6;text-align:center;padding:20px">ሥራ የለም</div>';return}
-  d.jobs.forEach(j=>{const el=document.createElement('div');el.className='job';el.innerHTML=`<h4>${esc(j.title)}</h4><p>${esc(j.desc)}</p><div class="ct"><i class="fas fa-phone"></i> ${esc(j.contact)}</div><div style="font-size:11px;opacity:.6;margin-top:6px">👤 ${esc(j.name)} • ${j.created}${j.mine?` • <i class="fas fa-trash" style="color:#ff4757;cursor:pointer" onclick="delJob('${j.id}')"></i>`:''}</div>`;c.appendChild(el)})}
-async function createJob(){const d=await api('/api/jobs/create','POST',{title:jTitle.value,desc:jDesc.value,contact:jContact.value});if(d.success){closeM('mJob');jTitle.value=jDesc.value=jContact.value='';loadJobs()}else alert(d.error)}
+  d.jobs.forEach(j=>{const el=document.createElement('div');el.className='job';el.innerHTML=`<h4>${esc(j.title)}</h4>${j.photo_url?`<img src="${j.photo_url}" class="img">`:''}<p>${esc(j.desc)}</p><div class="ct"><i class="fas fa-phone"></i> ${esc(j.contact)}</div><div style="font-size:12px;opacity:.6;margin-top:8px">👤 ${esc(j.name)} • ${j.created}${j.mine?` • <i class="fas fa-trash" style="color:#ff4757;cursor:pointer" onclick="delJob('${j.id}')"></i>`:''}</div>`;c.appendChild(el)})}
+function previewJobPhoto(e){const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=ev=>{jobShotData=ev.target.result;document.getElementById('jobPhotoPrev').innerHTML='<img src="'+jobShotData+'" class="photo-preview">'};r.readAsDataURL(f)}
+async function createJob(){const d=await api('/api/jobs/create','POST',{title:jTitle.value,desc:jDesc.value,contact:jContact.value,photo:jobShotData});if(d.success){closeM('mJob');jTitle.value=jDesc.value=jContact.value='';jobShotData='';jobPhotoPrev.innerHTML='';loadJobs()}else alert(d.error)}
 async function delJob(id){if(confirm('ይሰረዝ?')){await api(`/api/jobs/${id}/delete`,'POST');loadJobs()}}
 
-/* ADMIN */
 async function admOverview(){const d=await api('/api/admin/overview');if(!d.success)return;const s=d.stats;
   document.getElementById('admStats').innerHTML=`<div class="stat"><b>${s.users}</b><span>ተጠቃሚዎች</span></div><div class="stat"><b>${s.banned}</b><span>የታገዱ</span></div><div class="stat"><b>${s.rooms}</b><span>ክፍሎች</span></div><div class="stat"><b>${s.posts}</b><span>ጽሑፎች</span></div><div class="stat"><b>${s.jobs}</b><span>ሥራዎች</span></div><div class="stat"><b>${s.gifts}</b><span>ስጦታ</span></div><div class="stat"><b>${s.revenue} ብር</b><span>ገቢ</span></div><div class="stat"><b>${s.paid_out} ብር</b><span>የተከፈለ</span></div>`;
   const pc=document.getElementById('admPurch');pc.innerHTML='';
-  d.purchases.forEach(p=>{const el=document.createElement('div');el.className='arow';el.innerHTML=`<div class="top"><span>${esc(p.name)} → 🪙${p.coins} (${p.price} ብር)</span><span style="font-size:11px;opacity:.6">Ref:${p.ref}</span></div><div class="btns"><button class="btn sm" onclick="viewShot('${p.id}')">📷 ፎቶ</button><button class="btn sm grn" onclick="purch('${p.id}','approve')">አጽድቅ</button><button class="btn sm red" onclick="purch('${p.id}','reject')">ውድቅ</button></div>`;pc.appendChild(el)});
+  d.purchases.forEach(p=>{const el=document.createElement('div');el.className='arow';el.innerHTML=`<div class="top"><span>${esc(p.name)} → 🪙${p.coins} (${p.price} ብር)</span><span style="font-size:12px;opacity:.6">Ref:${p.ref}</span></div><div class="btns"><button class="btn sm" onclick="viewShot('${p.id}')">📷 ፎቶ</button><button class="btn sm grn" onclick="purch('${p.id}','approve')">አጽድቅ</button><button class="btn sm red" onclick="purch('${p.id}','reject')">ውድቅ</button></div>`;pc.appendChild(el)});
   if(!d.purchases.length)pc.innerHTML='<div style="opacity:.6;text-align:center;padding:14px">ጥያቄ የለም</div>';
   const wc=document.getElementById('admWith');wc.innerHTML='';
-  d.withdrawals.forEach(w=>{const el=document.createElement('div');el.className='arow';el.innerHTML=`<div class="top"><span>${esc(w.name)} → ${w.amount} ገቢ = ${w.birr} ብር</span><span style="font-size:11px">${w.phone}</span></div><div style="font-size:11px;opacity:.6">${esc(w.acc_name)}</div><div class="btns"><button class="btn sm grn" onclick="withd('${w.id}','paid')">ከፍል</button><button class="btn sm red" onclick="withd('${w.id}','reject')">ውድቅ</button></div>`;wc.appendChild(el)});
+  d.withdrawals.forEach(w=>{const el=document.createElement('div');el.className='arow';el.innerHTML=`<div class="top"><span>${esc(w.name)} → ${w.amount} ገቢ = ${w.birr} ብር</span><span style="font-size:12px">${w.phone}</span></div><div style="font-size:12px;opacity:.6">${esc(w.acc_name)}</div><div class="btns"><button class="btn sm grn" onclick="withd('${w.id}','paid')">ከፍል</button><button class="btn sm red" onclick="withd('${w.id}','reject')">ውድቅ</button></div>`;wc.appendChild(el)});
   if(!d.withdrawals.length)wc.innerHTML='<div style="opacity:.6;text-align:center;padding:14px">ጥያቄ የለም</div>';
   const rc=document.getElementById('admRooms');rc.innerHTML='';
-  d.rooms.forEach(r=>{const el=document.createElement('div');el.className='arow';el.innerHTML=`<div class="top"><span>${esc(r.name)} (${r.count})</span><span style="font-size:11px;opacity:.6">${esc(r.creator_name)}</span></div><div class="btns"><button class="btn sm red" onclick="delRoom('${r.id}')">ሰርዝ</button></div>`;rc.appendChild(el)});
+  d.rooms.forEach(r=>{const el=document.createElement('div');el.className='arow';el.innerHTML=`<div class="top"><span>${esc(r.name)} (${r.count})</span><span style="font-size:12px;opacity:.6">${esc(r.creator_name)}</span></div><div class="btns"><button class="btn sm red" onclick="delRoom('${r.id}')">ሰርዝ</button></div>`;rc.appendChild(el)});
   admUsers();
 }
 function admTab(t,el){document.querySelectorAll('#p-admin .subtab').forEach(x=>x.classList.remove('on'));el.classList.add('on');['admPurch','admWith','admUsers','admRooms'].forEach(id=>document.getElementById(id).style.display='none');document.getElementById({purch:'admPurch',with:'admWith',users:'admUsers',rooms:'admRooms'}[t]).style.display='block'}
@@ -367,7 +399,7 @@ async function withd(id,a){await api('/api/admin/withdraw','POST',{id,action:a})
 async function delRoom(id){if(confirm('ክፍሉ ይሰረዝ?')){await api('/api/admin/room','POST',{id});admOverview()}}
 async function admUsers(){const q=document.getElementById('uSearch').value;const d=await api('/api/admin/users?q='+encodeURIComponent(q));if(!d.success)return;const c=document.getElementById('admUsers');
   c.innerHTML='<input class="in" id="uSearch" placeholder="ፍለጋ" value="'+esc(q)+'" oninput="admUsers()">';
-  d.users.forEach(u=>{const el=document.createElement('div');el.className='arow';el.innerHTML=`<div class="top"><span>${esc(u.username)} <span style="opacity:.5;font-size:11px">${u.uid}</span></span><b style="color:${u.banned?'#ff4757':'#2ed573'}">${u.banned?'ታግዶ':'ንቁ'}</b></div><div style="font-size:11px;opacity:.7">🪙${u.coins} • ገቢ${u.earnings}</div><div class="btns"><button class="btn sm" onclick="grant('${u.uid}')">ሰጥ</button>${u.banned?`<button class="btn sm grn" onclick="uact('${u.uid}','unban')">ክፈት</button>`:`<button class="btn sm red" onclick="uact('${u.uid}','ban')">አግድ</button>`}<button class="btn sm red" onclick="uact('${u.uid}','delete')">ሰርዝ</button></div>`;c.appendChild(el)})}
+  d.users.forEach(u=>{const el=document.createElement('div');el.className='arow';el.innerHTML=`<div class="top"><span>${esc(u.username)} <span style="opacity:.5;font-size:12px">${u.uid}</span></span><b style="color:${u.banned?'#ff4757':'#2ed573'}">${u.banned?'ታግዶ':'ንቁ'}</b></div><div style="font-size:12px;opacity:.7">🪙${u.coins} • ገቢ${u.earnings}</div><div class="btns"><button class="btn sm" onclick="grant('${u.uid}')">ሰጥ</button>${u.banned?`<button class="btn sm grn" onclick="uact('${u.uid}','unban')">ክፈት</button>`:`<button class="btn sm red" onclick="uact('${u.uid}','ban')">አግድ</button>`}<button class="btn sm red" onclick="uact('${u.uid}','delete')">ሰርዝ</button></div>`;c.appendChild(el)})}
 async function uact(uid,a){if(a==='delete'&&!confirm('ተጠቃሚው ይሰረዝ?'))return;const d=await api('/api/admin/user','POST',{uid,action:a});if(d.success)admUsers();else alert(d.error)}
 function grant(uid){grUid.value=uid;grAmt.value='';openM('mGrant')}
 async function doGrant(){const d=await api('/api/admin/user','POST',{uid:grUid.value,action:'grant',amount:parseInt(grAmt.value)});if(d.success){closeM('mGrant');admUsers()}else alert(d.error)}
