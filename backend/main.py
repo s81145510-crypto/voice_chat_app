@@ -1,5 +1,5 @@
 from flask import Flask, render_template, request, jsonify, Response, g
-import json, os, re, hmac, hashlib, time, uuid, base64
+import json, os, re, hmac, hashlib, time, uuid, base64, random
 from functools import wraps
 from urllib.parse import parse_qsl
 from datetime import datetime
@@ -26,31 +26,32 @@ WELCOME_COINS = 100
 RECEIVER_SHARE = 0.7
 WITHDRAW_RATE_ETB = 0.4
 MIN_WITHDRAW = 500
+REFERRAL_BONUS_PERCENT = 10
 
 ID_RE = re.compile(r'^[A-Za-z0-9_]{1,40}$')
 REF_RE = re.compile(r'^[A-Za-z0-9]{8,20}$')
 
 GIFTS = {
-    'heart':    {'name': 'ልብ',        'price': 5,     'icon': '❤️'},
-    'coffee':   {'name': 'ቡና',        'price': 10,    'icon': '☕'},
-    'candy':    {'name': 'ከረሜላ',     'price': 20,    'icon': '🍭'},
-    'rose':     {'name': 'ሮዝ',        'price': 50,    'icon': '🌹'},
-    'choco':    {'name': 'ቸኮሌት',     'price': 80,    'icon': '🍫'},
-    'bear':     {'name': 'ድብ',        'price': 100,   'icon': '🧸'},
-    'cake':     {'name': 'ኬክ',        'price': 200,   'icon': '🎂'},
-    'champ':    {'name': 'ሻምፓኝ',     'price': 300,   'icon': '🍾'},
-    'diamond':  {'name': 'አልማዝ',      'price': 500,   'icon': '💎'},
-    'crown':    {'name': 'ዘውድ',       'price': 800,   'icon': '👑'},
-    'car':      {'name': 'መኪና',       'price': 1000,  'icon': '🚗'},
-    'ring':     {'name': 'ቀለበት',      'price': 1500,  'icon': '💍'},
-    'watch':    {'name': 'ሰዓት',       'price': 2000,  'icon': '⌚'},
-    'bike':     {'name': 'ሞተር',       'price': 3000,  'icon': '🏍️'},
-    'boat':     {'name': 'ጀልባ',       'price': 4000,  'icon': '🛥️'},
-    'castle':   {'name': 'ቤተመንግስት',  'price': 5000,  'icon': '🏰'},
-    'plane':    {'name': 'አውሮፕላን',   'price': 7500,  'icon': '✈️'},
-    'rocket':   {'name': 'ሮኬት',       'price': 10000, 'icon': '🚀'},
-    'island':   {'name': 'ደሴት',       'price': 20000, 'icon': '🏝️'},
-    'universe': {'name': 'ዩኒቨርስ',     'price': 50000, 'icon': '🌌'},
+    'heart':    {'name': 'Heart',    'price': 5,     'icon': '❤️', 'rarity': 'common'},
+    'coffee':   {'name': 'Coffee',   'price': 10,    'icon': '☕', 'rarity': 'common'},
+    'candy':    {'name': 'Candy',    'price': 20,    'icon': '🍭', 'rarity': 'common'},
+    'rose':     {'name': 'Rose',     'price': 50,    'icon': '🌹', 'rarity': 'rare'},
+    'choco':    {'name': 'Chocolate','price': 80,    'icon': '🍫', 'rarity': 'rare'},
+    'bear':     {'name': 'Bear',     'price': 100,   'icon': '🧸', 'rarity': 'rare'},
+    'cake':     {'name': 'Cake',     'price': 200,   'icon': '🎂', 'rarity': 'epic'},
+    'champ':    {'name': 'Champagne','price': 300,   'icon': '🍾', 'rarity': 'epic'},
+    'diamond':  {'name': 'Diamond',  'price': 500,   'icon': '💎', 'rarity': 'epic'},
+    'crown':    {'name': 'Crown',    'price': 800,   'icon': '👑', 'rarity': 'legendary'},
+    'car':      {'name': 'Car',      'price': 1000,  'icon': '🚗', 'rarity': 'legendary'},
+    'ring':     {'name': 'Ring',     'price': 1500,  'icon': '💍', 'rarity': 'legendary'},
+    'watch':    {'name': 'Watch',    'price': 2000,  'icon': '⌚', 'rarity': 'legendary'},
+    'bike':     {'name': 'Motorbike','price': 3000,  'icon': '🏍️', 'rarity': 'mythic'},
+    'boat':     {'name': 'Boat',     'price': 4000,  'icon': '🛥️', 'rarity': 'mythic'},
+    'castle':   {'name': 'Castle',   'price': 5000,  'icon': '🏰', 'rarity': 'mythic'},
+    'plane':    {'name': 'Plane',    'price': 7500,  'icon': '✈️', 'rarity': 'mythic'},
+    'rocket':   {'name': 'Rocket',   'price': 10000, 'icon': '🚀', 'rarity': 'mythic'},
+    'island':   {'name': 'Island',   'price': 20000, 'icon': '🏝️', 'rarity': 'mythic'},
+    'universe': {'name': 'Universe', 'price': 50000, 'icon': '🌌', 'rarity': 'mythic'},
 }
 
 COIN_PACKAGES = [
@@ -63,7 +64,39 @@ COIN_PACKAGES = [
     {'id': 'p7', 'coins': 50000, 'price': 21000},
 ]
 
-# ---------------- መሠረታዊ ----------------
+# ---- Games Configuration (70% RTP = 30% house edge) ----
+GAMES = {
+    'dice': {
+        'name': 'Dice Roll',
+        'min_bet': 10,
+        'max_bet': 10000,
+        'multiplier': 4.2,  # 1/6 * 4.2 = 70% RTP
+        'description': 'Pick a number 1-6. Win 4.2x your bet!'
+    },
+    'flip': {
+        'name': 'Coin Flip',
+        'min_bet': 10,
+        'max_bet': 50000,
+        'multiplier': 1.4,  # 1/2 * 1.4 = 70% RTP
+        'description': 'Heads or Tails. Win 1.4x your bet!'
+    },
+    'wheel': {
+        'name': 'Lucky Wheel',
+        'min_bet': 10,
+        'max_bet': 100000,
+        'segments': [
+            {'mult': 0,    'weight': 42, 'label': '0x',   'color': '#ff4757'},
+            {'mult': 0.5,  'weight': 25, 'label': '0.5x', 'color': '#ffa502'},
+            {'mult': 1,    'weight': 17, 'label': '1x',   'color': '#2ed573'},
+            {'mult': 2,    'weight': 10, 'label': '2x',   'color': '#1e90ff'},
+            {'mult': 3,    'weight': 4,  'label': '3x',   'color': '#a55eea'},
+            {'mult': 5,    'weight': 2,  'label': '5x',   'color': '#ffd700'},
+        ],
+        'description': 'Spin the wheel! Average 70% return.'
+    }
+}
+
+# ---- Helper Functions ----
 def verify_init_data(init_data):
     try:
         if not BOT_TOKEN:
@@ -95,10 +128,11 @@ def load_data():
         except Exception:
             data = {}
     for k, v in (('users', {}), ('rooms', {}), ('transactions', []), ('purchases', []),
-                 ('withdrawals', []), ('posts', []), ('jobs', []),
-                 ('meta', {'fee_coins': 0, 'gift_count': 0})):
+                 ('withdrawals', []), ('posts', []), ('jobs', []), ('games', []),
+                 ('meta', {'fee_coins': 0, 'gift_count': 0, 'game_profit': 0, 'game_total_bet': 0})):
         data.setdefault(k, v)
     data['gifts'] = GIFTS
+    data['games_config'] = GAMES
     return data
 
 def save_data(data):
@@ -216,13 +250,28 @@ def purge_user_from_rooms(data, uid):
         remove_user_seats(room, uid)
         room['members'].pop(uid, None)
 
+def get_level(coins):
+    if coins >= 100000: return {'name': 'King', 'icon': '👑', 'color': '#ffd700'}
+    if coins >= 50000:  return {'name': 'Diamond', 'icon': '💎', 'color': '#b9f2ff'}
+    if coins >= 10000:  return {'name': 'Gold', 'icon': '🥇', 'color': '#ffd700'}
+    if coins >= 5000:   return {'name': 'Silver', 'icon': '🥈', 'color': '#c0c0c0'}
+    if coins >= 1000:   return {'name': 'Bronze', 'icon': '🥉', 'color': '#cd7f32'}
+    return {'name': 'Newbie', 'icon': '🌱', 'color': '#7bed9f'}
+
 def user_view(u):
+    level = get_level(u.get('coins', 0))
     return {'username': u.get('username', ''), 'coins': u.get('coins', 0),
             'earnings': u.get('earnings', 0), 'bio': u.get('bio', ''),
             'phone': u.get('phone', ''), 'joined': u.get('joined', ''),
-            'photo': u.get('photo', '')}
+            'photo': u.get('photo', ''), 'level': level,
+            'referrer': u.get('referrer', ''),
+            'referral_bonus': u.get('referral_bonus', 0),
+            'referral_count': u.get('referral_count', 0),
+            'total_gifts_sent': u.get('total_gifts_sent', 0),
+            'total_gifts_received': u.get('total_gifts_received', 0),
+            'gift_level': get_level(u.get('total_gifts_received', 0))}
 
-# ---------------- መግቢያ / ፕሮፋይል ----------------
+# ---- Routes ----
 @app.route('/')
 def index():
     return render_template('index.html')
@@ -232,12 +281,17 @@ def register():
     uid, tg = current_user_id()
     if not uid:
         return unauthorized()
+    body = request.get_json(silent=True) or {}
+    referrer = str(body.get('referrer', '')).strip()
     data = load_data()
     changed = False
     if uid not in data['users']:
         data['users'][uid] = {
             'username': display_name(tg), 'coins': WELCOME_COINS,
-            'earnings': 0, 'joined': now_iso(), 'bio': '', 'phone': ''
+            'earnings': 0, 'joined': now_iso(), 'bio': '', 'phone': '',
+            'referrer': referrer if referrer and referrer != uid else '',
+            'referral_bonus': 0, 'referral_count': 0,
+            'total_gifts_sent': 0, 'total_gifts_received': 0
         }
         changed = True
     u = data['users'][uid]
@@ -256,7 +310,8 @@ def register():
             'telebirr': {'number': TELEBIRR_NUMBER, 'name': TELEBIRR_NAME},
             'rate': WITHDRAW_RATE_ETB, 'min_withdraw': MIN_WITHDRAW,
             'fee_percent': int(round((1 - RECEIVER_SHARE) * 100)),
-            'seats': MAX_SEATS
+            'seats': MAX_SEATS, 'referral_bonus': REFERRAL_BONUS_PERCENT,
+            'games': {k: {kk: vv for kk, vv in v.items() if kk != 'segments'} for k, v in GAMES.items()}
         }
     })
 
@@ -278,7 +333,7 @@ def profile():
     if phone:
         p = norm_phone(phone)
         if not p:
-            return err('የTelebirr ቁጥር ስህተት ነው (09xxxxxxxx)')
+            return err('Invalid Telebirr number (09xxxxxxxx)')
         u['phone'] = p
     else:
         u['phone'] = ''
@@ -293,16 +348,16 @@ def profile_photo():
     body = request.get_json(silent=True) or {}
     photo_data = body.get('photo')
     if not photo_data:
-        return err('ፎቶ የለም')
+        return err('No photo')
     m = re.match(r'^data:image/(jpeg|png|webp);base64,(.+)$', str(photo_data), re.S)
     if not m:
-        return err('ስህተት ያለበት ፎቶ')
+        return err('Invalid photo')
     try:
         raw = base64.b64decode(m.group(2))
     except Exception:
-        return err('ፎቶ መፍታት አልተቻለም')
+        return err('Photo decode failed')
     if len(raw) < 500 or len(raw) > 2_500_000:
-        return err('ፎቶው በጣም ትልቅ ወይም ትንሽ ነው')
+        return err('Photo too large or too small')
     if raw[:2] == b'\xff\xd8':
         ext = 'jpg'
     elif raw[:4] == b'\x89PNG':
@@ -310,7 +365,7 @@ def profile_photo():
     elif raw[:4] == b'RIFF':
         ext = 'webp'
     else:
-        return err('ያልተፈቀደ የፎቶ አይነት')
+        return err('Invalid photo type')
     os.makedirs(SHOT_DIR, exist_ok=True)
     filename = f'profile_{uid}.{ext}'
     with open(os.path.join(SHOT_DIR, filename), 'wb') as f:
@@ -318,7 +373,7 @@ def profile_photo():
     data = load_data()
     u = data['users'].get(uid)
     if not u:
-        return err('ተጠቃሚ አልተገኘም')
+        return err('User not found')
     u['photo'] = f'/api/profile/photo/{uid}?t={int(time.time())}'
     save_data(data)
     return jsonify({'success': True, 'photo': u['photo']})
@@ -331,13 +386,14 @@ def get_profile_photo(uid):
             mime = {'jpg': 'image/jpeg', 'png': 'image/png', 'webp': 'image/webp'}[ext]
             with open(path, 'rb') as f:
                 return Response(f.read(), mimetype=mime)
-    return jsonify({'error': 'ፎቶ የለም'}), 404
+    return jsonify({'error': 'No photo'}), 404
 
-# ---------------- ክፍሎች ----------------
+# ---- Rooms ----
 @app.route('/api/rooms', methods=['GET'])
 def get_rooms():
     data = load_data()
     out, dirty, now = {}, False, time.time()
+    category = request.args.get('category', '')
     for rid in list(data['rooms'].keys()):
         room = data['rooms'][rid]
         cleanup_room(room)
@@ -346,10 +402,13 @@ def get_rooms():
             dirty = True
             continue
         room.setdefault('active', now)
+        if category and room.get('category', '') != category:
+            continue
         out[rid] = {
             'name': room['name'], 'creator': room['creator'],
             'creator_name': room.get('creator_name', ''),
-            'count': len(room['members'])
+            'count': len(room['members']),
+            'category': room.get('category', 'chat')
         }
     if dirty:
         save_data(data)
@@ -363,6 +422,7 @@ def create_room():
     body = request.get_json(silent=True) or {}
     room_id = str(body.get('room_id', ''))
     room_name = str(body.get('room_name', '')).strip()[:50]
+    category = str(body.get('category', 'chat')).strip()[:20]
     if not ID_RE.match(room_id) or not room_name:
         return err('Invalid room')
     data = load_data()
@@ -370,7 +430,7 @@ def create_room():
         'name': room_name, 'creator': uid,
         'creator_name': display_name(tg), 'created': now_iso(), 'active': time.time(),
         'seats': {}, 'members': {}, 'known': [],
-        'messages': [], 'msg_seq': 0
+        'messages': [], 'msg_seq': 0, 'category': category
     }
     save_data(data)
     return jsonify({'success': True, 'room_id': room_id})
@@ -388,7 +448,7 @@ def room_state(rid):
     known = room.setdefault('known', [])
     if uid not in known:
         known.append(uid)
-    add_message(room, '', '👋 ' + display_name(tg) + ' ገባ', sys=True)
+    add_message(room, '', '👋 ' + display_name(tg) + ' joined', sys=True)
     room['members'][uid] = {'seen': time.time(), 'name': display_name(tg)}
     room['active'] = time.time()
     try:
@@ -402,7 +462,7 @@ def room_state(rid):
         'success': True, 'name': room['name'], 'host': room['creator'],
         'count': len(room['members']), 'seats': room['seats'],
         'messages': msgs, 'coins': u.get('coins', 0),
-        'earnings': u.get('earnings', 0)
+        'earnings': u.get('earnings', 0), 'category': room.get('category', 'chat')
     })
 
 @app.route('/api/rooms/<rid>/seat', methods=['POST'])
@@ -423,10 +483,10 @@ def take_seat(rid):
         return err('Room not found')
     cleanup_room(room)
     if idx == 0 and room['creator'] != uid:
-        return err('ይህ የባለቤቱ ዙፋን ነው 👑')
+        return err('This is the host seat 👑')
     cur = room['seats'].get(str(idx))
     if cur and cur['uid'] != uid:
-        return err('መቀመጫው ተይዟል')
+        return err('Seat already taken')
     remove_user_seats(room, uid)
     room['seats'][str(idx)] = {'uid': uid, 'name': display_name(tg), 'photo': photo_of(tg)}
     room['members'][uid] = {'seen': time.time(), 'name': display_name(tg)}
@@ -498,18 +558,20 @@ def room_gift(rid):
     if not isinstance(to, str) or to == uid:
         return err('Invalid recipient')
     if to not in room['members'] or to not in data['users'] or uid not in data['users']:
-        return err('ተቀባዩ በክፍሉ የለም')
+        return err('Recipient not in room')
     gift = GIFTS.get(gift_type)
     if not gift:
         return err('Invalid gift')
     sender = data['users'][uid]
     if sender.get('coins', 0) < gift['price']:
-        return jsonify({'success': False, 'error': 'ሳንቲም አይበቃም', 'need_coins': True})
+        return jsonify({'success': False, 'error': 'Not enough coins', 'need_coins': True})
     share = int(gift['price'] * RECEIVER_SHARE)
     fee = gift['price'] - share
     sender['coins'] -= gift['price']
+    sender['total_gifts_sent'] = sender.get('total_gifts_sent', 0) + 1
     rec = data['users'][to]
     rec['earnings'] = rec.get('earnings', 0) + share
+    rec['total_gifts_received'] = rec.get('total_gifts_received', 0) + 1
     data['meta']['fee_coins'] = data['meta'].get('fee_coins', 0) + fee
     data['meta']['gift_count'] = data['meta'].get('gift_count', 0) + 1
     data['transactions'].append({
@@ -518,14 +580,16 @@ def room_gift(rid):
     })
     data['transactions'] = data['transactions'][-2000:]
     to_name = room['members'][to].get('name', '')
+    sender_level = get_level(sender.get('total_gifts_sent', 0))
+    rec_level = get_level(rec.get('total_gifts_received', 0))
     add_message(
-        room, '', '🎁 ' + display_name(tg) + ' → ' + to_name + ' ' + gift['icon'] + ' ' + gift['name'],
+        room, '', f'🎁 {display_name(tg)} [{sender_level["icon"]}{sender_level["name"]}] → {to_name} [{rec_level["icon"]}{rec_level["name"]}] {gift["icon"]} {gift["name"]}',
         sys=True,
-        gift={'type': gift_type, 'icon': gift['icon'], 'to': to, 'price': gift['price']})
+        gift={'type': gift_type, 'icon': gift['icon'], 'to': to, 'price': gift['price'], 'rarity': gift['rarity']})
     save_data(data)
     return jsonify({'success': True, 'remaining_coins': sender['coins']})
 
-# ---------------- ዋሌት ----------------
+# ---- Wallet ----
 @app.route('/api/wallet', methods=['GET'])
 def wallet():
     uid, _ = current_user_id()
@@ -550,21 +614,21 @@ def coins_buy():
     pkg = next((p for p in COIN_PACKAGES if p['id'] == body.get('package_id')), None)
     ref = str(body.get('ref', '')).strip().upper()
     if not pkg:
-        return err('ጥቅል አልተመረጠም')
+        return err('Package not selected')
     if not REF_RE.match(ref):
-        return err('የTelebirr ግብይት ቁጥር ስህተት ነው (8-20 ፊደል/ቁጥር)')
+        return err('Invalid Telebirr transaction ref (8-20 chars)')
     data = load_data()
     if uid not in data['users']:
         return err('User not found')
     pending = [p for p in data['purchases'] if p['uid'] == uid and p['status'] == 'pending']
     if len(pending) >= 3:
-        return err('ብዙ ጥያቄዎች በመጠባበቅ ላይ ናቸው')
+        return err('Too many pending requests')
     if any(p['ref'].upper() == ref for p in data['purchases']):
-        return err('ይህ የግብይት ቁጥር ቀድሞ ገብቷል')
+        return err('This ref already used')
     pid = uuid.uuid4().hex[:10]
     shot = save_shot(pid, body.get('shot'))
     if not shot:
-        return err('የክፍያ ስክሪንሾት ፎቶ ያያይዙ')
+        return err('Please attach payment screenshot')
     data['purchases'].append({
         'id': pid, 'uid': uid, 'name': display_name(tg),
         'coins': pkg['coins'], 'price': pkg['price'], 'ref': ref, 'shot': shot,
@@ -584,21 +648,21 @@ def withdraw():
     try:
         amount = int(body.get('amount'))
     except (TypeError, ValueError):
-        return err('መጠን ስህተት ነው')
+        return err('Invalid amount')
     data = load_data()
     u = data['users'].get(uid)
     if not u:
         return err('User not found')
     if not phone:
-        return err('ትክክለኛ የTelebirr ቁጥር አስገባ (09xxxxxxxx)')
+        return err('Invalid Telebirr number (09xxxxxxxx)')
     if not acc_name:
-        return err('በTelebirr ላይ ያለውን ስም አስገባ')
+        return err('Enter name on Telebirr')
     if amount < MIN_WITHDRAW:
-        return err('ዝቅተኛው ' + str(MIN_WITHDRAW) + ' ነው')
+        return err('Minimum is ' + str(MIN_WITHDRAW))
     if amount > u.get('earnings', 0):
-        return err('ገቢህ አይበቃም')
+        return err('Not enough earnings')
     if len([w for w in data['withdrawals'] if w['uid'] == uid and w['status'] == 'pending']) >= 3:
-        return err('ብዙ ጥያቄዎች በመጠባበቅ ላይ ናቸው')
+        return err('Too many pending requests')
     u['earnings'] -= amount
     data['withdrawals'].append({
         'id': uuid.uuid4().hex[:10], 'uid': uid, 'name': display_name(tg),
@@ -608,7 +672,7 @@ def withdraw():
     save_data(data)
     return jsonify({'success': True, 'earnings': u['earnings']})
 
-# ---------------- ማኅበረሰብ ----------------
+# ---- Community ----
 def post_view(p, uid):
     likes = p.get('likes', [])
     return {'id': p['id'], 'name': p['name'], 'photo': p.get('photo', ''), 'text': p['text'],
@@ -633,11 +697,11 @@ def posts_create():
     text = str(body.get('text', '')).strip()[:500]
     photo_data = body.get('photo')
     if not text and not photo_data:
-        return err('ባዶ ነው')
+        return err('Empty')
     data = load_data()
     mine = [p for p in data['posts'] if p['uid'] == uid]
     if mine and time.time() - mine[-1].get('ts', 0) < 8:
-        return err('ትንሽ ቆይተህ ለጥፍ')
+        return err('Please wait before posting')
     photo_url = ''
     if photo_data:
         pid = uuid.uuid4().hex[:8]
@@ -661,7 +725,7 @@ def get_post_photo(pid):
             mime = {'jpg': 'image/jpeg', 'png': 'image/png', 'webp': 'image/webp'}[ext]
             with open(path, 'rb') as f:
                 return Response(f.read(), mimetype=mime)
-    return jsonify({'error': 'ፎቶ የለም'}), 404
+    return jsonify({'error': 'No photo'}), 404
 
 @app.route('/api/posts/<pid>/like', methods=['POST'])
 def posts_like(pid):
@@ -671,7 +735,7 @@ def posts_like(pid):
     data = load_data()
     p = next((x for x in data['posts'] if x['id'] == pid), None)
     if not p:
-        return err('አልተገኘም')
+        return err('Not found')
     likes = p.setdefault('likes', [])
     if uid in likes:
         likes.remove(uid)
@@ -688,14 +752,14 @@ def posts_delete(pid):
     data = load_data()
     p = next((x for x in data['posts'] if x['id'] == pid), None)
     if not p:
-        return err('አልተገኘም')
+        return err('Not found')
     if p['uid'] != uid and not is_admin(uid):
         return forbidden()
     data['posts'].remove(p)
     save_data(data)
     return jsonify({'success': True})
 
-# ---------------- ሥራ ----------------
+# ---- Jobs ----
 def job_view(j, uid):
     return {'id': j['id'], 'title': j['title'], 'desc': j['desc'], 'contact': j['contact'],
             'name': j['name'], 'created': j['created'], 'mine': j['uid'] == uid,
@@ -720,10 +784,10 @@ def jobs_create():
     contact = str(body.get('contact', '')).strip()[:100]
     photo_data = body.get('photo')
     if not title or not contact:
-        return err('ርዕስና ማግኛ ያስፈልጋል')
+        return err('Title and contact required')
     data = load_data()
     if not is_admin(uid) and len([j for j in data['jobs'] if j['uid'] == uid]) >= 5:
-        return err('ቢበዛ 5 ሥራ መለጠፍ ይቻላል')
+        return err('Maximum 5 jobs allowed')
     photo_url = ''
     if photo_data:
         jid = uuid.uuid4().hex[:8]
@@ -747,7 +811,7 @@ def get_job_photo(jid):
             mime = {'jpg': 'image/jpeg', 'png': 'image/png', 'webp': 'image/webp'}[ext]
             with open(path, 'rb') as f:
                 return Response(f.read(), mimetype=mime)
-    return jsonify({'error': 'ፎቶ የለም'}), 404
+    return jsonify({'error': 'No photo'}), 404
 
 @app.route('/api/jobs/<jid>/delete', methods=['POST'])
 def jobs_delete(jid):
@@ -757,14 +821,170 @@ def jobs_delete(jid):
     data = load_data()
     j = next((x for x in data['jobs'] if x['id'] == jid), None)
     if not j:
-        return err('አልተገኘም')
+        return err('Not found')
     if j['uid'] != uid and not is_admin(uid):
         return forbidden()
     data['jobs'].remove(j)
     save_data(data)
     return jsonify({'success': True})
 
-# ---------------- ሱፐር አድሚን ----------------
+# ---- GAMES (70% RTP, 30% house edge) ----
+@app.route('/api/games', methods=['GET'])
+def games_list():
+    uid, _ = current_user_id()
+    if not uid:
+        return unauthorized()
+    data = load_data()
+    u = data['users'].get(uid, {})
+    my_games = [g for g in data.get('games', []) if g['uid'] == uid][-20:][::-1]
+    return jsonify({
+        'success': True,
+        'games_config': {k: {kk: vv for kk, vv in v.items() if kk != 'segments'} for k, v in GAMES.items()},
+        'my_games': my_games,
+        'user_coins': u.get('coins', 0),
+        'house_stats': {
+            'total_bet': data['meta'].get('game_total_bet', 0),
+            'house_profit': data['meta'].get('game_profit', 0)
+        }
+    })
+
+@app.route('/api/games/dice', methods=['POST'])
+def play_dice():
+    uid, _ = current_user_id()
+    if not uid:
+        return unauthorized()
+    body = request.get_json(silent=True) or {}
+    try:
+        bet = int(body.get('bet', 0))
+        number = int(body.get('number', 0))
+    except (TypeError, ValueError):
+        return err('Invalid input')
+    if number < 1 or number > 6:
+        return err('Number must be 1-6')
+    game = GAMES['dice']
+    if bet < game['min_bet'] or bet > game['max_bet']:
+        return err(f'Bet must be {game["min_bet"]}-{game["max_bet"]}')
+    data = load_data()
+    u = data['users'].get(uid)
+    if not u or u.get('coins', 0) < bet:
+        return err('Not enough coins')
+    u['coins'] -= bet
+    data['meta']['game_total_bet'] = data['meta'].get('game_total_bet', 0) + bet
+    result = random.randint(1, 6)
+    won = (result == number)
+    payout = 0
+    if won:
+        payout = int(bet * game['multiplier'])
+        u['coins'] += payout
+        profit = -payout + bet  # negative = house loss
+    else:
+        profit = bet  # house keeps bet
+    data['meta']['game_profit'] = data['meta'].get('game_profit', 0) + profit
+    data['games'].append({
+        'id': uuid.uuid4().hex[:8], 'uid': uid, 'game': 'dice',
+        'bet': bet, 'number': number, 'result': result,
+        'won': won, 'payout': payout, 'created': now_iso()
+    })
+    data['games'] = data['games'][-5000:]
+    save_data(data)
+    return jsonify({
+        'success': True, 'won': won, 'result': result, 'payout': payout,
+        'remaining_coins': u['coins'], 'profit': profit
+    })
+
+@app.route('/api/games/flip', methods=['POST'])
+def play_flip():
+    uid, _ = current_user_id()
+    if not uid:
+        return unauthorized()
+    body = request.get_json(silent=True) or {}
+    try:
+        bet = int(body.get('bet', 0))
+        choice = str(body.get('choice', '')).lower()
+    except (TypeError, ValueError):
+        return err('Invalid input')
+    if choice not in ('heads', 'tails'):
+        return err('Choice must be heads or tails')
+    game = GAMES['flip']
+    if bet < game['min_bet'] or bet > game['max_bet']:
+        return err(f'Bet must be {game["min_bet"]}-{game["max_bet"]}')
+    data = load_data()
+    u = data['users'].get(uid)
+    if not u or u.get('coins', 0) < bet:
+        return err('Not enough coins')
+    u['coins'] -= bet
+    data['meta']['game_total_bet'] = data['meta'].get('game_total_bet', 0) + bet
+    result = random.choice(['heads', 'tails'])
+    won = (result == choice)
+    payout = 0
+    if won:
+        payout = int(bet * game['multiplier'])
+        u['coins'] += payout
+        profit = -payout + bet
+    else:
+        profit = bet
+    data['meta']['game_profit'] = data['meta'].get('game_profit', 0) + profit
+    data['games'].append({
+        'id': uuid.uuid4().hex[:8], 'uid': uid, 'game': 'flip',
+        'bet': bet, 'choice': choice, 'result': result,
+        'won': won, 'payout': payout, 'created': now_iso()
+    })
+    data['games'] = data['games'][-5000:]
+    save_data(data)
+    return jsonify({
+        'success': True, 'won': won, 'result': result, 'payout': payout,
+        'remaining_coins': u['coins'], 'profit': profit
+    })
+
+@app.route('/api/games/wheel', methods=['POST'])
+def play_wheel():
+    uid, _ = current_user_id()
+    if not uid:
+        return unauthorized()
+    body = request.get_json(silent=True) or {}
+    try:
+        bet = int(body.get('bet', 0))
+    except (TypeError, ValueError):
+        return err('Invalid bet')
+    game = GAMES['wheel']
+    if bet < game['min_bet'] or bet > game['max_bet']:
+        return err(f'Bet must be {game["min_bet"]}-{game["max_bet"]}')
+    data = load_data()
+    u = data['users'].get(uid)
+    if not u or u.get('coins', 0) < bet:
+        return err('Not enough coins')
+    u['coins'] -= bet
+    data['meta']['game_total_bet'] = data['meta'].get('game_total_bet', 0) + bet
+    # Weighted random selection
+    total_weight = sum(s['weight'] for s in game['segments'])
+    r = random.randint(1, total_weight)
+    cumulative = 0
+    selected = game['segments'][0]
+    for seg in game['segments']:
+        cumulative += seg['weight']
+        if r <= cumulative:
+            selected = seg
+            break
+    multiplier = selected['mult']
+    payout = int(bet * multiplier)
+    if payout > 0:
+        u['coins'] += payout
+    profit = bet - payout
+    data['meta']['game_profit'] = data['meta'].get('game_profit', 0) + profit
+    data['games'].append({
+        'id': uuid.uuid4().hex[:8], 'uid': uid, 'game': 'wheel',
+        'bet': bet, 'multiplier': multiplier, 'segment': selected['label'],
+        'won': multiplier > 0, 'payout': payout, 'created': now_iso()
+    })
+    data['games'] = data['games'][-5000:]
+    save_data(data)
+    return jsonify({
+        'success': True, 'won': multiplier > 0, 'multiplier': multiplier,
+        'segment': selected['label'], 'payout': payout,
+        'remaining_coins': u['coins'], 'profit': profit
+    })
+
+# ---- Admin ----
 @app.route('/api/admin/overview', methods=['GET'])
 @admin_only
 def admin_overview(aid):
@@ -777,7 +997,7 @@ def admin_overview(aid):
     for rid, r in data['rooms'].items():
         cleanup_room(r)
         rooms.append({'id': rid, 'name': r['name'], 'creator_name': r.get('creator_name', ''),
-                      'count': len(r['members'])})
+                      'count': len(r['members']), 'category': r.get('category', 'chat')})
     handled_p = sorted([strip(p) for p in data['purchases'] if p['status'] != 'pending'],
                        key=lambda x: x.get('handled', ''), reverse=True)[:15]
     handled_w = sorted([w for w in data['withdrawals'] if w['status'] != 'pending'],
@@ -792,7 +1012,9 @@ def admin_overview(aid):
             'revenue': sum(p['price'] for p in approved),
             'paid_out': round(sum(w['birr'] for w in paid), 2),
             'fee_coins': data['meta'].get('fee_coins', 0),
-            'gifts': data['meta'].get('gift_count', 0)
+            'gifts': data['meta'].get('gift_count', 0),
+            'game_total_bet': data['meta'].get('game_total_bet', 0),
+            'game_profit': data['meta'].get('game_profit', 0)
         },
         'purchases': [strip(p) for p in data['purchases'] if p['status'] == 'pending'],
         'withdrawals': [w for w in data['withdrawals'] if w['status'] == 'pending'],
@@ -819,10 +1041,10 @@ def admin_shot(aid, pid):
     data = load_data()
     p = next((x for x in data['purchases'] if x['id'] == pid), None)
     if not p or not p.get('shot'):
-        return err('አልተገኘም')
+        return err('Not found')
     path = os.path.join(SHOT_DIR, os.path.basename(p['shot']))
     if not os.path.exists(path):
-        return err('ፎቶው ጠፍቷል')
+        return err('Photo deleted')
     ext = path.rsplit('.', 1)[-1]
     mime = {'jpg': 'image/jpeg', 'png': 'image/png', 'webp': 'image/webp'}.get(ext, 'image/jpeg')
     with open(path, 'rb') as f:
@@ -835,10 +1057,17 @@ def admin_purchase(aid):
     data = load_data()
     p = next((x for x in data['purchases'] if x['id'] == body.get('id')), None)
     if not p or p['status'] != 'pending':
-        return err('አልተገኘም')
+        return err('Not found')
     if body.get('action') == 'approve':
         if p['uid'] in data['users']:
             data['users'][p['uid']]['coins'] = data['users'][p['uid']].get('coins', 0) + p['coins']
+            # REFERRAL BONUS: 10% to referrer
+            referrer = data['users'][p['uid']].get('referrer', '')
+            if referrer and referrer in data['users'] and referrer != p['uid']:
+                bonus = int(p['coins'] * REFERRAL_BONUS_PERCENT / 100)
+                data['users'][referrer]['coins'] = data['users'][referrer].get('coins', 0) + bonus
+                data['users'][referrer]['referral_bonus'] = data['users'][referrer].get('referral_bonus', 0) + bonus
+                data['users'][referrer]['referral_count'] = data['users'][referrer].get('referral_count', 0) + 1
         p['status'] = 'approved'
     else:
         p['status'] = 'rejected'
@@ -854,7 +1083,7 @@ def admin_withdraw(aid):
     data = load_data()
     w = next((x for x in data['withdrawals'] if x['id'] == body.get('id')), None)
     if not w or w['status'] != 'pending':
-        return err('አልተገኘም')
+        return err('Not found')
     if body.get('action') == 'paid':
         w['status'] = 'paid'
     else:
@@ -875,9 +1104,9 @@ def admin_user_action(aid):
     data = load_data()
     u = data['users'].get(target)
     if not u:
-        return err('ተጠቃሚ አልተገኘም')
+        return err('User not found')
     if is_admin(target) and action in ('ban', 'delete'):
-        return err('አድሚንን ማገድ ወይም መሰረዝ አይቻልም')
+        return err('Cannot ban or delete admin')
     if action == 'ban':
         u['banned'] = True
         purge_user_from_rooms(data, target)
@@ -900,9 +1129,9 @@ def admin_user_action(aid):
         try:
             amount = int(body.get('amount'))
         except (TypeError, ValueError):
-            return err('መጠን ስህተት ነው')
+            return err('Invalid amount')
         if abs(amount) > 10000000:
-            return err('መጠኑ በጣም ትልቅ ነው')
+            return err('Amount too large')
         u['coins'] = max(0, u.get('coins', 0) + amount)
     else:
         return err('Invalid action')
@@ -915,7 +1144,7 @@ def admin_room(aid):
     body = request.get_json(silent=True) or {}
     data = load_data()
     if data['rooms'].pop(str(body.get('id', '')), None) is None:
-        return err('አልተገኘም')
+        return err('Not found')
     save_data(data)
     return jsonify({'success': True})
 
@@ -930,17 +1159,20 @@ def livekit_token():
     room = data['rooms'].get(room_id)
     if not room:
         return err('Room not found')
-    token = (
-        lkapi.AccessToken(
-            os.environ.get('LIVEKIT_API_KEY', ''),
-            os.environ.get('LIVEKIT_API_SECRET', ''))
-        .with_identity(uid)
-        .with_name(display_name(tg))
-        .with_grants(lkapi.VideoGrants(
-            room_join=True, room=room_id,
-            can_publish=True, can_subscribe=True, can_publish_data=True))
-        .to_jwt()
-    )
+    try:
+        token = (
+            lkapi.AccessToken(
+                os.environ.get('LIVEKIT_API_KEY', ''),
+                os.environ.get('LIVEKIT_API_SECRET', ''))
+            .with_identity(uid)
+            .with_name(display_name(tg))
+            .with_grants(lkapi.VideoGrants(
+                room_join=True, room=room_id,
+                can_publish=True, can_subscribe=True, can_publish_data=True))
+            .to_jwt()
+        )
+    except Exception as e:
+        return jsonify({'success': False, 'error': 'LiveKit not configured: ' + str(e)})
     return jsonify({
         'success': True, 'token': token,
         'url': os.environ.get('LIVEKIT_URL', ''),
