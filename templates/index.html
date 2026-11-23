@@ -1,608 +1,231 @@
 <!DOCTYPE html>
-<html lang="am">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<html lang="am"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>VoiceChat</title>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/livekit-client@2.5.7/dist/livekit-client.umd.min.js"></script>
 <style>
-:root{
-  --bg:#0b0b14; --card:#15152a; --card2:#1d1d38; --line:rgba(255,255,255,.08);
-  --txt:#f4f4fb; --mut:#9a9ab8; --p1:#8b5cf6; --p2:#ec4899; --gold:#fbbf24;
-  --ok:#22c55e; --bad:#ef4444;
-  --grad:linear-gradient(135deg,#8b5cf6,#ec4899);
-}
-*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--txt);min-height:100vh;padding-bottom:90px}
-body:before{content:"";position:fixed;inset:0;background:radial-gradient(600px 300px at 10% -5%,rgba(139,92,246,.35),transparent),radial-gradient(500px 300px at 100% 0%,rgba(236,72,153,.25),transparent);pointer-events:none}
-.hidden{display:none!important}
-.wrap{max-width:520px;margin:0 auto;padding:14px;position:relative}
-button{font-family:inherit;cursor:pointer;border:none;color:#fff}
-input{font-family:inherit}
-
-/* top bar */
-.top{display:flex;align-items:center;justify-content:space-between;padding:6px 2px 14px}
-.brand{display:flex;align-items:center;gap:10px}
-.logo{width:40px;height:40px;border-radius:13px;background:var(--grad);display:flex;align-items:center;justify-content:center;font-size:20px;box-shadow:0 6px 20px rgba(139,92,246,.45)}
-.brand b{font-size:19px;letter-spacing:.3px}
-.brand small{display:block;font-size:11px;color:var(--mut);margin-top:1px}
-.chip{background:rgba(251,191,36,.12);border:1px solid rgba(251,191,36,.35);color:var(--gold);padding:8px 14px;border-radius:30px;font-weight:700;font-size:14px;display:flex;gap:6px;align-items:center}
-
-.card{background:var(--card);border:1px solid var(--line);border-radius:22px;padding:18px;margin-bottom:14px}
-.h{font-size:16px;font-weight:700;margin-bottom:12px;display:flex;align-items:center;gap:8px}
-.sub{font-size:12px;color:var(--mut)}
-.inp{width:100%;padding:14px 16px;border-radius:14px;background:var(--card2);border:1px solid var(--line);color:var(--txt);font-size:15px;outline:none}
-.inp:focus{border-color:var(--p1)}
-.btn{width:100%;padding:14px;border-radius:14px;background:var(--grad);font-weight:700;font-size:15px;margin-top:10px;box-shadow:0 8px 22px rgba(139,92,246,.35)}
-.btn.sec{background:var(--card2);box-shadow:none;border:1px solid var(--line)}
-.btn.ok{background:var(--ok);box-shadow:none}
-.btn.bad{background:var(--bad);box-shadow:none}
-.btn.sm{width:auto;padding:9px 16px;margin:0;font-size:13px;border-radius:12px}
-.row{display:flex;gap:8px;align-items:center}
-.grow{flex:1}
-
-/* rooms */
-.hero{background:var(--grad);border:none;position:relative;overflow:hidden}
-.hero:after{content:"🎙️";position:absolute;right:-6px;top:-10px;font-size:90px;opacity:.18}
-.hero .inp{background:rgba(255,255,255,.18);border-color:rgba(255,255,255,.3);color:#fff}
-.hero .inp::placeholder{color:rgba(255,255,255,.7)}
-.hero .btn{background:#fff;color:#6d28d9;box-shadow:none}
-.room{display:flex;align-items:center;gap:12px;padding:12px;border-radius:18px;background:var(--card2);margin-bottom:10px;border:1px solid var(--line)}
-.room .ic{width:48px;height:48px;border-radius:16px;background:var(--grad);display:flex;align-items:center;justify-content:center;font-size:22px}
-.room .nm{font-weight:700;font-size:15px}
-.live{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--ok);margin-right:5px;box-shadow:0 0 8px var(--ok)}
-.empty{text-align:center;padding:34px 10px;color:var(--mut)}
-.empty div{font-size:46px;margin-bottom:6px}
-
-/* wallet */
-.bal{background:linear-gradient(135deg,#1e1b4b,#4c1d95 55%,#be185d);border:none}
-.bal .big{font-size:36px;font-weight:800;margin:4px 0 2px}
-.bal .two{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}
-.bal .box{background:rgba(255,255,255,.12);border-radius:16px;padding:12px}
-.pk{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.pkg{background:var(--card2);border:1px solid var(--line);border-radius:18px;padding:14px;text-align:center;cursor:pointer}
-.pkg:active{transform:scale(.97)}
-.pkg .c{font-size:20px;font-weight:800;color:var(--gold)}
-.pkg .p{font-size:13px;color:var(--mut);margin-top:4px}
-.hist{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--line);font-size:13px}
-.hist:last-child{border:none}
-.tag{padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700}
-.tag.pending{background:rgba(251,191,36,.15);color:var(--gold)}
-.tag.approved,.tag.paid{background:rgba(34,197,94,.15);color:var(--ok)}
-.tag.rejected{background:rgba(239,68,68,.15);color:var(--bad)}
-
-/* admin */
-.stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:14px}
-.stat{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:12px;text-align:center}
-.stat b{display:block;font-size:18px}
-.stat span{font-size:11px;color:var(--mut)}
-.req{background:var(--card2);border-radius:16px;padding:12px;margin-bottom:10px;font-size:13px}
-.req .r1{display:flex;justify-content:space-between;margin-bottom:4px;font-weight:700}
-
-/* tab bar */
-.tabs{position:fixed;left:0;right:0;bottom:0;z-index:100;padding:8px 14px calc(10px + env(safe-area-inset-bottom));background:rgba(11,11,20,.92);backdrop-filter:blur(18px);border-top:1px solid var(--line)}
-.tabs .in{max-width:520px;margin:0 auto;display:flex;gap:6px}
-.tab{flex:1;background:none;color:var(--mut);padding:8px 4px;border-radius:14px;font-size:11px;font-weight:600}
-.tab span{display:block;font-size:22px;margin-bottom:2px}
-.tab.on{color:#fff;background:rgba(139,92,246,.2)}
-
-/* room view */
-#room-view{position:fixed;inset:0;z-index:300;background:var(--bg);overflow-y:auto;padding-bottom:20px}
-#room-view:before{content:"";position:fixed;inset:0;background:radial-gradient(500px 300px at 50% -5%,rgba(139,92,246,.35),transparent);pointer-events:none}
-.rtop{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
-.rtop .t{font-size:18px;font-weight:800}
-.exit{background:rgba(239,68,68,.15);color:#fca5a5;padding:10px 16px;border-radius:14px;font-weight:700;font-size:13px}
-.seats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:12px}
-.seat{background:var(--card);border:2px solid var(--line);border-radius:22px;padding:12px 6px;min-height:112px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;cursor:pointer;transition:.2s}
-.seat.mine{border-color:var(--gold)}
-.seat.speaking{border-color:var(--ok);box-shadow:0 0 18px rgba(34,197,94,.7)}
-.pic{width:58px;height:58px;border-radius:50%;background:var(--grad);display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:800;overflow:hidden}
-.pic img{width:100%;height:100%;object-fit:cover}
-.sname{font-size:12px;margin-top:6px;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.crown{font-size:16px;line-height:1;margin-bottom:2px}
-.seat .em{font-size:32px;opacity:.55}
-.seat .num{font-size:11px;color:var(--mut);margin-top:4px}
-.ctrl{display:flex;gap:10px;margin-bottom:12px}
-.ctrl button{flex:1;padding:13px;border-radius:14px;font-weight:700;font-size:14px}
-.chat{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:12px;height:200px;overflow-y:auto;font-size:14px;margin-bottom:10px}
-.msg{margin-bottom:6px;word-break:break-word}
-.msg .n{color:#c4b5fd;font-weight:700}
-.msg.sys{color:var(--mut);font-size:12px}
-.msg.gift{color:var(--gold);font-weight:700;font-size:13px}
-.cin{display:flex;gap:8px}
-.cin button{background:var(--grad);width:52px;border-radius:14px;font-size:18px}
-.giftbtn{background:rgba(251,191,36,.15)!important;color:var(--gold)}
-
-/* sheet */
-.sheet{position:fixed;inset:0;z-index:900;background:rgba(0,0,0,.6);display:flex;align-items:flex-end}
-.sheet-in{width:100%;max-width:520px;margin:0 auto;background:var(--card);border-radius:28px 28px 0 0;padding:20px 16px calc(20px + env(safe-area-inset-bottom));max-height:88vh;overflow-y:auto;border-top:1px solid var(--line)}
-.grab{width:44px;height:4px;background:var(--line);border-radius:4px;margin:-8px auto 14px}
-.gg{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:12px 0}
-.g{background:var(--card2);border:1px solid var(--line);border-radius:16px;padding:10px 2px;text-align:center;cursor:pointer}
-.g:active{transform:scale(.95)}
-.g .i{font-size:30px}
-.g .n{font-size:10px;color:var(--mut);margin-top:2px}
-.g .p{font-size:11px;font-weight:700;color:var(--gold)}
-.g.dis{opacity:.4}
-
-/* animations */
-.fly{position:fixed;z-index:950;pointer-events:none;font-size:54px;line-height:1;animation:fu 2.2s ease-out forwards}
-.fly.big{font-size:100px;animation-duration:3.2s}
-@keyframes fu{0%{transform:translate(-50%,-50%) scale(.3);opacity:0}15%{transform:translate(-50%,-60%) scale(1.3);opacity:1}100%{transform:translate(-50%,-200%) scale(1);opacity:0}}
-.mega{position:fixed;inset:0;z-index:960;pointer-events:none;display:flex;flex-direction:column;align-items:center;justify-content:center;background:radial-gradient(circle,rgba(139,92,246,.45),transparent 70%);animation:mg 4s ease forwards}
-.mega .e{font-size:150px;animation:pop 4s ease forwards}
-.mega .t{font-size:16px;font-weight:800;margin-top:8px;text-shadow:0 2px 12px #000}
-@keyframes mg{0%{opacity:0}10%{opacity:1}85%{opacity:1}100%{opacity:0}}
-@keyframes pop{0%{transform:scale(.2) rotate(-20deg)}20%{transform:scale(1.25) rotate(8deg)}40%{transform:scale(1) rotate(0)}100%{transform:scale(1.1)}}
-
-.toast{position:fixed;top:16px;left:50%;transform:translateX(-50%) translateY(-120px);padding:13px 22px;border-radius:14px;font-size:14px;font-weight:600;z-index:2000;transition:transform .3s;background:#222;max-width:90%;text-align:center}
-.toast.show{transform:translateX(-50%) translateY(0)}
-.toast.success{background:var(--ok)}
-.toast.error{background:var(--bad)}
-
-.splash{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:30px;position:relative}
-.splash .logo{width:90px;height:90px;font-size:44px;border-radius:28px;margin-bottom:16px}
-</style>
-</head>
-<body>
-<div id="toast" class="toast"></div>
-
-<div id="splash" class="splash">
-  <div class="logo">🎙️</div>
-  <h1 style="font-size:30px">VoiceChat</h1>
-  <p class="sub" id="splash-msg" style="margin-top:8px">በመግባት ላይ...</p>
-</div>
-
-<div id="app" class="hidden">
- <div class="wrap">
-  <div class="top">
-    <div class="brand"><div class="logo">🎙️</div><div><b>VoiceChat</b><small id="hello"></small></div></div>
-    <div class="chip" onclick="go('wallet')">🪙 <span id="coins">0</span></div>
-  </div>
-
-  <div id="t-home">
-    <div class="card hero">
-      <div class="h">✨ አዲስ ክፍል ፍጠር</div>
-      <input class="inp" id="room-name" maxlength="50" placeholder="የክፍሉ ስም...">
-      <button class="btn" onclick="createRoom()">🚀 ክፍል ክፈት</button>
-    </div>
-    <div class="card">
-      <div class="h">🔥 ቀጥታ ክፍሎች</div>
-      <div id="rooms"></div>
-    </div>
-  </div>
-
-  <div id="t-wallet" class="hidden">
-    <div class="card bal">
-      <div class="sub" style="color:#ddd">የእኔ ሳንቲም</div>
-      <div class="big">🪙 <span id="w-coins">0</span></div>
-      <div class="two">
-        <div class="box"><div class="sub" style="color:#ddd">የተገኘ ገቢ</div><b id="w-earn" style="font-size:18px">0</b></div>
-        <div class="box"><div class="sub" style="color:#ddd">የእኔ መታወቂያ</div><b id="w-id" style="font-size:12px;word-break:break-all"></b></div>
-      </div>
-    </div>
-    <div class="card">
-      <div class="h">💰 ሳንቲም ግዛ</div>
-      <div class="pk" id="pk"></div>
-    </div>
-    <div class="card">
-      <div class="h">💸 ገቢ አውጣ</div>
-      <div class="sub" id="wd-info" style="margin-bottom:10px"></div>
-      <input class="inp" id="wd-amount" type="number" inputmode="numeric" placeholder="የሳንቲም መጠን">
-      <input class="inp" id="wd-acc" style="margin-top:8px" maxlength="120" placeholder="Telebirr / CBE ሂሳብ ቁጥር እና ስም">
-      <button class="btn" onclick="withdraw()">ጥያቄ ላክ</button>
-    </div>
-    <div class="card">
-      <div class="h">🧾 ታሪክ</div>
-      <div id="hist"></div>
-    </div>
-  </div>
-
-  <div id="t-admin" class="hidden">
-    <div class="stats" id="a-stats"></div>
-    <div class="card"><div class="h">🛒 የሳንቲም ግዢ ጥያቄዎች</div><div id="a-pur"></div></div>
-    <div class="card"><div class="h">💸 የማውጫ ጥያቄዎች</div><div id="a-wd"></div></div>
-    <div class="card">
-      <div class="h">🎁 ሳንቲም ስጥ / ቀንስ</div>
-      <input class="inp" id="g-uid" placeholder="tg_123456789">
-      <input class="inp" id="g-amt" type="number" style="margin-top:8px" placeholder="መጠን (ለመቀነስ -ምልክት)">
-      <button class="btn" onclick="grant()">ተግብር</button>
-    </div>
-    <div class="card"><div class="h">👥 የቅርብ ጊዜ ተጠቃሚዎች</div><div id="a-users"></div></div>
-  </div>
- </div>
-
- <div class="tabs"><div class="in">
-   <button class="tab on" id="tb-home" onclick="go('home')"><span>🏠</span>ቤት</button>
-   <button class="tab" id="tb-wallet" onclick="go('wallet')"><span>👛</span>ዋሌት</button>
-   <button class="tab hidden" id="tb-admin" onclick="go('admin')"><span>🛠️</span>አድሚን</button>
- </div></div>
-</div>
-
-<div id="room-view" class="hidden"><div class="wrap">
-  <div class="rtop">
-    <div><div class="t" id="rv-title">🎙️</div><div class="sub" id="rv-count"></div></div>
-    <button class="exit" onclick="leaveRoom()">🚪 ውጣ</button>
-  </div>
-  <div class="seats" id="seats"></div>
-  <div class="ctrl">
-    <button class="btn sec hidden" id="mic-btn" onclick="toggleMute()" style="margin:0"></button>
-    <button class="hidden" id="stand-btn" onclick="leaveSeat()" style="background:rgba(239,68,68,.15);color:#fca5a5">⬇️ ተነሳ</button>
-  </div>
-  <div class="chat" id="chat"></div>
-  <div class="cin">
-    <input class="inp" id="chat-text" maxlength="200" placeholder="መልዕክት ጻፍ...">
-    <button class="giftbtn" onclick="openGift(null)">🎁</button>
-    <button onclick="sendChat()">➤</button>
-  </div>
-  <div id="audio-box"></div>
-</div></div>
-
-<div id="sheet" class="sheet hidden" onclick="if(event.target===this)closeSheet()">
-  <div class="sheet-in"><div class="grab"></div><div id="sheet-body"></div></div>
-</div>
-
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{margin:0;background:#0b0b18;color:#fff;font-family:system-ui,'Noto Sans Ethiopic',sans-serif;padding-bottom:calc(70px + env(safe-area-inset-bottom,0px))}
+button,input,textarea{font:inherit;color:inherit}
+input,textarea{width:100%;background:#151530;border:1px solid #2a2a50;border-radius:12px;padding:11px;margin:5px 0;outline:0}
+button{border:0;border-radius:12px;padding:10px 14px;background:#7c3aed;cursor:pointer}
+button.g{background:#1b1b38}button.r{background:#4a1520;color:#ff9aa8}button.ok{background:#14803c}
+.top{display:flex;justify-content:space-between;align-items:center;padding:14px 16px}
+.coin{background:#2b2210;border:1px solid #6b5420;color:#ffd24a;padding:6px 12px;border-radius:20px;font-weight:700}
+.card{background:#12122a;border:1px solid #24244a;border-radius:18px;padding:14px;margin:10px 14px}
+.hero{background:linear-gradient(135deg,#3b1d8f,#b0155f)}
+.row{display:flex;gap:8px;align-items:center}.sp{justify-content:space-between}.f1{flex:1}
+.grid{display:grid;gap:8px}.c2{grid-template-columns:1fr 1fr}.c4{grid-template-columns:repeat(4,1fr)}.c5{grid-template-columns:repeat(5,1fr)}
+.muted{color:#9aa}.small{font-size:12px}.big{font-size:34px;font-weight:800}
+nav{position:fixed;bottom:0;left:0;right:0;display:flex;background:#0f0f22;border-top:1px solid #24244a;padding-bottom:env(safe-area-inset-bottom,0px);z-index:20}
+nav button{flex:1;background:0;border-radius:0;font-size:11px;padding:8px 2px;color:#889}nav button.on{color:#fff}nav b{display:block;font-size:20px;font-weight:400}
+#room{position:fixed;inset:0;background:linear-gradient(#2a1a55,#0b0b18 40%);z-index:30;overflow:auto;padding:10px 12px calc(20px + env(safe-area-inset-bottom,0px));display:none}
+.seat{background:#151530;border:2px solid #25254a;border-radius:16px;text-align:center;padding:8px 2px;min-height:78px;font-size:11px;position:relative;cursor:pointer}
+.sofa{background:linear-gradient(160deg,#27458a,#16254f);border-color:#3d5fb0}
+.sofa .e{font-size:30px;filter:drop-shadow(0 2px 3px #000)}
+.throne{background:linear-gradient(160deg,#7a5a00,#2a1e00);border-color:#ffc83d;box-shadow:0 0 18px #ffc83d66;min-height:120px;width:46%;margin:0 auto 10px}
+.throne .e{font-size:42px}
+.av{width:44px;height:44px;border-radius:50%;margin:0 auto 3px;background:#19c3a5;display:flex;align-items:center;justify-content:center;font-weight:800;background-size:cover}
+.throne .av{width:62px;height:62px;border:3px solid gold}
+.spk{border-color:#3dff9a!important;box-shadow:0 0 12px #3dff9a88}
+.nm{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:0 3px}
+#chat{background:#12122a;border-radius:16px;height:190px;overflow:auto;padding:10px;margin:10px 0;font-size:14px}
+#chat div{margin-bottom:4px}.sys{color:#c9a0ff}
+#mini{position:fixed;left:10px;right:10px;bottom:calc(66px + env(safe-area-inset-bottom,0px));background:#2a1a55;border:1px solid #7c3aed;border-radius:16px;padding:8px 12px;z-index:21;display:none}
+#modal{position:fixed;inset:0;background:#000a;z-index:50;display:none;align-items:flex-end}
+#modal>div{background:#12122a;width:100%;max-height:88vh;overflow:auto;border-radius:22px 22px 0 0;padding:18px}
+#toast{position:fixed;top:14px;left:50%;transform:translateX(-50%);background:#333;padding:10px 16px;border-radius:12px;z-index:99;display:none;max-width:90%}
+.gift{background:#1b1b38;border-radius:12px;padding:8px 2px;text-align:center;font-size:11px}.gift i{font-style:normal;font-size:26px;display:block}
+.tag{padding:2px 8px;border-radius:8px;font-size:11px;background:#333}.pending{background:#6b5420}.approved,.paid{background:#14803c}.rejected{background:#7a1c2c}
+img.shot{width:100%;border-radius:10px;margin:6px 0}
+</style></head><body>
+<div id="toast"></div><div id="modal"></div>
+<div id="app"></div>
+<div id="mini"></div>
+<nav id="nav"></nav>
+<div id="room"></div>
 <script>
-const tg = window.Telegram && window.Telegram.WebApp;
-if (tg) { tg.ready(); tg.expand(); try { tg.setHeaderColor('#0b0b14'); tg.setBackgroundColor('#0b0b14'); } catch (e) {} }
+const tg=window.Telegram&&Telegram.WebApp;if(tg){tg.ready();tg.expand()}
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+let ME=null,CFG=null,ADMIN=false,TAB='home',R=null,POLL=null,SEL=null,AU={};
+function toast(t){const e=$('#toast');e.textContent=t;e.style.display='block';clearTimeout(toast.t);toast.t=setTimeout(()=>e.style.display='none',2600)}
+async function api(p,b,raw){
+  const o={headers:{'X-Telegram-Init-Data':tg?tg.initData:''}};
+  if(b!==undefined){o.method='POST';o.headers['Content-Type']='application/json';o.body=JSON.stringify(b)}
+  let r;try{r=await fetch(p,o)}catch(e){return{success:false,error:'ኔትዎርክ የለም'}}
+  if(raw&&(r.headers.get('content-type')||'').startsWith('image'))return r;
+  let j;try{j=await r.json()}catch(e){j={success:false,error:'ስህተት'}}
+  if(j.banned)document.body.innerHTML='<h2 style="padding:60px 20px;text-align:center">🚫 ታግደዋል</h2>';
+  return j}
+const val=id=>($('#'+id)||{}).value||'';
+function modal(h){const m=$('#modal');if(!h){m.style.display='none';m.innerHTML='';return}m.innerHTML='<div>'+h+'</div>';m.style.display='flex'}
+$('#modal').addEventListener('click',e=>{if(e.target.id==='modal')modal()});
+const av=(n,p)=>`<div class="av" style="${p?`background-image:url('${esc(p)}')`:''}">${p?'':esc((n||'?').slice(0,2).toUpperCase())}</div>`;
+const when=s=>(s||'').replace('T',' ').slice(5,16);
+const st=s=>`<span class="tag ${s}">${{pending:'በመጠባበቅ',approved:'ጸድቋል',paid:'ተከፍሏል',rejected:'ውድቅ'}[s]||s}</span>`;
 
-let ME = null, CFG = null, tab = 'home';
-let lkRoom = null, inRoom = null, lastMsg = 0, lastSeats = {}, mySeat = null;
-let muted = false, speaking = new Set(), pollTimer = null, micBusy = false;
-let firstPoll = true, giftTarget = null, giftBusy = false;
+/* ---------- ጅምር ---------- */
+async function init(){
+  const r=await api('/api/register',{});
+  if(!r.success){$('#app').innerHTML='<p style="padding:40px;text-align:center">ይህን መተግበሪያ ከTelegram ቦት ክፈት</p>';return}
+  ME=r;CFG=r.config;ADMIN=r.admin;go('home');
+}
+const TABS=[['home','🏠','ቤት'],['jobs','💼','ሥራ'],['comm','👥','ማኅበረሰብ'],['wallet','👛','ዋሌት'],['profile','👤','ፕሮፋይል']];
+function go(t){TAB=t;
+  const tabs=ADMIN?TABS.concat([['admin','🛡️','አድሚን']]):TABS;
+  $('#nav').innerHTML=tabs.map(x=>`<button class="${x[0]===t?'on':''}" data-a="go" data-t="${x[0]}"><b>${x[1]}</b>${x[2]}</button>`).join('');
+  $('#app').innerHTML='';$('#room').style.display='none';
+  ({home:vHome,jobs:vJobs,comm:vComm,wallet:vWallet,profile:vProfile,admin:vAdmin})[t]();
+  renderMini()}
+const head=()=>`<div class="top"><b style="font-size:20px">🎙️ VoiceChat</b><span class="coin">🪙 ${ME.user.coins}</span></div>`;
 
-const fmt = n => Number(n || 0).toLocaleString('en-US');
-function hdrs() { return {'Content-Type': 'application/json', 'X-Telegram-Init-Data': tg ? tg.initData : ''}; }
-function esc(s) {
-  return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+/* ---------- ቤት ---------- */
+async function vHome(){
+  $('#app').innerHTML=head()+`<div class="card"><b>አዲስ ክፍል ክፈት</b><input id="rn" placeholder="የክፍል ስም" maxlength="50"><button data-a="mk" style="width:100%">➕ ክፈት</button></div><div id="rl" class="muted" style="padding:0 14px">...</div>`;
+  const rs=await api('/api/rooms');if(TAB!=='home')return;
+  const ids=Object.keys(rs);
+  $('#rl').innerHTML=ids.length?ids.map(i=>`<div class="card row sp" style="margin:8px 0"><div><b>${esc(rs[i].name)}</b><div class="small muted">👑 ${esc(rs[i].creator_name)} · 👥 ${rs[i].count}</div></div><button data-a="enter" data-id="${esc(i)}">ግባ</button></div>`).join(''):'ክፍል የለም';
 }
-function $(id) { return document.getElementById(id); }
-function toast(msg, type) {
-  const t = $('toast'); t.textContent = msg; t.className = 'toast show ' + (type || 'success');
-  setTimeout(() => t.className = 'toast', 3000);
-}
-async function api(path, method, body) {
-  const o = {method: method || 'POST', headers: hdrs()};
-  if (o.method !== 'GET') o.body = JSON.stringify(body || {});
-  const r = await fetch(path, o);
-  return r.json();
-}
-function setCoins(c) { ME.coins = c; $('coins').textContent = fmt(c); $('w-coins').textContent = fmt(c); }
-function setEarn(e) { ME.earnings = e; $('w-earn').textContent = fmt(e); }
+/* ---------- ክፍል ---------- */
+async function mk(){const n=val('rn').trim();if(!n)return toast('ስም ጻፍ');
+  const id='r'+Math.random().toString(36).slice(2,10);
+  const r=await api('/api/rooms/create',{room_id:id,room_name:n});r.success?enter(id):toast(r.error)}
+async function enter(id){
+  if(R&&R.id===id){showRoom();return}
+  if(R)await leaveRoom();
+  R={id,since:0,name:'',host:'',seats:{},msgs:[],count:0,muted:false,speak:new Set(),mic:null};
+  showRoom();
+  const t=await api('/api/livekit-token',{room_id:id});
+  if(t.success&&t.url&&window.LivekitClient){
+    try{const L=LivekitClient;const lk=new L.Room({audioCaptureDefaults:{echoCancellation:true,noiseSuppression:true}});
+      lk.on(L.RoomEvent.TrackSubscribed,(tr)=>{if(tr.kind==='audio'){const el=tr.attach();el.dataset.lk=1;document.body.appendChild(el)}});
+      lk.on(L.RoomEvent.TrackUnsubscribed,tr=>tr.detach().forEach(e=>e.remove()));
+      lk.on(L.RoomEvent.ActiveSpeakersChanged,s=>{R.speak=new Set(s.map(x=>x.identity));drawSeats()});
+      await lk.connect(t.url,t.token);R.lk=lk;syncMic()}catch(e){toast('ድምጽ መገናኘት አልተቻለም')}
+  }else if(!t.success)toast(t.error||'ስህተት');
+  clearInterval(POLL);POLL=setInterval(poll,2000);poll()}
+async function poll(){
+  if(!R)return;const id=R.id;
+  const s=await api(`/api/rooms/${id}/state?since=${R.since}`);
+  if(!R||R.id!==id)return;
+  if(!s.success){if(s.error==='Room not found'){toast('ክፍሉ ተዘግቷል');await exitRoom(true)}return}
+  R.name=s.name;R.host=s.host;R.seats=s.seats;R.count=s.count;ME.user.coins=s.coins;ME.user.earnings=s.earnings;
+  s.messages.forEach(m=>{R.msgs.push(m);R.since=Math.max(R.since,m.id)});R.msgs=R.msgs.slice(-100);
+  if(R.open)drawRoom();renderMini();syncMic()}
+const mySeat=()=>R&&Object.keys(R.seats).find(k=>R.seats[k].uid===ME.user_id);
+function syncMic(){if(!R||!R.lk)return;const want=mySeat()!==undefined&&!R.muted;
+  if(R.mic!==want){R.mic=want;R.lk.localParticipant.setMicrophoneEnabled(want).catch(()=>{R.mic=null})}}
+function showRoom(){R.open=true;$('#room').style.display='block';$('#room').innerHTML=`
+<div class="row sp"><div><b id="rt"></b><div class="small muted" id="rc"></div></div><div class="row"><button class="g" data-a="min">⬇️ ሚኒማይዝ</button><button class="r" data-a="exit">🚪 ውጣ</button></div></div>
+<div id="seats" style="margin-top:12px"></div>
+<div class="row"><button class="g f1" id="mb" data-a="mute"></button><button class="r f1" data-a="down">⬇️ ተነሳ</button></div>
+<div id="chat"></div><div class="row"><input id="ci" placeholder="መልእክት..." maxlength="200" class="f1"><button data-a="say">➤</button></div>`;
+  drawRoom();renderMini()}
+function drawRoom(){if(!R)return;$('#rt').textContent='🎙️ '+R.name;$('#rc').textContent='👥 '+R.count+' ሰው';
+  $('#mb').textContent=R.muted?'🎤 ማይክ ክፈት':'🔇 ማይክ አጥፋ';drawSeats();
+  const c=$('#chat'),b=c.scrollTop+c.clientHeight>=c.scrollHeight-30;
+  c.innerHTML=R.msgs.map(m=>m.sys?`<div class="sys">${esc(m.text)}</div>`:`<div><b style="color:#b79cff">${esc(m.name)}:</b> ${esc(m.text)}</div>`).join('');
+  if(b)c.scrollTop=c.scrollHeight}
+function seatHtml(i){const s=R.seats[i],th=i===0;
+  const cls='seat '+(th?'throne':'sofa')+(s&&R.speak.has(s.uid)?' spk':'');
+  const body=s?av(s.name,s.photo)+`<div class="nm">${esc(s.name)}</div>`:`<div class="e">${th?'👑':'🛋️'}</div><div>${th?'የባለቤት ዙፋን':i}</div>`;
+  return `<div class="${cls}" data-a="seat" data-i="${i}">${s&&th?'<div>👑</div>':''}${body}</div>`}
+function drawSeats(){const e=$('#seats');if(!e||!R)return;let h=seatHtml(0)+'<div class="grid c4">';for(let i=1;i<=20;i++)h+=seatHtml(i);e.innerHTML=h+'</div>'}
+async function seat(i){const s=R.seats[i];
+  if(s&&s.uid!==ME.user_id)return giftSheet(s.uid,s.name);
+  if(s)return;const r=await api(`/api/rooms/${R.id}/seat`,{seat:+i});r.success?poll():toast(r.error)}
+async function say(){const t=val('ci').trim();if(!t||!R)return;$('#ci').value='';const r=await api(`/api/rooms/${R.id}/chat`,{text:t});r.success?poll():toast(r.error)}
+async function down(){await api(`/api/rooms/${R.id}/leave-seat`,{});R.mic=null;poll()}
+function giftSheet(uid,name){modal(`<b>🎁 ለ ${esc(name)} ስጦታ ላክ</b> <span class="coin" style="float:right">🪙 ${ME.user.coins}</span><div class="grid c4" style="margin-top:12px">${CFG.gifts.map(g=>`<div class="gift" data-a="gift" data-g="${g.id}" data-u="${esc(uid)}"><i>${g.icon}</i>${esc(g.name)}<br>🪙${g.price}</div>`).join('')}</div>`)}
+async function gift(d){const r=await api(`/api/rooms/${R.id}/gift`,{gift_type:d.g,recipient_id:d.u});
+  if(r.success){ME.user.coins=r.remaining_coins;modal();poll();toast('ተልኳል 🎁')}
+  else{toast(r.error);if(r.need_coins){modal();minimize();go('wallet')}}}
+function minimize(){if(!R)return;R.open=false;$('#room').style.display='none';renderMini()}
+function renderMini(){const m=$('#mini');if(!R||R.open){m.style.display='none';return}
+  m.style.display='block';m.innerHTML=`<div class="row sp"><div data-a="enter" data-id="${esc(R.id)}" class="f1">🎙️ <b>${esc(R.name||'ክፍል')}</b> <span class="small muted">· 👥${R.count} · ክፈት ⬆️</span></div><button class="g" data-a="mute">${R.muted?'🎤':'🔇'}</button><button class="r" data-a="exit">✖</button></div>`}
+async function leaveRoom(){const r=R;if(!r)return;clearInterval(POLL);R=null;
+  try{r.lk&&await r.lk.disconnect()}catch(e){}document.querySelectorAll('audio[data-lk]').forEach(e=>e.remove());
+  await api(`/api/rooms/${r.id}/exit`,{})}
+async function exitRoom(){await leaveRoom();$('#room').style.display='none';$('#mini').style.display='none';if(TAB==='home')vHome()}
 
-/* ---------- መግቢያ ---------- */
-async function register() {
-  if (!tg || !tg.initData) { $('splash-msg').textContent = '⚠️ ይህን መተግበሪያ ከቴሌግራም ቦት ውስጥ ክፈት'; return; }
-  try {
-    const d = await api('/api/register', 'POST', {});
-    if (!d.success) { $('splash-msg').textContent = '❌ ' + (d.error || 'ስህተት'); return; }
-    ME = {uid: d.user_id, name: d.user.username, coins: d.user.coins, earnings: d.user.earnings, admin: d.admin};
-    CFG = d.config;
-    $('splash').classList.add('hidden');
-    $('app').classList.remove('hidden');
-    $('hello').textContent = 'ሰላም ' + ME.name + ' 👋';
-    $('w-id').textContent = ME.uid;
-    if (ME.admin) $('tb-admin').classList.remove('hidden');
-    setCoins(ME.coins); setEarn(ME.earnings);
-    $('wd-info').textContent = 'ዝቅተኛ ' + fmt(CFG.min_withdraw) + ' ሳንቲም · 1 ሳንቲም = ' + CFG.rate + ' ብር';
-    renderPackages();
-    loadRooms();
-  } catch (e) { $('splash-msg').textContent = '❌ ግንኙነት አልተሳካም፣ ድጋሚ ክፈት'; }
-}
+/* ---------- ዋሌት (Telebirr ብቻ) ---------- */
+async function vWallet(){
+  const u=ME.user;
+  $('#app').innerHTML=head()+`<div class="card hero"><div class="small">የእኔ ሳንቲም</div><div class="big">🪙 ${u.coins}</div><div class="row" style="margin-top:8px"><div class="card f1" style="margin:0;background:#fff2"><div class="small">የተገኘ ገቢ</div><b>${u.earnings}</b></div><div class="card f1" style="margin:0;background:#fff2"><div class="small">የእኔ መታወቂያ</div><b>${esc(ME.user_id)}</b></div></div></div>
+  <div class="card"><b>💰 ሳንቲም ግዛ</b><div class="small muted">ክፍያ በTelebirr ብቻ</div><div class="grid c2" style="margin-top:10px">${CFG.packages.map(p=>`<div class="card" style="margin:0;text-align:center" data-a="pkg" data-id="${p.id}"><b style="color:#ffd24a;font-size:20px">🪙 ${p.coins.toLocaleString()}</b><div class="muted">${p.price.toLocaleString()} ብር</div></div>`).join('')}</div></div>
+  <div class="card"><b>💸 ገንዘብ አውጣ</b><div class="small muted">1 ገቢ = ${CFG.rate} ብር · ዝቅተኛ ${CFG.min_withdraw} · መድረኩ ${CFG.fee_percent}% ይቆርጣል (በስጦታ ጊዜ)</div>
+  <input id="wp" placeholder="Telebirr ቁጥር 09xxxxxxxx" value="${esc(u.phone)}" inputmode="tel"><input id="wn" placeholder="በTelebirr ላይ ያለ ስም"><input id="wa" type="number" placeholder="የገቢ መጠን (${CFG.min_withdraw}+)">
+  <button data-a="wd" style="width:100%">አውጣ</button></div><div id="hist"></div>`;
+  const w=await api('/api/wallet');if(TAB!=='wallet'||!w.success)return;
+  ME.user=w.user;
+  $('#hist').innerHTML=`<div class="card"><b>የግዢ ታሪክ</b>${w.purchases.map(p=>`<div class="row sp small" style="margin-top:6px"><span>🪙${p.coins} · ${p.price} ብር · ${when(p.created)}</span>${st(p.status)}</div>`).join('')||'<div class="muted small">የለም</div>'}</div>
+  <div class="card"><b>የማውጣት ታሪክ</b>${w.withdrawals.map(x=>`<div class="row sp small" style="margin-top:6px"><span>${x.amount} → ${x.birr} ብር · ${when(x.created)}</span>${st(x.status)}</div>`).join('')||'<div class="muted small">የለም</div>'}</div>`}
+function pkg(d){const p=CFG.packages.find(x=>x.id===d.id);SEL=p;
+  modal(`<b>🪙 ${p.coins.toLocaleString()} ሳንቲም — ${p.price.toLocaleString()} ብር</b>
+  <div class="card" style="margin:12px 0;background:#2b2210"><div class="small">በTelebirr ወደዚህ ላክ፦</div><div class="big" style="font-size:26px;color:#ffd24a" data-a="copy">${CFG.telebirr.number}</div><div>ስም፦ <b>${esc(CFG.telebirr.name)}</b></div><div class="small muted">⚠️ ከመላክዎ በፊት ስሙ ${esc(CFG.telebirr.name)} መሆኑን ያረጋግጡ</div></div>
+  <input id="ref" placeholder="Transaction ID (የግብይት ቁጥር)" maxlength="20"><input id="shot" type="file" accept="image/*">
+  <div class="row"><button class="g f1" data-a="close">ተመለስ</button><button class="ok f1" data-a="buy">ላክ</button></div>`)}
+async function buy(){const f=$('#shot').files[0];if(!f)return toast('ስክሪንሾት ምረጥ');
+  const shot=await shrink(f);const r=await api('/api/coins/buy',{package_id:SEL.id,ref:val('ref'),shot});
+  if(r.success){modal();toast('ተልኳል፤ አድሚን እስኪያጸድቅ ይጠብቁ ✅');vWallet()}else toast(r.error)}
+function shrink(f){return new Promise(res=>{const im=new Image();im.onload=()=>{const s=Math.min(1,1100/Math.max(im.width,im.height)),c=document.createElement('canvas');c.width=im.width*s;c.height=im.height*s;c.getContext('2d').drawImage(im,0,0,c.width,c.height);res(c.toDataURL('image/jpeg',.8))};im.src=URL.createObjectURL(f)})}
+async function wd(){const r=await api('/api/withdraw',{phone:val('wp'),acc_name:val('wn'),amount:val('wa')});
+  if(r.success){toast('ጥያቄ ተልኳል ✅');ME.user.earnings=r.earnings;vWallet()}else toast(r.error)}
 
-function go(t) {
-  tab = t;
-  for (const x of ['home', 'wallet', 'admin']) {
-    $('t-' + x).classList.toggle('hidden', x !== t);
-    $('tb-' + x).classList.toggle('on', x === t);
-  }
-  window.scrollTo(0, 0);
-  if (t === 'wallet') loadWallet();
-  if (t === 'admin') loadAdmin();
-  if (t === 'home') loadRooms();
-}
+/* ---------- ፕሮፋይል ---------- */
+function vProfile(){const u=ME.user;
+  $('#app').innerHTML=head()+`<div class="card" style="text-align:center">${av(u.username,u.photo)}<b>${esc(u.username)}</b><div class="small muted">${esc(ME.user_id)}</div></div>
+  <div class="card"><input id="pn" value="${esc(u.username)}" placeholder="ስም" maxlength="30"><textarea id="pb" rows="3" placeholder="ስለ እኔ" maxlength="150">${esc(u.bio)}</textarea><input id="pp" value="${esc(u.phone)}" placeholder="Telebirr ቁጥር (አማራጭ)"><button data-a="psave" style="width:100%">አስቀምጥ</button></div>
+  <div class="card"><div class="row sp"><span>🪙 ሳንቲም</span><b>${u.coins}</b></div><div class="row sp"><span>💵 ገቢ</span><b>${u.earnings}</b></div><div class="row sp"><span>📅 የተቀላቀሉት</span><b>${when(u.joined)}</b></div></div>`}
+async function psave(){const r=await api('/api/profile',{name:val('pn'),bio:val('pb'),phone:val('pp')});if(r.success){ME.user=r.user;toast('ተቀምጧል ✅');vProfile()}else toast(r.error)}
 
-/* ---------- ክፍሎች ---------- */
-async function createRoom() {
-  const name = $('room-name').value.trim();
-  if (!name) { toast('⚠️ የክፍል ስም አስገባ', 'error'); return; }
-  const id = 'room_' + Math.random().toString(36).substr(2, 9);
-  try {
-    const d = await api('/api/rooms/create', 'POST', {room_id: id, room_name: name});
-    if (d.success) { $('room-name').value = ''; joinRoom(id); }
-    else toast('❌ ' + (d.error || 'ስህተት'), 'error');
-  } catch (e) { toast('❌ ስህተት', 'error'); }
-}
+/* ---------- ሥራ ---------- */
+async function vJobs(){
+  $('#app').innerHTML=head()+`<div class="card"><b>💼 ሥራ ለጥፍ</b><input id="jt" placeholder="ርዕስ" maxlength="80"><textarea id="jd" rows="2" placeholder="ዝርዝር" maxlength="500"></textarea><input id="jc" placeholder="ማግኛ (ስልክ/@username)" maxlength="100"><button data-a="jpost" style="width:100%">ለጥፍ</button></div><div id="jl"></div>`;
+  const r=await api('/api/jobs');if(TAB!=='jobs'||!r.success)return;
+  $('#jl').innerHTML=r.jobs.map(j=>`<div class="card"><b>${esc(j.title)}</b><div class="muted small">${esc(j.name)} · ${when(j.created)}</div><p>${esc(j.desc)}</p><div class="row sp"><span>📞 ${esc(j.contact)}</span>${j.mine||ADMIN?`<button class="r" data-a="jdel" data-id="${j.id}">🗑</button>`:''}</div></div>`).join('')||'<p class="muted" style="padding:0 14px">ሥራ የለም</p>'}
+async function jpost(){const r=await api('/api/jobs/create',{title:val('jt'),desc:val('jd'),contact:val('jc')});r.success?vJobs():toast(r.error)}
+async function jdel(d){await api(`/api/jobs/${d.id}/delete`,{});vJobs()}
 
-async function loadRooms() {
-  if (inRoom || tab !== 'home' || !ME) return;
-  try {
-    const rooms = await (await fetch('/api/rooms')).json();
-    const keys = Object.keys(rooms);
-    if (!keys.length) { $('rooms').innerHTML = '<div class="empty"><div>🔇</div>ገና ምንም ክፍል የለም</div>'; return; }
-    $('rooms').innerHTML = keys.map(rid => {
-      const r = rooms[rid];
-      return '<div class="room"><div class="ic">🎙️</div><div class="grow"><div class="nm">' + esc(r.name)
-        + '</div><div class="sub"><span class="live"></span>' + esc(r.creator_name) + ' · 👥 ' + r.count
-        + '</div></div><button class="btn sm" onclick="joinRoom(\'' + esc(rid) + '\')">ግባ</button></div>';
-    }).join('');
-  } catch (e) {}
-}
+/* ---------- ማኅበረሰብ ---------- */
+async function vComm(){
+  $('#app').innerHTML=head()+`<div class="card"><textarea id="po" rows="2" placeholder="ምን እያሰቡ ነው?" maxlength="500"></textarea><button data-a="ppost" style="width:100%">ለጥፍ</button></div><div id="pl"></div>`;
+  const r=await api('/api/posts');if(TAB!=='comm'||!r.success)return;
+  $('#pl').innerHTML=r.posts.map(p=>`<div class="card"><div class="row">${av(p.name,p.photo)}<div><b>${esc(p.name)}</b><div class="small muted">${when(p.created)}</div></div></div><p>${esc(p.text)}</p><div class="row"><button class="g" data-a="plike" data-id="${p.id}">${p.liked?'❤️':'🤍'} ${p.likes}</button>${p.mine||ADMIN?`<button class="r" data-a="pdel" data-id="${p.id}">🗑</button>`:''}</div></div>`).join('')||'<p class="muted" style="padding:0 14px">ልጥፍ የለም</p>'}
+async function ppost(){const r=await api('/api/posts/create',{text:val('po')});r.success?vComm():toast(r.error)}
+async function plike(d){await api(`/api/posts/${d.id}/like`,{});vComm()}
+async function pdel(d){await api(`/api/posts/${d.id}/delete`,{});vComm()}
 
-async function joinRoom(roomId) {
-  if (inRoom) await leaveRoom();
-  try {
-    const d = await api('/api/livekit-token', 'POST', {room_id: roomId});
-    if (!d.success) { toast('❌ ' + d.error, 'error'); return; }
-    lkRoom = new LivekitClient.Room({
-      adaptiveStream: true, dynacast: true,
-      audioCaptureDefaults: {echoCancellation: true, noiseSuppression: true, autoGainControl: true, channelCount: 1, sampleRate: 48000},
-      publishDefaults: {audioPreset: LivekitClient.AudioPresets.speech, dtx: true, red: true}
-    });
-    lkRoom.on(LivekitClient.RoomEvent.TrackSubscribed, (track) => {
-      if (track.kind === 'audio') $('audio-box').appendChild(track.attach());
-    });
-    lkRoom.on(LivekitClient.RoomEvent.TrackUnsubscribed, (track) => { track.detach().forEach(el => el.remove()); });
-    lkRoom.on(LivekitClient.RoomEvent.ActiveSpeakersChanged, (sp) => { speaking = new Set(sp.map(s => s.identity)); renderSeats(); });
-    await lkRoom.connect(d.url, d.token);
-    await lkRoom.startAudio();
-  } catch (e) { toast('❌ መግባት አልተሳካም', 'error'); lkRoom = null; return; }
-  inRoom = roomId;
-  lastMsg = 0; lastSeats = {}; mySeat = null; muted = false; firstPoll = true;
-  $('chat').innerHTML = '';
-  $('app').classList.add('hidden');
-  $('room-view').classList.remove('hidden');
-  await pollState();
-  pollTimer = setInterval(pollState, 2000);
-  window.scrollTo(0, 0);
-}
+/* ---------- ሱፐር አድሚን ---------- */
+async function vAdmin(){
+  $('#app').innerHTML=head()+'<p class="muted" style="padding:0 14px">...</p>';
+  const o=await api('/api/admin/overview');if(TAB!=='admin')return;if(!o.success)return toast(o.error);
+  const s=o.stats,S=[['ተጠቃሚ',s.users],['ታግዶ',s.banned],['ክፍል',s.rooms],['ልጥፍ',s.posts],['ሥራ',s.jobs],['ሳንቲም',s.coins],['ገቢ',s.earnings],['ሽያጭ ብር',s.revenue],['የተከፈለ ብር',s.paid_out],['ኮሚሽን',s.fee_coins],['ስጦታ',s.gifts]];
+  $('#app').innerHTML=head()+`<div class="card"><b>📊 ስታቲስቲክስ</b><div class="grid c4" style="margin-top:8px">${S.map(x=>`<div class="gift"><b>${x[1]}</b><br>${x[0]}</div>`).join('')}</div></div>
+  <div class="card"><b>💳 የሳንቲም ግዢ ጥያቄዎች (${o.purchases.length})</b>${o.purchases.map(p=>`<div class="card" style="margin:8px 0"><b>${esc(p.name)}</b> · 🪙${p.coins} · ${p.price} ብር<div class="small muted">ID: ${esc(p.ref)} · ${esc(p.uid)} · ${when(p.created)}</div><div id="sh${p.id}"></div><div class="row" style="margin-top:6px"><button class="g" data-a="shot" data-id="${p.id}">🖼</button><button class="ok f1" data-a="apur" data-id="${p.id}" data-x="approve">✅ አጽድቅ</button><button class="r f1" data-a="apur" data-id="${p.id}" data-x="reject">❌</button></div></div>`).join('')||'<div class="muted small">የለም</div>'}</div>
+  <div class="card"><b>💸 የማውጣት ጥያቄዎች (${o.withdrawals.length})</b>${o.withdrawals.map(w=>`<div class="card" style="margin:8px 0"><b>${esc(w.name)}</b> · ${w.amount} → <b>${w.birr} ብር</b><div class="small">📱 ${esc(w.phone)} · ${esc(w.acc_name)}</div><div class="row" style="margin-top:6px"><button class="ok f1" data-a="awd" data-id="${w.id}" data-x="paid">✅ ተከፍሏል</button><button class="r f1" data-a="awd" data-id="${w.id}" data-x="reject">❌ መልስ</button></div></div>`).join('')||'<div class="muted small">የለም</div>'}</div>
+  <div class="card"><b>🎙️ ክፍሎች</b>${o.rooms.map(r=>`<div class="row sp" style="margin-top:6px"><span>${esc(r.name)} · 👥${r.count}</span><button class="r" data-a="arm" data-id="${esc(r.id)}">ዝጋ</button></div>`).join('')||'<div class="muted small">የለም</div>'}</div>
+  <div class="card"><b>👤 ተጠቃሚዎች</b><div class="row"><input id="uq" placeholder="ስም ወይም tg_ID" class="f1"><button data-a="usr">ፈልግ</button></div><div id="ul"></div></div>
+  <div class="card"><b>📜 የቅርብ ታሪክ</b>${o.history_p.concat(o.history_w).map(h=>`<div class="row sp small" style="margin-top:5px"><span>${esc(h.name)} · ${h.coins?'🪙'+h.coins:h.birr+' ብር'}</span>${st(h.status)}</div>`).join('')}</div>`;
+  usr()}
+async function usr(){const r=await api('/api/admin/users?q='+encodeURIComponent(val('uq')));if(!r.success)return;
+  $('#ul').innerHTML=r.users.map(u=>`<div class="card" style="margin:8px 0"><b>${esc(u.username)}</b> ${u.banned?'🚫':''}<div class="small muted">${esc(u.uid)} · 🪙${u.coins} · 💵${u.earnings}</div><div class="row" style="flex-wrap:wrap;margin-top:6px"><button class="${u.banned?'ok':'r'}" data-a="uact" data-u="${esc(u.uid)}" data-x="${u.banned?'unban':'ban'}">${u.banned?'ፍቀድ':'አግድ'}</button><button class="g" data-a="grant" data-u="${esc(u.uid)}">🪙 ±</button><button class="r" data-a="uact" data-u="${esc(u.uid)}" data-x="delete">🗑 ሰርዝ</button></div></div>`).join('')}
+async function shot(d){const r=await api('/api/admin/shot/'+d.id,undefined,true);
+  if(r.blob){$('#sh'+d.id).innerHTML=`<img class="shot" src="${URL.createObjectURL(await r.blob())}">`}else toast(r.error||'ፎቶ የለም')}
+async function apur(d){if(d.x==='approve'&&!confirm('ሳንቲሙ ይሰጠው?'))return;const r=await api('/api/admin/purchase',{id:d.id,action:d.x});r.success?vAdmin():toast(r.error)}
+async function awd(d){const r=await api('/api/admin/withdraw',{id:d.id,action:d.x});r.success?vAdmin():toast(r.error)}
+async function arm(d){if(!confirm('ክፍሉ ይዘጋ?'))return;await api('/api/admin/room',{id:d.id});vAdmin()}
+async function uact(d){if(d.x==='delete'&&!confirm('ተጠቃሚው ሙሉ በሙሉ ይሰረዝ?'))return;const r=await api('/api/admin/user',{uid:d.u,action:d.x});r.success?usr():toast(r.error)}
+async function grant(d){const a=prompt('የሳንቲም መጠን (ለመቀነስ -)');if(!a)return;const r=await api('/api/admin/user',{uid:d.u,action:'grant',amount:a});r.success?(toast('✅'),usr()):toast(r.error)}
 
-async function leaveRoom() {
-  const rid = inRoom;
-  inRoom = null;
-  closeSheet();
-  if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
-  if (lkRoom) { try { await lkRoom.disconnect(); } catch (e) {} lkRoom = null; }
-  $('audio-box').innerHTML = '';
-  $('room-view').classList.add('hidden');
-  $('app').classList.remove('hidden');
-  if (rid) { try { await api('/api/rooms/' + rid + '/exit', 'POST', {}); } catch (e) {} }
-  go('home');
-}
-
-async function pollState() {
-  if (!inRoom) return;
-  try {
-    const d = await api('/api/rooms/' + inRoom + '/state?since=' + lastMsg, 'GET');
-    if (!d.success) { toast('❌ ክፍሉ የለም', 'error'); leaveRoom(); return; }
-    lastSeats = d.seats;
-    $('rv-title').textContent = '🎙️ ' + d.name;
-    $('rv-count').textContent = '👥 ' + d.count + ' ሰው';
-    if (typeof d.coins === 'number') setCoins(d.coins);
-    if (typeof d.earnings === 'number') setEarn(d.earnings);
-    mySeat = null;
-    for (const [k, s] of Object.entries(d.seats)) if (s.uid === ME.uid) mySeat = parseInt(k);
-    renderSeats();
-    const animate = !firstPoll; firstPoll = false;
-    appendMessages(d.messages, animate);
-    syncMic();
-  } catch (e) {}
-}
-
-function renderSeats() {
-  let h = '';
-  for (let i = 0; i < 9; i++) {
-    const s = lastSeats[String(i)];
-    if (s) {
-      const cls = 'seat' + (s.uid === ME.uid ? ' mine' : '') + (speaking.has(s.uid) ? ' speaking' : '');
-      const pic = s.photo ? '<img src="' + esc(s.photo) + '">' : esc((s.name || '?').charAt(0).toUpperCase());
-      h += '<div class="' + cls + '" data-uid="' + esc(s.uid) + '" onclick="seatClick(' + i + ')">'
-        + (i === 0 ? '<div class="crown">👑</div>' : '') + '<div class="pic">' + pic + '</div>'
-        + '<div class="sname">' + esc(s.name) + '</div></div>';
-    } else {
-      h += '<div class="seat" onclick="seatClick(' + i + ')"><div class="em">' + (i === 0 ? '👑' : '🛋️')
-        + '</div><div class="num">' + (i === 0 ? 'host' : (i + 1)) + '</div></div>';
-    }
-  }
-  $('seats').innerHTML = h;
-  $('mic-btn').classList.toggle('hidden', mySeat === null);
-  $('stand-btn').classList.toggle('hidden', mySeat === null);
-  $('mic-btn').textContent = muted ? '🎤 ማይክ አብራ' : '🔇 ማይክ አጥፋ';
-}
-
-async function seatClick(i) {
-  const s = lastSeats[String(i)];
-  if (s && s.uid === ME.uid) { leaveSeat(); return; }
-  if (s) { openGift(s.uid, s.name); return; }
-  try {
-    const d = await api('/api/rooms/' + inRoom + '/seat', 'POST', {seat: i});
-    if (!d.success) { toast('❌ ' + d.error, 'error'); return; }
-    muted = false; await pollState();
-  } catch (e) { toast('❌ ስህተት', 'error'); }
-}
-async function leaveSeat() {
-  try { await api('/api/rooms/' + inRoom + '/leave-seat', 'POST', {}); await pollState(); } catch (e) {}
-}
-async function syncMic() {
-  if (!lkRoom || micBusy) return;
-  const want = (mySeat !== null) && !muted;
-  if (want === lkRoom.localParticipant.isMicrophoneEnabled) return;
-  micBusy = true;
-  try { await lkRoom.localParticipant.setMicrophoneEnabled(want); }
-  catch (e) { if (want) { toast('❌ ማይክ ፈቃድ አልተሰጠም', 'error'); muted = true; renderSeats(); } }
-  micBusy = false;
-}
-function toggleMute() { muted = !muted; renderSeats(); syncMic(); }
-
-/* ---------- ቻት ---------- */
-function appendMessages(msgs, animate) {
-  if (!msgs || !msgs.length) return;
-  let h = '';
-  for (const m of msgs) {
-    lastMsg = Math.max(lastMsg, m.id);
-    if (m.gift) { h += '<div class="msg gift">' + esc(m.text) + '</div>'; if (animate) playGift(m.gift); }
-    else if (m.sys) h += '<div class="msg sys">' + esc(m.text) + '</div>';
-    else h += '<div class="msg"><span class="n">' + esc(m.name) + ':</span> ' + esc(m.text) + '</div>';
-  }
-  const box = $('chat');
-  box.insertAdjacentHTML('beforeend', h);
-  box.scrollTop = box.scrollHeight;
-}
-async function sendChat() {
-  const inp = $('chat-text'), text = inp.value.trim();
-  if (!text || !inRoom) return;
-  inp.value = '';
-  try { await api('/api/rooms/' + inRoom + '/chat', 'POST', {text: text}); pollState(); } catch (e) {}
-}
-$('chat-text').addEventListener('keydown', e => { if (e.key === 'Enter') sendChat(); });
-
-/* ---------- Sheet ---------- */
-function openSheet(html) { $('sheet-body').innerHTML = html; $('sheet').classList.remove('hidden'); }
-function closeSheet() { $('sheet').classList.add('hidden'); giftTarget = null; }
-
-/* ---------- ስጦታ ---------- */
-function openGift(uid, name) {
-  if (!uid) {
-    const others = Object.values(lastSeats).filter(s => s.uid !== ME.uid);
-    if (!others.length) { toast('ስጦታ ለመላክ የተቀመጠ ሰው ንካ', 'error'); return; }
-    const host = lastSeats['0'] && lastSeats['0'].uid !== ME.uid ? lastSeats['0'] : others[0];
-    uid = host.uid; name = host.name;
-  }
-  giftTarget = {uid: uid, name: name};
-  const gs = CFG.gifts.map(g =>
-    '<div class="g' + (ME.coins < g.price ? ' dis' : '') + '" onclick="sendRoomGift(\'' + g.id + '\')"><div class="i">'
-    + g.icon + '</div><div class="n">' + esc(g.name) + '</div><div class="p">' + fmt(g.price) + '</div></div>').join('');
-  openSheet('<div class="row"><div class="grow"><b style="font-size:16px">🎁 ለ ' + esc(name)
-    + '</b><div class="sub">ስጦታ ይምረጡ</div></div><div class="chip">🪙 ' + fmt(ME.coins) + '</div></div>'
-    + '<div class="gg">' + gs + '</div>'
-    + '<button class="btn sec" onclick="buyFromRoom()">💰 ሳንቲም ግዛ</button>');
-}
-function buyFromRoom() { closeSheet(); toast('መጀመሪያ ክፍሉን ውጣና በ👛 ዋሌት ግዛ', 'error'); }
-
-async function sendRoomGift(type) {
-  if (!giftTarget || !inRoom || giftBusy) return;
-  giftBusy = true;
-  try {
-    const d = await api('/api/rooms/' + inRoom + '/gift', 'POST', {gift_type: type, recipient_id: giftTarget.uid});
-    if (d.success) { setCoins(d.remaining_coins); closeSheet(); pollState(); }
-    else toast('❌ ' + d.error, 'error');
-  } catch (e) { toast('❌ ስህተት', 'error'); }
-  giftBusy = false;
-}
-
-function playGift(g) {
-  if (g.price >= 5000) {
-    const m = document.createElement('div');
-    m.className = 'mega';
-    m.innerHTML = '<div class="e">' + g.icon + '</div><div class="t">🎉 ' + fmt(g.price) + ' 🪙</div>';
-    document.body.appendChild(m);
-    setTimeout(() => m.remove(), 4100);
-    return;
-  }
-  const seat = document.querySelector('[data-uid="' + g.to + '"]');
-  const el = document.createElement('div');
-  el.className = 'fly' + (g.price >= 500 ? ' big' : '');
-  el.textContent = g.icon;
-  if (seat) {
-    const r = seat.getBoundingClientRect();
-    el.style.left = (r.left + r.width / 2) + 'px'; el.style.top = (r.top + r.height / 2) + 'px';
-  } else { el.style.left = '50%'; el.style.top = '40%'; }
-  document.body.appendChild(el);
-  setTimeout(() => el.remove(), 3400);
-}
-
-/* ---------- ዋሌት ---------- */
-function renderPackages() {
-  $('pk').innerHTML = CFG.packages.map(p =>
-    '<div class="pkg" onclick="buyPackage(\'' + p.id + '\')"><div class="c">🪙 ' + fmt(p.coins)
-    + '</div><div class="p">' + fmt(p.price) + ' ብር</div></div>').join('');
-}
-function buyPackage(id) {
-  const p = CFG.packages.find(x => x.id === id);
-  openSheet('<div style="text-align:center"><div style="font-size:40px">💰</div><b style="font-size:18px">'
-    + fmt(p.coins) + ' ሳንቲም</b><div class="sub">' + fmt(p.price) + ' ብር</div></div>'
-    + '<div class="req" style="margin-top:14px"><b>1. ክፍያ ላክ፦</b><br>' + esc(CFG.pay_info) + '</div>'
-    + '<div class="req"><b>2. የደረሰኝ / የግብይት ቁጥር አስገባ፦</b></div>'
-    + '<input class="inp" id="pay-ref" maxlength="100" placeholder="ለምሳሌ፡ DAB1C2D3E4">'
-    + '<button class="btn" onclick="submitBuy(\'' + id + '\')">✅ ጥያቄ ላክ</button>'
-    + '<div class="sub" style="text-align:center;margin-top:10px">አድሚን ካረጋገጠ በኋላ ሳንቲሙ ይገባል</div>');
-}
-async function submitBuy(id) {
-  const ref = $('pay-ref').value.trim();
-  if (!ref) { toast('⚠️ የደረሰኝ ቁጥር አስገባ', 'error'); return; }
-  try {
-    const d = await api('/api/coins/buy', 'POST', {package_id: id, ref: ref});
-    if (d.success) { closeSheet(); toast('✅ ጥያቄው ተልኳል፣ ማረጋገጫ ይጠብቁ'); loadWallet(); }
-    else toast('❌ ' + d.error, 'error');
-  } catch (e) { toast('❌ ስህተት', 'error'); }
-}
-async function withdraw() {
-  const amount = parseInt($('wd-amount').value), account = $('wd-acc').value.trim();
-  if (!amount) { toast('⚠️ መጠን አስገባ', 'error'); return; }
-  try {
-    const d = await api('/api/withdraw', 'POST', {amount: amount, account: account});
-    if (d.success) { setEarn(d.earnings); $('wd-amount').value = ''; toast('✅ ጥያቄው ተልኳል'); loadWallet(); }
-    else toast('❌ ' + d.error, 'error');
-  } catch (e) { toast('❌ ስህተት', 'error'); }
-}
-const ST = {pending: 'በመጠባበቅ', approved: 'ጸድቋል', paid: 'ተከፍሏል', rejected: 'ተከልክሏል'};
-async function loadWallet() {
-  try {
-    const d = await api('/api/wallet', 'GET');
-    if (!d.success) return;
-    setCoins(d.user.coins); setEarn(d.user.earnings);
-    let h = '';
-    for (const p of d.purchases) h += '<div class="hist"><span>🛒 ' + fmt(p.coins) + ' 🪙<br><span class="sub">' + esc(p.created.slice(0, 10)) + '</span></span><span class="tag ' + p.status + '">' + ST[p.status] + '</span></div>';
-    for (const w of d.withdrawals) h += '<div class="hist"><span>💸 ' + fmt(w.amount) + ' → ' + fmt(w.birr) + ' ብር<br><span class="sub">' + esc(w.created.slice(0, 10)) + '</span></span><span class="tag ' + w.status + '">' + ST[w.status] + '</span></div>';
-    $('hist').innerHTML = h || '<div class="empty">ገና ምንም ታሪክ የለም</div>';
-  } catch (e) {}
-}
-
-/* ---------- አድሚን ---------- */
-async function loadAdmin() {
-  try {
-    const d = await api('/api/admin/overview', 'GET');
-    if (!d.success) { toast('❌ ' + d.error, 'error'); return; }
-    const s = d.stats;
-    $('a-stats').innerHTML = [['👥', s.users, 'ተጠቃሚ'], ['🎙️', s.rooms, 'ክፍል'], ['🎁', s.gifts, 'ስጦታ'],
-      ['🪙', fmt(s.coins), 'ጠቅላላ ሳንቲም'], ['💵', fmt(s.revenue), 'ገቢ (ብር)'], ['⏳', d.purchases.length + d.withdrawals.length, 'ጥያቄ']]
-      .map(x => '<div class="stat"><span>' + x[0] + ' ' + x[2] + '</span><b>' + x[1] + '</b></div>').join('');
-    $('a-pur').innerHTML = d.purchases.map(p =>
-      '<div class="req"><div class="r1"><span>' + esc(p.name) + '</span><span>' + fmt(p.coins) + ' 🪙 · ' + fmt(p.price) + ' ብር</span></div>'
-      + '<div class="sub">ደረሰኝ፦ <b style="color:#fff">' + esc(p.ref) + '</b> · ' + esc(p.uid) + '</div>'
-      + '<div class="row" style="margin-top:8px"><button class="btn ok sm grow" onclick="adminPur(\'' + esc(p.id) + '\',\'approve\')">✅ አጽድቅ</button>'
-      + '<button class="btn bad sm grow" onclick="adminPur(\'' + esc(p.id) + '\',\'reject\')">❌ ከልክል</button></div></div>').join('')
-      || '<div class="sub">ምንም የለም</div>';
-    $('a-wd').innerHTML = d.withdrawals.map(w =>
-      '<div class="req"><div class="r1"><span>' + esc(w.name) + '</span><span>' + fmt(w.birr) + ' ብር</span></div>'
-      + '<div class="sub">' + fmt(w.amount) + ' ሳንቲም · <b style="color:#fff">' + esc(w.account) + '</b></div>'
-      + '<div class="row" style="margin-top:8px"><button class="btn ok sm grow" onclick="adminWd(\'' + esc(w.id) + '\',\'paid\')">💸 ከፍያለሁ</button>'
-      + '<button class="btn bad sm grow" onclick="adminWd(\'' + esc(w.id) + '\',\'reject\')">❌ መልስ</button></div></div>').join('')
-      || '<div class="sub">ምንም የለም</div>';
-    $('a-users').innerHTML = d.users.map(u =>
-      '<div class="hist" onclick="$(\'g-uid\').value=\'' + esc(u.uid) + '\';window.scrollTo(0,0)"><span>' + esc(u.username)
-      + '<br><span class="sub">' + esc(u.uid) + '</span></span><span>🪙 ' + fmt(u.coins) + '<br><span class="sub">ገቢ ' + fmt(u.earnings) + '</span></span></div>').join('');
-  } catch (e) {}
-}
-async function adminPur(id, action) {
-  const d = await api('/api/admin/purchase', 'POST', {id: id, action: action});
-  toast(d.success ? '✅ ተደርጓል' : '❌ ' + d.error, d.success ? 'success' : 'error'); loadAdmin();
-}
-async function adminWd(id, action) {
-  const d = await api('/api/admin/withdraw', 'POST', {id: id, action: action});
-  toast(d.success ? '✅ ተደርጓል' : '❌ ' + d.error, d.success ? 'success' : 'error'); loadAdmin();
-}
-async function grant() {
-  const uid = $('g-uid').value.trim(), amount = parseInt($('g-amt').value);
-  if (!uid || !amount) { toast('⚠️ ሁሉንም ሙላ', 'error'); return; }
-  const d = await api('/api/admin/grant', 'POST', {uid: uid, amount: amount});
-  if (d.success) { toast('✅ አዲስ ሂሳብ፦ ' + fmt(d.coins)); $('g-amt').value = ''; loadAdmin(); }
-  else toast('❌ ' + d.error, 'error');
-}
-
-setInterval(loadRooms, 5000);
-register();
-</script>
-</body>
-</html>
+/* ---------- ጠቅታዎች ---------- */
+const A={go:d=>go(d.t),mk,enter:d=>enter(d.id),min:minimize,exit:exitRoom,seat:d=>seat(d.i),say,down,
+  mute:()=>{if(!R)return;R.muted=!R.muted;R.mic=null;syncMic();R.open?drawRoom():renderMini()},
+  gift,pkg,buy,wd,psave,jpost,jdel,ppost,plike,pdel,shot,apur,awd,arm,usr,uact,grant,close:()=>modal(),
+  copy:d=>{navigator.clipboard&&navigator.clipboard.writeText('0970575151');toast('ተቀድቷል')}};
+document.addEventListener('click',e=>{const t=e.target.closest('[data-a]');if(t&&A[t.dataset.a])A[t.dataset.a](t.dataset)});
+document.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.id==='ci')say()});
+init();
+</script></body></html>
