@@ -67,7 +67,7 @@
             font-size: 14px;
             font-weight: 600;
         }
-        .input-group input {
+        .input-group input, .chat-input input {
             width: 100%;
             padding: 16px 20px;
             border: 2px solid rgba(255, 255, 255, 0.3);
@@ -77,7 +77,7 @@
             font-size: 16px;
             outline: none;
         }
-        .input-group input::placeholder { color: rgba(255, 255, 255, 0.5); }
+        .input-group input::placeholder, .chat-input input::placeholder { color: rgba(255, 255, 255, 0.5); }
         .btn {
             background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
             color: white;
@@ -94,11 +94,8 @@
             background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
             color: #333;
         }
-        .section-title {
-            font-size: 20px;
-            font-weight: 700;
-            margin-bottom: 15px;
-        }
+        .btn-danger { background: #ff4757; }
+        .section-title { font-size: 20px; font-weight: 700; margin-bottom: 15px; }
         .gifts-grid {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
@@ -112,11 +109,6 @@
             padding: 20px 10px;
             text-align: center;
             cursor: pointer;
-            transition: all 0.3s;
-        }
-        .gift-card:hover {
-            transform: translateY(-5px);
-            border-color: rgba(255, 255, 255, 0.6);
         }
         .gift-icon { font-size: 40px; margin-bottom: 8px; display: block; }
         .gift-price { font-weight: 700; font-size: 14px; color: #ffd700; }
@@ -142,18 +134,69 @@
         .room-name { font-weight: 600; font-size: 16px; margin-bottom: 4px; }
         .room-meta { font-size: 12px; color: rgba(255, 255, 255, 0.7); }
         .hidden { display: none !important; }
-        .toast {
-            position: fixed;
-            top: 20px;
-            left: 50%;
-            transform: translateX(-50%) translateY(-100px);
-            background: rgba(0, 0, 0, 0.9);
-            color: white;
-            padding: 15px 25px;
-            border-radius: 12px;
+
+        .room-top {
+            display: flex; justify-content: space-between; align-items: center;
+            margin-bottom: 14px; gap: 10px;
+        }
+        .room-top .t { font-size: 18px; font-weight: 700; }
+        .room-top .c { font-size: 13px; color: rgba(255,255,255,0.8); }
+        .exit-btn {
+            background: #ff4757; border: none; color: #fff;
+            padding: 10px 16px; border-radius: 12px; font-weight: 600; font-size: 14px;
+        }
+        .seat-grid {
+            display: grid; grid-template-columns: repeat(3, 1fr);
+            gap: 10px; margin-bottom: 14px;
+        }
+        .seat {
+            background: rgba(255,255,255,0.12);
+            border: 2px solid rgba(255,255,255,0.2);
+            border-radius: 18px;
+            padding: 12px 6px;
+            text-align: center;
+            min-height: 108px;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            cursor: pointer;
+        }
+        .seat.mine { border-color: #ffd700; }
+        .seat.speaking { border-color: #43e97b; box-shadow: 0 0 14px #43e97b; }
+        .seat .pic {
+            width: 56px; height: 56px; border-radius: 50%;
+            background: linear-gradient(135deg, #ff6b6b, #feca57);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 24px; font-weight: bold; overflow: hidden; position: relative;
+        }
+        .seat .pic img { width: 100%; height: 100%; object-fit: cover; }
+        .seat .empty { font-size: 34px; opacity: 0.7; }
+        .seat .sname {
+            font-size: 12px; margin-top: 6px; max-width: 100%;
+            overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+        }
+        .seat .crown { font-size: 16px; line-height: 1; margin-bottom: 2px; }
+        .seat .num { font-size: 11px; color: rgba(255,255,255,0.6); margin-top: 4px; }
+
+        .chat-box {
+            background: rgba(0,0,0,0.18); border-radius: 16px;
+            padding: 12px; height: 190px; overflow-y: auto; margin-bottom: 10px;
             font-size: 14px;
-            z-index: 1000;
-            transition: transform 0.3s;
+        }
+        .msg { margin-bottom: 6px; word-break: break-word; }
+        .msg .n { color: #feca57; font-weight: 600; }
+        .msg.sys { color: rgba(255,255,255,0.65); font-size: 12px; }
+        .chat-input { display: flex; gap: 8px; }
+        .chat-input input { padding: 12px 16px; }
+        .chat-input button {
+            border: none; border-radius: 14px; padding: 0 18px;
+            background: linear-gradient(135deg, #4facfe, #00f2fe);
+            color: #fff; font-size: 18px;
+        }
+        .toast {
+            position: fixed; top: 20px; left: 50%;
+            transform: translateX(-50%) translateY(-100px);
+            background: rgba(0, 0, 0, 0.9); color: white;
+            padding: 15px 25px; border-radius: 12px; font-size: 14px;
+            z-index: 1000; transition: transform 0.3s;
         }
         .toast.show { transform: translateX(-50%) translateY(0); }
         .toast.success { background: rgba(67, 233, 123, 0.9); color: #333; }
@@ -175,6 +218,7 @@
                 <button class="btn" onclick="register()">🚀 ጀምር</button>
             </div>
         </div>
+
         <div id="main-section" class="hidden">
             <div class="user-bar">
                 <div class="user-info">
@@ -186,56 +230,79 @@
                 </div>
                 <div class="coin-badge">🪙 <span id="coin-balance">0</span></div>
             </div>
-            <div id="voice-panel" class="card hidden">
-                <div class="section-title" id="voice-title">🎙️</div>
-                <div id="voice-status" style="margin-bottom:10px;"></div>
-                <button class="btn btn-success" id="mic-btn" onclick="toggleMic()">🎤 ማይክ አብራ</button>
-                <button class="btn" onclick="leaveRoom()" style="background:#ff4757;">🚪 ውጣ</button>
+
+            <div id="lobby">
+                <div class="card">
+                    <div class="section-title">🏠 አዲስ ክፍል ፍጠር</div>
+                    <div class="input-group">
+                        <label>የክፍሉ ስም</label>
+                        <input type="text" id="room-name" placeholder="ለምሳሌ፡ ሙዚቃ፣ ዜና...">
+                    </div>
+                    <button class="btn btn-success" onclick="createRoom()">✨ ክፍል ፍጠር</button>
+                </div>
+                <div class="card">
+                    <div class="section-title">📢 ክፍሎች</div>
+                    <div id="rooms-list"></div>
+                </div>
+                <div class="card">
+                    <div class="section-title">🎁 ስጦታ ላክ</div>
+                    <div class="input-group">
+                        <label>የተቀባይ ID</label>
+                        <input type="text" id="recipient-id" placeholder="tg_123456789">
+                    </div>
+                    <div class="gifts-grid">
+                        <div class="gift-card" onclick="sendGift('coffee')">
+                            <span class="gift-icon">☕</span>
+                            <div class="gift-price">10 🪙</div>
+                            <div class="gift-name">ቡና</div>
+                        </div>
+                        <div class="gift-card" onclick="sendGift('rose')">
+                            <span class="gift-icon">🌹</span>
+                            <div class="gift-price">50 🪙</div>
+                            <div class="gift-name">ሮዝ</div>
+                        </div>
+                        <div class="gift-card" onclick="sendGift('car')">
+                            <span class="gift-icon">🚗</span>
+                            <div class="gift-price">1000 🪙</div>
+                            <div class="gift-name">መኪና</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="room-view" class="hidden">
+                <div class="card">
+                    <div class="room-top">
+                        <div>
+                            <div class="t" id="rv-title">🎙️</div>
+                            <div class="c" id="rv-count"></div>
+                        </div>
+                        <button class="exit-btn" onclick="leaveRoom()">🚪 ውጣ</button>
+                    </div>
+                    <div class="seat-grid" id="seat-grid"></div>
+                    <button class="btn btn-success hidden" id="mic-btn" onclick="toggleMute()">🎤 ማይክ</button>
+                    <button class="btn btn-danger hidden" id="stand-btn" onclick="leaveSeat()" style="margin-bottom:12px;">⬇️ ከመቀመጫ ተነሳ</button>
+                </div>
+                <div class="card">
+                    <div class="chat-box" id="chat-box"></div>
+                    <div class="chat-input">
+                        <input type="text" id="chat-text" maxlength="200" placeholder="መልዕክት ጻፍ...">
+                        <button onclick="sendChat()">➤</button>
+                    </div>
+                </div>
                 <div id="audio-box"></div>
-            </div>
-            <div class="card">
-                <div class="section-title">🏠 አዲስ ክፍል ፍጠር</div>
-                <div class="input-group">
-                    <label>የክፍሉ ስም</label>
-                    <input type="text" id="room-name" placeholder="ለምሳሌ፡ ሙዚቃ፣ ዜና...">
-                </div>
-                <button class="btn btn-success" onclick="createRoom()">✨ ክፍል ፍጠር</button>
-            </div>
-            <div class="card">
-                <div class="section-title">📢 ክፍሎች</div>
-                <div id="rooms-list"></div>
-            </div>
-            <div class="card">
-                <div class="section-title">🎁 ስጦታ ላክ</div>
-                <div class="input-group">
-                    <label>የተቀባይ ID</label>
-                    <input type="text" id="recipient-id" placeholder="tg_123456789">
-                </div>
-                <div class="gifts-grid">
-                    <div class="gift-card" onclick="sendGift('coffee')">
-                        <span class="gift-icon">☕</span>
-                        <div class="gift-price">10 🪙</div>
-                        <div class="gift-name">ቡና</div>
-                    </div>
-                    <div class="gift-card" onclick="sendGift('rose')">
-                        <span class="gift-icon">🌹</span>
-                        <div class="gift-price">50 🪙</div>
-                        <div class="gift-name">ሮዝ</div>
-                    </div>
-                    <div class="gift-card" onclick="sendGift('car')">
-                        <span class="gift-icon">🚗</span>
-                        <div class="gift-price">1000 🪙</div>
-                        <div class="gift-name">መኪና</div>
-                    </div>
-                </div>
             </div>
         </div>
     </div>
+
     <script>
         const tg = window.Telegram && window.Telegram.WebApp;
         if (tg) { tg.ready(); tg.expand(); }
+
         let userId = null, username = null;
-        let lkRoom = null;
+        let lkRoom = null, inRoom = null, hostId = null;
+        let lastMsg = 0, lastSeats = {}, mySeat = null;
+        let muted = false, speaking = new Set(), pollTimer = null, micBusy = false;
 
         function hdrs() {
             return {
@@ -244,15 +311,21 @@
             };
         }
         function esc(s) {
-            const d = document.createElement('div');
-            d.textContent = s;
-            return d.innerHTML;
+            return String(s == null ? '' : s)
+                .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
         }
         function showToast(msg, type='success') {
             const t = document.getElementById('toast');
             t.textContent = msg;
             t.className = 'toast show ' + type;
             setTimeout(() => t.className = 'toast', 3000);
+        }
+        async function api(path, method, body) {
+            const opt = { method: method || 'POST', headers: hdrs() };
+            if (opt.method !== 'GET') opt.body = JSON.stringify(body || {});
+            const r = await fetch(path, opt);
+            return r.json();
         }
 
         async function register() {
@@ -262,10 +335,7 @@
                 return;
             }
             try {
-                const r = await fetch('/api/register', {
-                    method: 'POST', headers: hdrs(), body: '{}'
-                });
-                const d = await r.json();
+                const d = await api('/api/register', 'POST', {});
                 if (d.success) {
                     userId = d.user_id;
                     username = d.user.username;
@@ -280,7 +350,7 @@
                 } else {
                     showToast('❌ ' + (d.error || 'ስህተት'), 'error');
                 }
-            } catch(e) { showToast('❌ ስህተት', 'error'); }
+            } catch (e) { showToast('❌ ስህተት', 'error'); }
         }
 
         async function createRoom() {
@@ -288,22 +358,19 @@
             if (!name) { showToast('⚠️ የክፍል ስም አስገባ!', 'error'); return; }
             const roomId = 'room_' + Math.random().toString(36).substr(2, 9);
             try {
-                const r = await fetch('/api/rooms/create', {
-                    method: 'POST', headers: hdrs(),
-                    body: JSON.stringify({room_id: roomId, room_name: name})
-                });
-                const d = await r.json();
+                const d = await api('/api/rooms/create', 'POST', {room_id: roomId, room_name: name});
                 if (d.success) {
-                    showToast('✅ ክፍል "' + name + '" ተፈጥሯል!');
                     document.getElementById('room-name').value = '';
-                    loadRooms();
+                    showToast('✅ ክፍል ተፈጥሯል!');
+                    joinRoom(roomId);
                 } else {
                     showToast('❌ ' + (d.error || 'ስህተት'), 'error');
                 }
-            } catch(e) { showToast('❌ ስህተት', 'error'); }
+            } catch (e) { showToast('❌ ስህተት', 'error'); }
         }
 
         async function loadRooms() {
+            if (inRoom) return;
             try {
                 const r = await fetch('/api/rooms');
                 const rooms = await r.json();
@@ -316,11 +383,11 @@
                 for (const [rid, room] of Object.entries(rooms)) {
                     html += '<div class="room-card"><div class="room-icon">🎙️</div><div class="room-info"><div class="room-name">'
                         + esc(room.name) + '</div><div class="room-meta">👤 '
-                        + esc(room.creator_name || room.creator) + '</div></div>'
-                        + '<button class="btn" style="width:auto;padding:10px 16px;margin:0;" onclick="joinRoom(\'' + rid + '\')">ግባ</button></div>';
+                        + esc(room.creator_name) + ' · 👥 ' + room.count + '</div></div>'
+                        + '<button class="btn" style="width:auto;padding:10px 16px;margin:0;" onclick="joinRoom(\'' + esc(rid) + '\')">ግባ</button></div>';
                 }
                 list.innerHTML = html;
-            } catch(e) {}
+            } catch (e) {}
         }
 
         async function sendGift(type) {
@@ -328,11 +395,7 @@
             if (!to) { showToast('⚠️ የተቀባይ ID አስገባ!', 'error'); return; }
             const names = {coffee: '☕ ቡና', rose: '🌹 ሮዝ', car: '🚗 መኪና'};
             try {
-                const r = await fetch('/api/gifts/send', {
-                    method: 'POST', headers: hdrs(),
-                    body: JSON.stringify({gift_type: type, recipient_id: to})
-                });
-                const d = await r.json();
+                const d = await api('/api/gifts/send', 'POST', {gift_type: type, recipient_id: to});
                 if (d.success) {
                     showToast('🎁 ' + names[type] + ' ተልኳል!');
                     document.getElementById('coin-balance').textContent = d.remaining_coins;
@@ -340,17 +403,14 @@
                 } else {
                     showToast('❌ ' + d.error, 'error');
                 }
-            } catch(e) { showToast('❌ ስህተት', 'error'); }
+            } catch (e) { showToast('❌ ስህተት', 'error'); }
         }
 
+        /* ---------- ክፍል ---------- */
         async function joinRoom(roomId) {
-            if (lkRoom) await leaveRoom();
+            if (inRoom) await leaveRoom();
             try {
-                const r = await fetch('/api/livekit-token', {
-                    method: 'POST', headers: hdrs(),
-                    body: JSON.stringify({room_id: roomId})
-                });
-                const d = await r.json();
+                const d = await api('/api/livekit-token', 'POST', {room_id: roomId});
                 if (!d.success) { showToast('❌ ' + d.error, 'error'); return; }
                 lkRoom = new LivekitClient.Room();
                 lkRoom.on(LivekitClient.RoomEvent.TrackSubscribed, (track) => {
@@ -358,43 +418,162 @@
                         document.getElementById('audio-box').appendChild(track.attach());
                     }
                 });
-                lkRoom.on(LivekitClient.RoomEvent.ParticipantConnected, updateStatus);
-                lkRoom.on(LivekitClient.RoomEvent.ParticipantDisconnected, updateStatus);
+                lkRoom.on(LivekitClient.RoomEvent.TrackUnsubscribed, (track) => {
+                    track.detach().forEach(el => el.remove());
+                });
+                lkRoom.on(LivekitClient.RoomEvent.ActiveSpeakersChanged, (sp) => {
+                    speaking = new Set(sp.map(s => s.identity));
+                    renderSeats();
+                });
                 await lkRoom.connect(d.url, d.token);
                 await lkRoom.startAudio();
-                document.getElementById('voice-panel').classList.remove('hidden');
-                document.getElementById('voice-title').textContent = '🎙️ ክፍል ውስጥ ነህ';
-                document.getElementById('mic-btn').style.display = d.is_host ? 'block' : 'none';
-                updateStatus();
-                window.scrollTo(0, 0);
-                showToast('✅ ገብተሃል!');
             } catch (e) {
                 showToast('❌ መግባት አልተሳካም', 'error');
+                lkRoom = null;
+                return;
             }
-        }
-
-        function updateStatus() {
-            if (!lkRoom) return;
-            const n = lkRoom.remoteParticipants.size + 1;
-            document.getElementById('voice-status').textContent = '👥 ' + n + ' ሰው ክፍሉ ውስጥ አለ';
-        }
-
-        async function toggleMic() {
-            if (!lkRoom) return;
-            const on = lkRoom.localParticipant.isMicrophoneEnabled;
-            try {
-                await lkRoom.localParticipant.setMicrophoneEnabled(!on);
-                document.getElementById('mic-btn').textContent = on ? '🎤 ማይክ አብራ' : '🔇 ማይክ አጥፋ';
-            } catch (e) {
-                showToast('❌ ማይክ ፈቃድ አልተሰጠም', 'error');
-            }
+            inRoom = roomId;
+            lastMsg = 0; lastSeats = {}; mySeat = null; muted = false;
+            document.getElementById('chat-box').innerHTML = '';
+            document.getElementById('lobby').classList.add('hidden');
+            document.getElementById('room-view').classList.remove('hidden');
+            await pollState();
+            pollTimer = setInterval(pollState, 2000);
+            window.scrollTo(0, 0);
         }
 
         async function leaveRoom() {
-            if (lkRoom) { await lkRoom.disconnect(); lkRoom = null; }
+            const rid = inRoom;
+            inRoom = null;
+            if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
+            if (lkRoom) { try { await lkRoom.disconnect(); } catch (e) {} lkRoom = null; }
             document.getElementById('audio-box').innerHTML = '';
-            document.getElementById('voice-panel').classList.add('hidden');
+            document.getElementById('room-view').classList.add('hidden');
+            document.getElementById('lobby').classList.remove('hidden');
+            if (rid) { try { await api('/api/rooms/' + rid + '/exit', 'POST', {}); } catch (e) {} }
+            loadRooms();
         }
+
+        async function pollState() {
+            if (!inRoom) return;
+            try {
+                const d = await api('/api/rooms/' + inRoom + '/state?since=' + lastMsg, 'GET');
+                if (!d.success) {
+                    showToast('❌ ክፍሉ የለም', 'error');
+                    leaveRoom();
+                    return;
+                }
+                hostId = d.host;
+                lastSeats = d.seats;
+                document.getElementById('rv-title').textContent = '🎙️ ' + d.name;
+                document.getElementById('rv-count').textContent = '👥 ' + d.count + ' ሰው';
+                mySeat = null;
+                for (const [k, s] of Object.entries(d.seats)) {
+                    if (s.uid === userId) mySeat = parseInt(k);
+                }
+                renderSeats();
+                appendMessages(d.messages);
+                syncMic();
+            } catch (e) {}
+        }
+
+        function renderSeats() {
+            const grid = document.getElementById('seat-grid');
+            let html = '';
+            for (let i = 0; i < 9; i++) {
+                const s = lastSeats[String(i)];
+                if (s) {
+                    const cls = 'seat' + (s.uid === userId ? ' mine' : '') + (speaking.has(s.uid) ? ' speaking' : '');
+                    const pic = s.photo
+                        ? '<img src="' + esc(s.photo) + '">'
+                        : esc((s.name || '?').charAt(0).toUpperCase());
+                    html += '<div class="' + cls + '" onclick="seatClick(' + i + ')">'
+                        + (i === 0 ? '<div class="crown">👑</div>' : '')
+                        + '<div class="pic">' + pic + '</div>'
+                        + '<div class="sname">' + esc(s.name) + '</div></div>';
+                } else {
+                    html += '<div class="seat" onclick="seatClick(' + i + ')">'
+                        + '<div class="empty">' + (i === 0 ? '👑' : '🛋️') + '</div>'
+                        + '<div class="num">' + (i === 0 ? 'host' : (i + 1)) + '</div></div>';
+                }
+            }
+            grid.innerHTML = html;
+            document.getElementById('mic-btn').classList.toggle('hidden', mySeat === null);
+            document.getElementById('stand-btn').classList.toggle('hidden', mySeat === null);
+            document.getElementById('mic-btn').textContent = muted ? '🎤 ማይክ አብራ' : '🔇 ማይክ አጥፋ';
+        }
+
+        async function seatClick(i) {
+            const s = lastSeats[String(i)];
+            if (s && s.uid === userId) { leaveSeat(); return; }
+            if (s) { showToast('መቀመጫው ተይዟል', 'error'); return; }
+            try {
+                const d = await api('/api/rooms/' + inRoom + '/seat', 'POST', {seat: i});
+                if (!d.success) { showToast('❌ ' + d.error, 'error'); return; }
+                muted = false;
+                await pollState();
+            } catch (e) { showToast('❌ ስህተት', 'error'); }
+        }
+
+        async function leaveSeat() {
+            try {
+                await api('/api/rooms/' + inRoom + '/leave-seat', 'POST', {});
+                await pollState();
+            } catch (e) {}
+        }
+
+        async function syncMic() {
+            if (!lkRoom || micBusy) return;
+            const want = (mySeat !== null) && !muted;
+            const cur = lkRoom.localParticipant.isMicrophoneEnabled;
+            if (want === cur) return;
+            micBusy = true;
+            try {
+                await lkRoom.localParticipant.setMicrophoneEnabled(want);
+            } catch (e) {
+                if (want) {
+                    showToast('❌ ማይክ ፈቃድ አልተሰጠም', 'error');
+                    muted = true;
+                    renderSeats();
+                }
+            }
+            micBusy = false;
+        }
+
+        function toggleMute() {
+            muted = !muted;
+            renderSeats();
+            syncMic();
+        }
+
+        function appendMessages(msgs) {
+            if (!msgs || !msgs.length) return;
+            const box = document.getElementById('chat-box');
+            let html = '';
+            for (const m of msgs) {
+                lastMsg = Math.max(lastMsg, m.id);
+                if (m.sys) html += '<div class="msg sys">' + esc(m.text) + '</div>';
+                else html += '<div class="msg"><span class="n">' + esc(m.name) + ':</span> ' + esc(m.text) + '</div>';
+            }
+            box.insertAdjacentHTML('beforeend', html);
+            box.scrollTop = box.scrollHeight;
+        }
+
+        async function sendChat() {
+            const inp = document.getElementById('chat-text');
+            const text = inp.value.trim();
+            if (!text || !inRoom) return;
+            inp.value = '';
+            try {
+                await api('/api/rooms/' + inRoom + '/chat', 'POST', {text: text});
+                pollState();
+            } catch (e) {}
+        }
+        document.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('chat-text').addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') sendChat();
+            });
+        });
 
         setInterval(loadRooms, 5000);
         register();
