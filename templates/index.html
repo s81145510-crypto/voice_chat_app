@@ -3,152 +3,583 @@
 <html lang="am">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>VoiceChat Bot</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>VoiceChat - Live Voice Rooms</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
+        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #1a0533 0%, #2d1b69 50%, #1a0533 100%);
             color: white;
             min-height: 100vh;
-            padding: 20px;
+            overflow-x: hidden;
+            padding-bottom: 80px;
         }
-        .container { max-width: 600px; margin: 0 auto; }
-        .header {
-            background: rgba(255,255,255,0.1);
-            border-radius: 15px;
-            padding: 20px;
-            margin-bottom: 20px;
+        
+        /* Header */
+        .app-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 15px 20px;
             display: flex;
             justify-content: space-between;
             align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
         }
-        .user-info { display: flex; align-items: center; gap: 15px; }
-        .avatar {
-            width: 50px; height: 50px;
+        .header-left { display: flex; align-items: center; gap: 12px; }
+        .user-avatar {
+            width: 45px; height: 45px;
             border-radius: 50%;
             background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
             display: flex; align-items: center; justify-content: center;
-            font-size: 24px; font-weight: bold;
+            font-size: 20px; font-weight: bold;
+            border: 2px solid rgba(255,255,255,0.3);
+            cursor: pointer;
         }
-        .coins {
+        .user-info h3 { font-size: 16px; font-weight: 600; }
+        .user-info p { font-size: 11px; opacity: 0.8; }
+        .coins-badge {
             background: linear-gradient(135deg, #ffd700 0%, #ffed4e 100%);
             color: #333;
-            padding: 10px 20px;
+            padding: 8px 16px;
             border-radius: 25px;
             font-weight: bold;
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: 6px;
+            font-size: 14px;
+            box-shadow: 0 4px 15px rgba(255, 215, 0, 0.4);
+            cursor: pointer;
+        }
+        
+        /* Pages */
+        .page { display: none; animation: fadeIn 0.3s ease; }
+        .page.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        
+        /* Bottom Navigation */
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: rgba(26, 5, 51, 0.95);
+            backdrop-filter: blur(20px);
+            display: flex;
+            justify-content: space-around;
+            padding: 10px 0;
+            border-top: 1px solid rgba(255,255,255,0.1);
+            z-index: 1000;
+        }
+        .nav-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            cursor: pointer;
+            padding: 5px 15px;
+            transition: all 0.3s;
+        }
+        .nav-item i { font-size: 22px; opacity: 0.6; transition: all 0.3s; }
+        .nav-item span { font-size: 10px; opacity: 0.6; }
+        .nav-item.active i { opacity: 1; color: #f093fb; transform: scale(1.1); }
+        .nav-item.active span { opacity: 1; color: #f093fb; }
+        
+        /* Home Page */
+        .featured-section {
+            padding: 20px;
+        }
+        .section-title {
+            font-size: 20px;
+            font-weight: bold;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .featured-rooms {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
         }
         .room-card {
-            background: rgba(255,255,255,0.1);
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.3) 0%, rgba(118, 75, 162, 0.3) 100%);
             border-radius: 15px;
-            padding: 20px;
-            margin-bottom: 15px;
+            padding: 15px;
+            cursor: pointer;
+            transition: all 0.3s;
+            border: 1px solid rgba(255,255,255,0.1);
+            position: relative;
+            overflow: hidden;
         }
-        .room-header {
+        .room-card:hover { transform: translateY(-5px); box-shadow: 0 10px 30px rgba(102, 126, 234, 0.4); }
+        .room-card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: linear-gradient(135deg, transparent 0%, rgba(240, 147, 251, 0.1) 100%);
+        }
+        .room-name { font-size: 16px; font-weight: bold; margin-bottom: 8px; position: relative; }
+        .room-host { font-size: 12px; opacity: 0.8; margin-bottom: 10px; position: relative; }
+        .room-stats {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 15px;
+            position: relative;
+        }
+        .room-count { font-size: 12px; opacity: 0.7; }
+        .room-live {
+            background: #ff4757;
+            padding: 3px 8px;
+            border-radius: 10px;
+            font-size: 10px;
+            font-weight: bold;
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.6; } }
+        
+        /* Categories */
+        .categories {
+            display: flex;
+            gap: 10px;
+            overflow-x: auto;
+            padding: 0 20px 20px;
+            scrollbar-width: none;
+        }
+        .categories::-webkit-scrollbar { display: none; }
+        .category-chip {
+            background: rgba(255,255,255,0.1);
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 13px;
+            white-space: nowrap;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .category-chip.active { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+        
+        /* Room Page */
+        .room-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+            text-align: center;
+        }
+        .room-title { font-size: 24px; font-weight: bold; margin-bottom: 5px; }
+        .room-host-info { font-size: 14px; opacity: 0.9; }
+        
+        .seats-container {
+            padding: 20px;
         }
         .seats-grid {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
-            gap: 10px;
+            gap: 12px;
         }
         .seat {
-            background: rgba(255,255,255,0.15);
+            background: rgba(255,255,255,0.1);
+            border-radius: 15px;
+            padding: 20px 10px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            border: 2px solid transparent;
+            position: relative;
+        }
+        .seat:hover { transform: scale(1.05); background: rgba(255,255,255,0.15); }
+        .seat.host {
+            background: linear-gradient(135deg, #ffd700 0%, #ffed4e 100%);
+            border-color: #ffd700;
+        }
+        .seat.occupied {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-color: #667eea;
+        }
+        .seat-icon { font-size: 32px; margin-bottom: 8px; }
+        .seat-name { font-size: 12px; font-weight: 600; }
+        .seat-number { font-size: 11px; opacity: 0.7; margin-top: 4px; }
+        
+        /* Chat */
+        .chat-container {
+            padding: 20px;
+            background: rgba(0,0,0,0.2);
+            border-radius: 15px;
+            margin: 0 20px 20px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .chat-message {
+            margin-bottom: 10px;
+            padding: 8px 12px;
+            background: rgba(255,255,255,0.1);
             border-radius: 10px;
+            font-size: 13px;
+        }
+        .chat-input-container {
+            display: flex;
+            gap: 10px;
+            padding: 0 20px 20px;
+        }
+        .chat-input {
+            flex: 1;
+            background: rgba(255,255,255,0.1);
+            border: none;
+            padding: 12px 16px;
+            border-radius: 25px;
+            color: white;
+            font-size: 14px;
+        }
+        .chat-input::placeholder { color: rgba(255,255,255,0.5); }
+        .send-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            padding: 12px 20px;
+            border-radius: 25px;
+            color: white;
+            cursor: pointer;
+        }
+        
+        /* Wallet Page */
+        .wallet-header {
+            background: linear-gradient(135deg, #ffd700 0%, #ffed4e 100%);
+            padding: 30px 20px;
+            text-align: center;
+            color: #333;
+        }
+        .wallet-balance { font-size: 48px; font-weight: bold; margin: 10px 0; }
+        .wallet-label { font-size: 14px; opacity: 0.8; }
+        
+        .coin-packages {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            padding: 20px;
+        }
+        .package-card {
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.3) 0%, rgba(118, 75, 162, 0.3) 100%);
+            border-radius: 15px;
             padding: 20px;
             text-align: center;
             cursor: pointer;
             transition: all 0.3s;
+            border: 2px solid transparent;
         }
-        .seat:hover { background: rgba(255,255,255,0.25); }
-        .seat.occupied { background: rgba(76, 175, 80, 0.3); }
-        .seat.host { background: rgba(255, 215, 0, 0.3); }
+        .package-card:hover { border-color: #ffd700; transform: scale(1.05); }
+        .package-coins { font-size: 28px; font-weight: bold; color: #ffd700; margin-bottom: 5px; }
+        .package-price { font-size: 14px; opacity: 0.8; }
+        
+        /* Profile Page */
+        .profile-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 40px 20px;
+            text-align: center;
+        }
+        .profile-avatar {
+            width: 100px; height: 100px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 40px; font-weight: bold;
+            margin: 0 auto 15px;
+            border: 4px solid rgba(255,255,255,0.3);
+        }
+        .profile-name { font-size: 24px; font-weight: bold; margin-bottom: 5px; }
+        .profile-id { font-size: 14px; opacity: 0.8; }
+        
+        .profile-stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            padding: 20px;
+        }
+        .stat-card {
+            background: rgba(255,255,255,0.1);
+            border-radius: 15px;
+            padding: 20px;
+            text-align: center;
+        }
+        .stat-value { font-size: 24px; font-weight: bold; color: #ffd700; }
+        .stat-label { font-size: 12px; opacity: 0.7; margin-top: 5px; }
+        
+        /* Buttons */
         .btn {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
             border: none;
-            padding: 12px 24px;
+            padding: 14px 28px;
             border-radius: 25px;
             font-size: 16px;
+            font-weight: 600;
             cursor: pointer;
             width: 100%;
-            margin-top: 10px;
+            margin: 10px 0;
+            transition: all 0.3s;
         }
-        .btn-danger { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); }
-        .messages {
-            background: rgba(0,0,0,0.2);
-            border-radius: 10px;
-            padding: 15px;
-            max-height: 300px;
-            overflow-y: auto;
-            margin-top: 15px;
+        .btn:hover { transform: translateY(-2px); box-shadow: 0 10px 30px rgba(102, 126, 234, 0.4); }
+        .btn-danger { background: linear-gradient(135deg, #ff4757 0%, #ff6348 100%); }
+        .btn-success { background: linear-gradient(135deg, #2ed573 0%, #7bed9f 100%); }
+        
+        /* Loading */
+        .loading {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            font-size: 18px;
         }
-        .message { margin-bottom: 10px; padding: 8px; background: rgba(255,255,255,0.1); border-radius: 8px; }
-        input, textarea {
+        .spinner {
+            width: 40px; height: 40px;
+            border: 4px solid rgba(255,255,255,0.1);
+            border-top-color: #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-right: 15px;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        
+        /* Gift Animation */
+        .gift-animation {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 100px;
+            animation: giftPop 1.5s ease-out;
+            pointer-events: none;
+            z-index: 9999;
+        }
+        @keyframes giftPop {
+            0% { transform: translate(-50%, -50%) scale(0) rotate(0deg); opacity: 1; }
+            50% { transform: translate(-50%, -50%) scale(1.5) rotate(180deg); opacity: 1; }
+            100% { transform: translate(-50%, -50%) scale(0) rotate(360deg); opacity: 0; }
+        }
+        
+        /* Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.8);
+            z-index: 2000;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        .modal.active { display: flex; }
+        .modal-content {
+            background: linear-gradient(135deg, #2d1b69 0%, #1a0533 100%);
+            border-radius: 20px;
+            padding: 30px;
+            max-width: 400px;
             width: 100%;
-            padding: 12px;
-            border-radius: 8px;
-            border: none;
-            background: rgba(255,255,255,0.2);
-            color: white;
-            margin-top: 10px;
+            max-height: 80vh;
+            overflow-y: auto;
         }
-        input::placeholder, textarea::placeholder { color: rgba(255,255,255,0.6); }
-        .hidden { display: none; }
+        .modal-title { font-size: 20px; font-weight: bold; margin-bottom: 20px; text-align: center; }
+        
+        /* Level Badge */
+        .level-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: bold;
+            margin-left: 8px;
+        }
+        .level-bronze { background: #cd7f32; }
+        .level-silver { background: #c0c0c0; color: #333; }
+        .level-gold { background: #ffd700; color: #333; }
+        .level-diamond { background: #b9f2ff; color: #333; }
+        .level-king { background: linear-gradient(135deg, #ffd700 0%, #ffed4e 100%); color: #333; }
     </style>
 </head>
 <body>
-    <div class="container">
-        <div id="loading">⏳ እየተጫነ ነው...</div>
-        
-        <div id="main-app" class="hidden">
-            <div class="header">
+    <div id="loading" class="loading">
+        <div class="spinner"></div>
+        <span>እየተጫነ ነው...</span>
+    </div>
+
+    <div id="app" style="display: none;">
+        <!-- Header -->
+        <div class="app-header">
+            <div class="header-left">
+                <div class="user-avatar" id="header-avatar" onclick="showPage('profile')">T</div>
                 <div class="user-info">
-                    <div class="avatar" id="user-avatar">T</div>
-                    <div>
-                        <div id="user-name">User</div>
-                        <div id="user-id" style="font-size: 12px; opacity: 0.7;"></div>
-                    </div>
-                </div>
-                <div class="coins">
-                    <span>🪙</span>
-                    <span id="user-coins">0</span>
+                    <h3 id="header-name">User</h3>
+                    <p id="header-level">Level 1</p>
                 </div>
             </div>
+            <div class="coins-badge" onclick="showPage('wallet')">
+                <i class="fas fa-coins"></i>
+                <span id="header-coins">0</span>
+            </div>
+        </div>
 
-            <div id="rooms-list"></div>
+        <!-- Home Page -->
+        <div id="page-home" class="page active">
+            <div class="featured-section">
+                <div class="section-title">
+                    <i class="fas fa-fire" style="color: #ff4757;"></i>
+                    ተወዳጅ ክፍሎች
+                </div>
+                <div class="featured-rooms" id="featured-rooms"></div>
+            </div>
+            
+            <div class="section-title" style="padding: 0 20px;">
+                <i class="fas fa-layer-group" style="color: #667eea;"></i>
+                ምድቦች
+            </div>
+            <div class="categories">
+                <div class="category-chip active">🎵 ሙዚቃ</div>
+                <div class="category-chip">💬 ውይይት</div>
+                <div class="category-chip">🎮 ጌሚንግ</div>
+                <div class="category-chip">📚 ትምህርት</div>
+                <div class="category-chip">❤️ ፍቅር</div>
+                <div class="category-chip">🎭 መዝናኛ</div>
+            </div>
+        </div>
 
-            <div id="room-view" class="hidden">
-                <div class="room-card">
-                    <div class="room-header">
-                        <h2 id="room-name">Room</h2>
-                        <button class="btn btn-danger" onclick="exitRoom()">ውጣ</button>
-                    </div>
-                    <div class="seats-grid" id="seats-grid"></div>
-                    <div class="messages" id="messages"></div>
-                    <input type="text" id="chat-input" placeholder="መልዕክት ይጻፉ...">
-                    <button class="btn" onclick="sendChat()">ላክ</button>
+        <!-- Rooms Page -->
+        <div id="page-rooms" class="page">
+            <div class="featured-section">
+                <div class="section-title">
+                    <i class="fas fa-door-open" style="color: #667eea;"></i>
+                    ሁሉም ክፍሎች
+                </div>
+                <div id="all-rooms"></div>
+                <button class="btn" onclick="showCreateRoom()">
+                    <i class="fas fa-plus"></i> አዲስ ክፍል ይፍጠሩ
+                </button>
+            </div>
+        </div>
+
+        <!-- Wallet Page -->
+        <div id="page-wallet" class="page">
+            <div class="wallet-header">
+                <div class="wallet-label">የእርስዎ ሳንቲሞች</div>
+                <div class="wallet-balance" id="wallet-coins">0</div>
+                <div class="wallet-label">🪙 Coins</div>
+            </div>
+            
+            <div class="featured-section">
+                <div class="section-title">
+                    <i class="fas fa-shopping-cart" style="color: #ffd700;"></i>
+                    ሳንቲም ይግዙ
+                </div>
+                <div class="coin-packages" id="coin-packages"></div>
+            </div>
+        </div>
+
+        <!-- Community Page -->
+        <div id="page-community" class="page">
+            <div class="featured-section">
+                <div class="section-title">
+                    <i class="fas fa-users" style="color: #2ed573;"></i>
+                    ማኅበረሰብ
+                </div>
+                <div id="posts-list"></div>
+                <button class="btn" onclick="showCreatePost()">
+                    <i class="fas fa-pen"></i> ጽሑፍ ይለጥፉ
+                </button>
+            </div>
+        </div>
+
+        <!-- Profile Page -->
+        <div id="page-profile" class="page">
+            <div class="profile-header">
+                <div class="profile-avatar" id="profile-avatar">T</div>
+                <div class="profile-name" id="profile-name">User</div>
+                <div class="profile-id" id="profile-id">tg_123</div>
+            </div>
+            
+            <div class="profile-stats">
+                <div class="stat-card">
+                    <div class="stat-value" id="stat-coins">0</div>
+                    <div class="stat-label">ሳንቲሞች</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="stat-earnings">0</div>
+                    <div class="stat-label">ገቢ</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="stat-level">1</div>
+                    <div class="stat-label">ደረጃ</div>
                 </div>
             </div>
-
-            <div id="create-room" class="hidden">
-                <div class="room-card">
-                    <h2>አዲስ ክፍል ይፍጠሩ</h2>
-                    <input type="text" id="room-id" placeholder="Room ID (letters/numbers only)">
-                    <input type="text" id="room-name-input" placeholder="የክፍሉ ስም">
-                    <button class="btn" onclick="createRoom()">ፍጠር</button>
-                </div>
+            
+            <div class="featured-section">
+                <button class="btn" onclick="showEditProfile()">
+                    <i class="fas fa-edit"></i> ፕሮፋይል ያርቱ
+                </button>
+                <button class="btn btn-success" onclick="showWithdraw()">
+                    <i class="fas fa-money-bill-wave"></i> ገቢ ያውጡ
+                </button>
             </div>
+        </div>
 
-            <button class="btn" onclick="showCreateRoom()">+ አዲስ ክፍል</button>
+        <!-- Room View (when inside a room) -->
+        <div id="room-view" style="display: none;">
+            <div class="room-header">
+                <div class="room-title" id="room-view-name">Room</div>
+                <div class="room-host-info" id="room-view-host">Host: User</div>
+            </div>
+            
+            <div class="seats-container">
+                <div class="seats-grid" id="seats-grid"></div>
+            </div>
+            
+            <div class="chat-container" id="chat-messages"></div>
+            
+            <div class="chat-input-container">
+                <input type="text" class="chat-input" id="chat-input" placeholder="መልዕክት ይጻፉ...">
+                <button class="send-btn" onclick="sendChat()">
+                    <i class="fas fa-paper-plane"></i>
+                </button>
+            </div>
+            
+            <div style="padding: 0 20px 20px;">
+                <button class="btn btn-danger" onclick="exitRoom()">
+                    <i class="fas fa-sign-out-alt"></i> ክፍሉን ይውጡ
+                </button>
+            </div>
+        </div>
+
+        <!-- Bottom Navigation -->
+        <div class="bottom-nav">
+            <div class="nav-item active" onclick="showPage('home')">
+                <i class="fas fa-home"></i>
+                <span>መነሻ</span>
+            </div>
+            <div class="nav-item" onclick="showPage('rooms')">
+                <i class="fas fa-door-open"></i>
+                <span>ክፍሎች</span>
+            </div>
+            <div class="nav-item" onclick="showPage('wallet')">
+                <i class="fas fa-wallet"></i>
+                <span>ኪስ</span>
+            </div>
+            <div class="nav-item" onclick="showPage('community')">
+                <i class="fas fa-users"></i>
+                <span>ማኅበረሰብ</span>
+            </div>
+            <div class="nav-item" onclick="showPage('profile')">
+                <i class="fas fa-user"></i>
+                <span>ፕሮፋይል</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Create Room Modal -->
+    <div id="create-room-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-title">አዲስ ክፍል ይፍጠሩ</div>
+            <input type="text" class="chat-input" id="new-room-id" placeholder="Room ID (letters/numbers)" style="width: 100%; margin-bottom: 15px;">
+            <input type="text" class="chat-input" id="new-room-name" placeholder="የክፍሉ ስም" style="width: 100%; margin-bottom: 20px;">
+            <button class="btn" onclick="createRoom()">ፍጠር</button>
+            <button class="btn btn-danger" onclick="closeModal('create-room-modal')">ይቅር</button>
         </div>
     </div>
 
@@ -159,6 +590,7 @@
         let currentUser = null;
         let currentRoom = null;
         let initData = '';
+        let config = null;
 
         async function api(url, method = 'GET', body = null) {
             const headers = { 'Content-Type': 'application/json' };
@@ -173,48 +605,113 @@
             initData = tg?.initData || '';
             const data = await api('/api/register', 'POST');
             if (!data.success) {
-                document.getElementById('loading').textContent = '❌ ስህተት: ' + (data.error || 'Unknown');
+                document.getElementById('loading').innerHTML = '<div style="text-align: center;"><i class="fas fa-exclamation-triangle" style="font-size: 48px; color: #ff4757; margin-bottom: 20px;"></i><div>ስህተት: ' + (data.error || 'Unknown') + '</div></div>';
                 return;
             }
             currentUser = data.user;
-            document.getElementById('loading').classList.add('hidden');
-            document.getElementById('main-app').classList.remove('hidden');
-            document.getElementById('user-name').textContent = currentUser.username;
-            document.getElementById('user-id').textContent = data.user_id;
-            document.getElementById('user-coins').textContent = currentUser.coins;
-            document.getElementById('user-avatar').textContent = currentUser.username[0]?.toUpperCase() || 'U';
+            config = data.config;
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('app').style.display = 'block';
+            updateUI();
             loadRooms();
+            loadPackages();
+        }
+
+        function updateUI() {
+            const name = currentUser.username || 'User';
+            const initial = name[0]?.toUpperCase() || 'U';
+            document.getElementById('header-avatar').textContent = initial;
+            document.getElementById('header-name').textContent = name;
+            document.getElementById('header-coins').textContent = currentUser.coins;
+            document.getElementById('profile-avatar').textContent = initial;
+            document.getElementById('profile-name').textContent = name;
+            document.getElementById('profile-id').textContent = 'tg_' + (tg?.initDataUnsafe?.user?.id || '');
+            document.getElementById('wallet-coins').textContent = currentUser.coins;
+            document.getElementById('stat-coins').textContent = currentUser.coins;
+            document.getElementById('stat-earnings').textContent = currentUser.earnings || 0;
+        }
+
+        function showPage(page) {
+            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+            document.getElementById('page-' + page).classList.add('active');
+            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+            event.currentTarget.classList.add('active');
+            if (page === 'rooms') loadAllRooms();
+            if (page === 'community') loadPosts();
         }
 
         async function loadRooms() {
             const rooms = await api('/api/rooms');
-            const container = document.getElementById('rooms-list');
+            const container = document.getElementById('featured-rooms');
             container.innerHTML = '';
             if (Object.keys(rooms).length === 0) {
-                container.innerHTML = '<div class="room-card">ምንም ክፍሎች የሉም</div>';
+                container.innerHTML = '<div style="text-align: center; padding: 40px; opacity: 0.6;">ምንም ክፍሎች የሉም</div>';
                 return;
             }
-            for (const [rid, room] of Object.entries(rooms)) {
+            for (const [rid, room] of Object.entries(rooms).slice(0, 6)) {
                 const div = document.createElement('div');
                 div.className = 'room-card';
+                div.onclick = () => joinRoom(rid);
                 div.innerHTML = `
-                    <h3>${room.name}</h3>
-                    <p>ባለቤት: ${room.creator_name} | ሰዎች: ${room.count}</p>
-                    <button class="btn" onclick="joinRoom('${rid}')">ግባ</button>
+                    <div class="room-name">${room.name}</div>
+                    <div class="room-host">👤 ${room.creator_name}</div>
+                    <div class="room-stats">
+                        <div class="room-count">👥 ${room.count}</div>
+                        <div class="room-live">LIVE</div>
+                    </div>
                 `;
                 container.appendChild(div);
             }
+        }
+
+        async function loadAllRooms() {
+            const rooms = await api('/api/rooms');
+            const container = document.getElementById('all-rooms');
+            container.innerHTML = '';
+            for (const [rid, room] of Object.entries(rooms)) {
+                const div = document.createElement('div');
+                div.className = 'room-card';
+                div.style.marginBottom = '15px';
+                div.onclick = () => joinRoom(rid);
+                div.innerHTML = `
+                    <div class="room-name">${room.name}</div>
+                    <div class="room-host">👤 ${room.creator_name}</div>
+                    <div class="room-stats">
+                        <div class="room-count">👥 ${room.count} ሰዎች</div>
+                        <div class="room-live">LIVE</div>
+                    </div>
+                `;
+                container.appendChild(div);
+            }
+        }
+
+        function loadPackages() {
+            const container = document.getElementById('coin-packages');
+            container.innerHTML = '';
+            if (!config) return;
+            config.packages.forEach(pkg => {
+                const div = document.createElement('div');
+                div.className = 'package-card';
+                div.onclick = () => buyCoins(pkg.id);
+                div.innerHTML = `
+                    <div class="package-coins">🪙 ${pkg.coins.toLocaleString()}</div>
+                    <div class="package-price">${pkg.price} ብር</div>
+                `;
+                container.appendChild(div);
+            });
         }
 
         async function joinRoom(rid) {
             const data = await api(`/api/rooms/${rid}/state`);
             if (!data.success) { alert(data.error); return; }
             currentRoom = rid;
-            document.getElementById('rooms-list').classList.add('hidden');
-            document.getElementById('room-view').classList.remove('hidden');
-            document.getElementById('room-name').textContent = data.name;
+            document.getElementById('room-view-name').textContent = data.name;
+            document.getElementById('room-view-host').textContent = 'Host: ' + (data.host || 'Unknown');
             renderSeats(data.seats);
             renderMessages(data.messages);
+            document.getElementById('room-view').style.display = 'block';
+            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+            document.querySelector('.bottom-nav').style.display = 'none';
         }
 
         function renderSeats(seats) {
@@ -226,13 +723,13 @@
                 const s = seats[i];
                 if (i === 0) {
                     seat.classList.add('host');
-                    seat.innerHTML = s ? `👑<br>${s.name}` : '👑<br>host';
+                    seat.innerHTML = `<div class="seat-icon">👑</div><div class="seat-name">${s ? s.name : 'Host'}</div>`;
                 } else {
                     if (s) {
                         seat.classList.add('occupied');
-                        seat.innerHTML = `🛋️<br>${s.name}`;
+                        seat.innerHTML = `<div class="seat-icon">🎙️</div><div class="seat-name">${s.name}</div><div class="seat-number">Seat ${i}</div>`;
                     } else {
-                        seat.innerHTML = `🛋️<br>${i}`;
+                        seat.innerHTML = `<div class="seat-icon">🛋️</div><div class="seat-number">Seat ${i}</div>`;
                     }
                 }
                 seat.onclick = () => takeSeat(i);
@@ -251,11 +748,11 @@
         }
 
         function renderMessages(msgs) {
-            const container = document.getElementById('messages');
+            const container = document.getElementById('chat-messages');
             container.innerHTML = '';
             msgs.forEach(m => {
                 const div = document.createElement('div');
-                div.className = 'message';
+                div.className = 'chat-message';
                 div.textContent = m.sys ? m.text : `${m.name}: ${m.text}`;
                 container.appendChild(div);
             });
@@ -275,25 +772,74 @@
         async function exitRoom() {
             await api(`/api/rooms/${currentRoom}/exit`, 'POST');
             currentRoom = null;
-            document.getElementById('room-view').classList.add('hidden');
-            document.getElementById('rooms-list').classList.remove('hidden');
+            document.getElementById('room-view').style.display = 'none';
+            document.querySelector('.bottom-nav').style.display = 'flex';
+            showPage('home');
             loadRooms();
         }
 
         function showCreateRoom() {
-            document.getElementById('create-room').classList.toggle('hidden');
+            document.getElementById('create-room-modal').classList.add('active');
+        }
+
+        function closeModal(id) {
+            document.getElementById(id).classList.remove('active');
         }
 
         async function createRoom() {
-            const rid = document.getElementById('room-id').value.trim();
-            const name = document.getElementById('room-name-input').value.trim();
+            const rid = document.getElementById('new-room-id').value.trim();
+            const name = document.getElementById('new-room-name').value.trim();
             if (!rid || !name) { alert('ሁለቱንም ይሙሉ'); return; }
             const data = await api('/api/rooms/create', 'POST', { room_id: rid, room_name: name });
             if (data.success) {
-                document.getElementById('create-room').classList.add('hidden');
+                closeModal('create-room-modal');
                 loadRooms();
+                loadAllRooms();
             } else {
                 alert(data.error);
+            }
+        }
+
+        async function buyCoins(packageId) {
+            alert('የTelebirr ክፍያ ገጽ ይከፈታል... (ይህ በወደፊት ይጨመራል)');
+        }
+
+        async function loadPosts() {
+            const data = await api('/api/posts');
+            const container = document.getElementById('posts-list');
+            container.innerHTML = '';
+            if (!data.posts || data.posts.length === 0) {
+                container.innerHTML = '<div style="text-align: center; padding: 40px; opacity: 0.6;">ምንም ጽሑፎች የሉም</div>';
+                return;
+            }
+            data.posts.forEach(p => {
+                const div = document.createElement('div');
+                div.className = 'room-card';
+                div.style.marginBottom = '15px';
+                div.innerHTML = `
+                    <div class="room-name">${p.name}</div>
+                    <div style="margin: 10px 0; font-size: 14px;">${p.text}</div>
+                    <div class="room-stats">
+                        <div class="room-count">❤️ ${p.likes}</div>
+                        <div class="room-count">${new Date(p.created).toLocaleDateString()}</div>
+                    </div>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        function showEditProfile() {
+            alert('የፕሮፋይል ማስተካከያ ገጽ (በወደፊት ይጨመራል)');
+        }
+
+        function showWithdraw() {
+            alert('የገቢ ማውጣት ገጽ (በወደፊት ይጨመራል)');
+        }
+
+        function showCreatePost() {
+            const text = prompt('ጽሑፍዎን ይጻፉ:');
+            if (text) {
+                api('/api/posts/create', 'POST', { text }).then(() => loadPosts());
             }
         }
 
