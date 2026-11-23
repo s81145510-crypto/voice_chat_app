@@ -11,6 +11,7 @@
 <style>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:linear-gradient(160deg,#0a0118 0%,#1a0a2e 50%,#0a0118 100%);color:#fff;min-height:100vh;overflow-x:hidden;padding-bottom:65px;font-size:12px}
+.app-title{text-align:center;padding:8px;font-size:16px;font-weight:bold;background:linear-gradient(135deg,#ffd700,#ff4757);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
 .hdr{background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);padding:8px 12px;display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:100;box-shadow:0 4px 20px rgba(102,126,234,.4)}
 .hdr-l{display:flex;align-items:center;gap:8px}
 .av{width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,#f093fb,#f5576c);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:bold;border:2px solid rgba(255,255,255,.3);cursor:pointer;overflow:hidden}
@@ -116,7 +117,7 @@ textarea.in{min-height:60px;resize:vertical}
 .level-badge{display:inline-block;padding:2px 6px;border-radius:8px;font-size:8px;font-weight:bold;margin-left:4px}
 .ref-info{background:rgba(46,213,115,.1);border:1px solid rgba(46,213,115,.3);border-radius:8px;padding:8px;margin:8px 0;font-size:11px}
 .ref-info b{color:#2ed573}
-.app-title{text-align:center;padding:8px;font-size:16px;font-weight:bold;background:linear-gradient(135deg,#ffd700,#ff4757);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.seller-badge{background:linear-gradient(135deg,#ffd700,#ff4757);color:#fff;padding:3px 8px;border-radius:10px;font-size:9px;font-weight:bold;display:inline-block;margin-top:4px}
 </style>
 </head>
 <body>
@@ -129,7 +130,7 @@ textarea.in{min-height:60px;resize:vertical}
 <div class="app-title">🎉 Twenty One Party 🎉</div>
 <div class="hdr">
   <div class="hdr-l"><div class="av" id="hAv" onclick="go('profile')">T</div>
-  <div><h3 id="hName">User</h3><p id="hSub">Level 1</p></div></div>
+  <div><h3 id="hName">User</h3><p id="hSub">Newbie</p></div></div>
   <div class="coin" onclick="go('wallet')"><i class="fas fa-coins"></i><span id="hCoins">0</span></div>
 </div>
 
@@ -173,30 +174,12 @@ textarea.in{min-height:60px;resize:vertical}
 <div id="p-games" class="page">
   <div class="sec">
     <div class="st"><i class="fas fa-gamepad" style="color:#ff4757"></i> Games <span style="font-size:10px;opacity:.7;margin-left:auto">70% RTP • 30% House Edge</span></div>
-    <div class="game-card" onclick="openGame('dice')">
-      <h4>🎲 Dice Roll</h4><p>Pick 1-6. Win 4.2x!</p>
-      <div class="stats-row"><span>Min: 10</span><span>Max: 10,000</span><span>Win: 4.2x</span></div>
-    </div>
-    <div class="game-card" onclick="openGame('flip')">
-      <h4>🪙 Coin Flip</h4><p>Heads or Tails. Win 1.4x!</p>
-      <div class="stats-row"><span>Min: 10</span><span>Max: 50,000</span><span>Win: 1.4x</span></div>
-    </div>
-    <div class="game-card" onclick="openGame('wheel')">
-      <h4>🎡 Lucky Wheel</h4><p>Spin! Up to 5x!</p>
-      <div class="stats-row"><span>Min: 10</span><span>Max: 100,000</span><span>Win: up to 5x</span></div>
-    </div>
-    <div class="game-card" onclick="openGame('race')">
-      <h4>🏇 Horse Race</h4><p>Pick a horse. Win 4.5x!</p>
-      <div class="stats-row"><span>Min: 10</span><span>Max: 50,000</span><span>Win: 4.5x</span></div>
-    </div>
-    <div class="game-card" onclick="openGame('box')">
-      <h4>📦 Mystery Box</h4><p>Open a box! Up to 10x!</p>
-      <div class="stats-row"><span>Min: 50</span><span>Max: 100,000</span><span>Win: up to 10x</span></div>
-    </div>
-    <div class="game-card" onclick="openGame('p2p')">
-      <h4>⚔️ P2P Battle</h4><p>Bet against players. Win 1.9x!</p>
-      <div class="stats-row"><span>Min: 100</span><span>Max: 1,000,000</span><span>Win: 1.9x</span></div>
-    </div>
+    <div class="game-card" onclick="openGame('dice')"><h4>🎲 Dice Roll</h4><p>Pick 1-6. Win 4.2x!</p><div class="stats-row"><span>Min: 10</span><span>Max: 10,000</span><span>Win: 4.2x</span></div></div>
+    <div class="game-card" onclick="openGame('flip')"><h4>🪙 Coin Flip</h4><p>Heads or Tails. Win 1.4x!</p><div class="stats-row"><span>Min: 10</span><span>Max: 50,000</span><span>Win: 1.4x</span></div></div>
+    <div class="game-card" onclick="openGame('wheel')"><h4>🎡 Lucky Wheel</h4><p>Spin! Up to 5x!</p><div class="stats-row"><span>Min: 10</span><span>Max: 100,000</span><span>Win: up to 5x</span></div></div>
+    <div class="game-card" onclick="openGame('race')"><h4>🏇 Horse Race</h4><p>Pick a horse. Win 4.5x!</p><div class="stats-row"><span>Min: 10</span><span>Max: 50,000</span><span>Win: 4.5x</span></div></div>
+    <div class="game-card" onclick="openGame('box')"><h4>📦 Mystery Box</h4><p>Open a box! Up to 10x!</p><div class="stats-row"><span>Min: 50</span><span>Max: 100,000</span><span>Win: up to 10x</span></div></div>
+    <div class="game-card" onclick="openGame('p2p')"><h4>⚔️ P2P Battle</h4><p>Bet against players. Win 1.9x!</p><div class="stats-row"><span>Min: 100</span><span>Max: 1,000,000</span><span>Win: 1.9x</span></div></div>
     <div class="st" style="margin-top:16px"><i class="fas fa-history" style="color:#667eea"></i> My Games</div>
     <div id="myGames"></div>
   </div>
@@ -227,7 +210,7 @@ textarea.in{min-height:60px;resize:vertical}
 </div>
 
 <div id="p-profile" class="page">
-  <div class="ph"><div class="pav" id="pAv">T</div><h2 id="pName">User</h2><p id="pId" style="opacity:.85;font-size:11px"></p><p id="pBio" style="font-size:11px;opacity:.9;margin-top:6px"></p><div id="pLevel" style="margin-top:6px"></div></div>
+  <div class="ph"><div class="pav" id="pAv">T</div><h2 id="pName">User</h2><p id="pId" style="opacity:.85;font-size:11px"></p><p id="pBio" style="font-size:11px;opacity:.9;margin-top:6px"></p><div id="pLevel" style="margin-top:6px"></div><div id="pSeller" style="margin-top:6px"></div></div>
   <div class="stats">
     <div class="stat"><b id="sCoins">0</b><span>Coins</span></div>
     <div class="stat"><b id="sEarn">0</b><span>Earnings</span></div>
@@ -269,7 +252,6 @@ textarea.in{min-height:60px;resize:vertical}
 
 <!-- Modals -->
 <div class="modal" id="mRoom"><div class="mc"><div class="mt">New Room</div>
-<input class="in" id="nrId" placeholder="Room ID (A-Z a-z 0-9 _)">
 <input class="in" id="nrName" placeholder="Room name">
 <select class="in" id="nrCat" style="color:#fff">
   <option value="chat">💬 Chat</option>
@@ -376,6 +358,11 @@ function paint(){
   const lvl=getLevel(U.coins);
   hSub.textContent=lvl.icon+' '+lvl.name;
   pLevel.innerHTML=`<span class="level-badge" style="background:${lvl.color};color:#333">${lvl.icon} ${lvl.name}</span>`;
+  if(U.coin_seller_badge){
+    pSeller.innerHTML=`<span class="seller-badge">${U.coin_seller_badge}</span>`;
+  } else {
+    pSeller.innerHTML='';
+  }
   document.getElementById('tbNum').textContent=C.telebirr.number;
   document.getElementById('tbName').textContent=C.telebirr.name;
   document.getElementById('wMin').textContent=C.min_withdraw;
@@ -387,7 +374,7 @@ function go(p){
   document.querySelectorAll('.page').forEach(x=>x.classList.remove('active'));
   document.getElementById('p-'+p).classList.add('active');
   document.querySelectorAll('.ni').forEach(x=>x.classList.remove('on'));
-  const idx={home:0,rooms:1,wallet:2,community:3,games:4,profile:5}[p];
+  const idx={home:0,rooms:1,wallet:2,community:3,games:4,agency:5,profile:6}[p];
   if(idx!==undefined)document.querySelectorAll('.ni')[idx]?.classList.add('on');
   if(p==='rooms')loadAll();if(p==='wallet')loadHist();if(p==='community'){loadPosts();loadJobs()}
   if(p==='admin')admOverview();if(p==='games')loadGames();if(p==='agency')loadAgency();
@@ -440,10 +427,10 @@ function card(rid,rm){return `<div class="card" onclick="joinRoom('${rid}')"><h4
 function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
 
 async function createRoom(){
-  const id=nrId.value.trim(),nm=nrName.value.trim(),cat=nrCat.value;
-  if(!id||!nm){alert('Fill both fields');return}
-  const d=await api('/api/rooms/create','POST',{room_id:id,room_name:nm,category:cat});
-  if(d.success){closeM('mRoom');nrId.value='';nrName.value='';joinRoom(id)}else alert(d.error)
+  const nm=nrName.value.trim(),cat=nrCat.value;
+  if(!nm){alert('Enter room name');return}
+  const d=await api('/api/rooms/create','POST',{room_name:nm,category:cat});
+  if(d.success){closeM('mRoom');nrName.value='';joinRoom(d.room_id)}else alert(d.error)
 }
 
 async function joinRoom(rid){
@@ -477,8 +464,7 @@ async function seatTap(i,st){
 function renderGifts(){
   const g=document.getElementById('gGrid');g.innerHTML='';selGift=null;
   C.gifts.forEach(x=>{
-    const d=document.createElement('div');
-    d.className='gi';
+    const d=document.createElement('div');d.className='gi';
     d.innerHTML=`<div class="e">${x.icon}</div><div class="n">${x.name}</div><div class="pr">${x.price}</div>`;
     d.onclick=()=>{document.querySelectorAll('.gi').forEach(y=>y.classList.remove('sel'));d.classList.add('sel');selGift=x.id};
     g.appendChild(d)
@@ -496,19 +482,41 @@ async function sendChat(){const t2=chatIn.value.trim();if(!t2)return;await api(`
 async function exitRoom(){await api(`/api/rooms/${CR}/exit`,'POST');leaveVoice();clearInterval(poll);CR=null;RS=null;roomMinimized=false;document.getElementById('roomView').style.display='none';document.getElementById('roomMin').style.display='none';document.getElementById('minBtn').style.display='none';document.querySelectorAll('.page').forEach(p=>p.style.display='');document.getElementById('navBar').style.display='flex';go('rooms')}
 
 async function joinVoice(){
+  const btn=document.getElementById('voiceBtn');
+  btn.disabled=true;btn.innerHTML='<i class="fas fa-spinner fa-spin"></i> Connecting...';
   try{
     const d=await api('/api/livekit-token','POST',{room_id:CR});
-    if(!d.success||!d.url){alert('Error: '+(d.error||'LiveKit not configured'));return}
-    if(!window.LivekitClient){alert('LiveKit SDK not loaded');return}
-    const {Room,RoomEvent}=window.LivekitClient;
-    lkRoom=new Room();await lkRoom.connect(d.url,d.token);
+    if(!d.success||!d.url)throw new Error(d.error||'LiveKit not configured');
+    if(!window.LivekitClient)throw new Error('SDK not loaded');
+    const {Room,RoomEvent,ConnectionState}=window.LivekitClient;
+    lkRoom=new Room({adaptiveStream:true,dynacast:true});
+    lkRoom.on(RoomEvent.Disconnected,()=>{
+      voiceBar.style.display='none';
+      voiceBtn.style.display='block';voiceBtn.disabled=false;
+      voiceBtn.innerHTML='<i class="fas fa-microphone"></i> Start Voice';
+    });
+    await lkRoom.connect(d.url,d.token);
+    if(lkRoom.connectionState!==ConnectionState.Connected){
+      await new Promise((res,rej)=>{
+        const t=setTimeout(()=>rej(new Error('Connection timeout')),15000);
+        lkRoom.once(RoomEvent.Connected,()=>{clearTimeout(t);res()});
+      });
+    }
     await lkRoom.localParticipant.setMicrophoneEnabled(true);
-    document.getElementById('voiceBtn').style.display='none';
-    document.getElementById('voiceBar').style.display='flex';
+    voiceBtn.style.display='none';
+    voiceBar.style.display='flex';
     lkRoom.on(RoomEvent.ParticipantConnected,()=>updVoice());
     lkRoom.on(RoomEvent.ParticipantDisconnected,()=>updVoice());
+    lkRoom.on(RoomEvent.ConnectionStateChanged,(s)=>{
+      if(s!==ConnectionState.Connected){voiceTxt.textContent='🔄 Reconnecting...'}
+      else updVoice();
+    });
     updVoice();
-  }catch(e){alert('Voice error: '+e.message)}
+  }catch(e){
+    alert('Voice error: '+e.message);
+    if(lkRoom){try{await lkRoom.disconnect()}catch(_){}lkRoom=null}
+    voiceBar.style.display='none';voiceBtn.style.display='block';
+  }finally{btn.disabled=false;btn.innerHTML='<i class="fas fa-microphone"></i> Start Voice'}
 }
 function updVoice(){
   if(lkRoom){
@@ -545,7 +553,6 @@ async function loadJobs(){const d=await api('/api/jobs');if(!d.success)return;co
 async function createJob(){const d=await api('/api/jobs/create','POST',{title:jTitle.value,desc:jDesc.value,contact:jContact.value});if(d.success){closeM('mJob');jTitle.value=jDesc.value=jContact.value='';loadJobs()}else alert(d.error)}
 async function delJob(id){if(confirm('Delete?')){await api(`/api/jobs/${id}/delete`,'POST');loadJobs()}}
 
-// GAMES
 async function loadGames(){
   const d=await api('/api/games');
   if(!d.success)return;
@@ -648,7 +655,6 @@ async function playGame(){
   btn.disabled=false;btn.textContent='Play';
 }
 
-// AGENCY
 async function loadAgency(){
   const d=await api('/api/agency');
   if(!d.success)return;
@@ -671,9 +677,8 @@ async function claimAgency(){
   else alert(d.error);
 }
 
-// ADMIN
 async function admOverview(){const d=await api('/api/admin/overview');if(!d.success)return;const s=d.stats;
-  document.getElementById('admStats').innerHTML=`<div class="stat"><b>${s.users}</b><span>Users</span></div><div class="stat"><b>${s.banned}</b><span>Banned</span></div><div class="stat"><b>${s.rooms}</b><span>Rooms</span></div><div class="stat"><b>${s.posts}</b><span>Posts</span></div><div class="stat"><b>${s.revenue} Birr</b><span>Revenue</span></div><div class="stat"><b>${s.paid_out} Birr</b><span>Paid Out</span></div><div class="stat"><b>${s.game_profit} 🪙</b><span>Game Profit</span></div><div class="stat"><b>${s.gifts}</b><span>🎁 Gifts</span></div>`;
+  document.getElementById('admStats').innerHTML=`<div class="stat"><b>${s.users}</b><span>Users</span></div><div class="stat"><b>${s.banned}</b><span>Banned</span></div><div class="stat"><b>${s.rooms}</b><span>Rooms</span></div><div class="stat"><b>${s.posts}</b><span>Posts</span></div><div class="stat"><b>${s.jobs}</b><span>Jobs</span></div><div class="stat"><b>${s.gifts}</b><span>🎁</span></div><div class="stat"><b>${s.revenue} Birr</b><span>Revenue</span></div><div class="stat"><b>${s.paid_out} Birr</b><span>Paid Out</span></div><div class="stat"><b>${s.game_profit} 🪙</b><span>Game Profit</span></div><div class="stat"><b>${s.game_total_bet} 🪙</b><span>Game Bets</span></div>`;
   const pc=document.getElementById('admPurch');pc.innerHTML='';
   d.purchases.forEach(p=>{const el=document.createElement('div');el.className='arow';el.innerHTML=`<div class="top"><span>${esc(p.name)} → 🪙${p.coins} (${p.price} Birr)</span><span style="font-size:9px;opacity:.6">Ref:${p.ref}</span></div><div class="btns"><button class="btn sm" onclick="viewShot('${p.id}')">📷</button><button class="btn sm grn" onclick="purch('${p.id}','approve')">Approve</button><button class="btn sm red" onclick="purch('${p.id}','reject')">Reject</button></div>`;pc.appendChild(el)});
   if(!d.purchases.length)pc.innerHTML='<div style="opacity:.6;text-align:center;padding:10px">No pending</div>';
@@ -681,7 +686,7 @@ async function admOverview(){const d=await api('/api/admin/overview');if(!d.succ
   d.withdrawals.forEach(w=>{const el=document.createElement('div');el.className='arow';el.innerHTML=`<div class="top"><span>${esc(w.name)} → ${w.amount} = ${w.birr} Birr</span><span style="font-size:9px">${w.phone}</span></div><div style="font-size:9px;opacity:.6">${esc(w.acc_name)}</div><div class="btns"><button class="btn sm grn" onclick="withd('${w.id}','paid')">Paid</button><button class="btn sm red" onclick="withd('${w.id}','reject')">Reject</button></div>`;wc.appendChild(el)});
   if(!d.withdrawals.length)wc.innerHTML='<div style="opacity:.6;text-align:center;padding:10px">No pending</div>';
   const rc=document.getElementById('admRooms');rc.innerHTML='';
-  d.rooms.forEach(r=>{const el=document.createElement('div');el.className='arow';el.innerHTML=`<div class="top"><span>${esc(r.name)} (${r.count})</span><span style="font-size:9px;opacity:.6">${esc(r.creator_name)}</span></div><div class="btns"><button class="btn sm red" onclick="delRoom('${r.id}')">Delete</button></div>`;rc.appendChild(el)});
+  d.rooms.forEach(r=>{const el=document.createElement('div');el.className='arow';el.innerHTML=`<div class="top"><span>${esc(r.name)} (${r.count}) [${r.category||'chat'}]</span><span style="font-size:9px;opacity:.6">${esc(r.creator_name)}</span></div><div class="btns"><button class="btn sm red" onclick="delRoom('${r.id}')">Delete</button></div>`;rc.appendChild(el)});
   admUsers();
 }
 function admTab(t2,el){document.querySelectorAll('#p-admin .subtab').forEach(x=>x.classList.remove('on'));el.classList.add('on');['admPurch','admWith','admUsers','admRooms'].forEach(id=>document.getElementById(id).style.display='none');document.getElementById({purch:'admPurch',with:'admWith',users:'admUsers',rooms:'admRooms'}[t2]).style.display='block'}
