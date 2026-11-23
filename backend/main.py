@@ -2,6 +2,7 @@ from flask import Flask, render_template, request, jsonify
 import json, os, hmac, hashlib, time
 from urllib.parse import parse_qsl
 from datetime import datetime
+from livekit import api as lkapi
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 TEMPLATE_DIR = os.path.join(BASE_DIR, 'templates')
@@ -142,3 +143,37 @@ def get_balance():
         return unauthorized()
     data = load_data()
     return jsonify({'coins': data['users'].get(uid, {}).get('coins', 0)})
+
+
+@app.route('/api/livekit-token', methods=['POST'])
+def livekit_token():
+    uid, tg = current_user_id()
+    if not uid:
+        return unauthorized()
+    body = request.get_json(silent=True) or {}
+    room_id = str(body.get('room_id', ''))
+    data = load_data()
+    room = data['rooms'].get(room_id)
+    if not room:
+        return jsonify({'success': False, 'error': 'Room not found'})
+    is_host = room['creator'] == uid
+    token = (
+        lkapi.AccessToken(
+            os.environ.get('LIVEKIT_API_KEY', ''),
+            os.environ.get('LIVEKIT_API_SECRET', ''))
+        .with_identity(uid)
+        .with_name(tg.get('first_name', 'User'))
+        .with_grants(lkapi.VideoGrants(
+            room_join=True,
+            room=room_id,
+            can_publish=is_host,
+            can_subscribe=True,
+            can_publish_data=True))
+        .to_jwt()
+    )
+    return jsonify({
+        'success': True,
+        'token': token,
+        'url': os.environ.get('LIVEKIT_URL', ''),
+        'is_host': is_host
+    })
