@@ -847,12 +847,20 @@ def agora_token():
     app_id = os.environ.get('AGORA_APP_ID', '')
     app_cert = os.environ.get('AGORA_APP_CERTIFICATE', '')
     
-    if not app_id or not app_cert:
-        return jsonify({'success': False, 'error': 'Agora not configured'})
+    if not app_id:
+        return jsonify({'success': False, 'error': 'Agora App ID not configured'})
     
     try:
+        current_time = int(time.time())
+        privilege_expired_ts = current_time + 86400  # 24 hours
+        
         token = RtcTokenBuilder.buildTokenWithUid(
-            app_id, app_cert, room_id, 0, 2, 3600
+            app_id, 
+            app_cert if app_cert else '',
+            room_id, 
+            0,  # uid = 0 means any user
+            1,  # role = 1 (publisher)
+            privilege_expired_ts
         )
     except Exception as e:
         return jsonify({'success': False, 'error': 'Token generation failed: ' + str(e)})
