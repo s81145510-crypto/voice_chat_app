@@ -6,7 +6,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <title>Twenty One Party</title>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/livekit-client@2/dist/livekit-client.umd.min.js"></script>
+<script src="https://cdn.agora.io/sdk/release/AgoraRTC_N-4.20.0.js"></script>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <style>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
@@ -292,7 +292,7 @@ textarea.in{min-height:60px;resize:vertical}
 
 <script>
 const tg=window.Telegram?.WebApp; if(tg)tg.ready();
-let U=null,C=null,init='',CR=null,RS=null,lkRoom=null,selGift=null,giftTo=null,shotData='',photoShotData='',roomMinimized=false,currentGame=null;
+let U=null,C=null,init='',CR=null,RS=null,agoraClient=null,agoraLocalTrack=null,selGift=null,giftTo=null,shotData='',photoShotData='',roomMinimized=false,currentGame=null;
 
 async function api(u,m='GET',b=null){const h={'Content-Type':'application/json'};if(init)h['X-Telegram-Init-Data']=init;const o={method:m,headers:h};if(b)o.body=JSON.stringify(b);const r=await fetch(u,o);return r.json()}
 function openM(i){document.getElementById(i).classList.add('on')}
@@ -450,117 +450,60 @@ async function joinVoice(){
   btn.disabled=true;
   btn.innerHTML='<i class="fas fa-spinner fa-spin"></i> Connecting...';
   
-  let attempts=0;
-  const maxAttempts=5;
-  
-  while(attempts<maxAttempts){
-    attempts++;
-    btn.innerHTML=`<i class="fas fa-spinner fa-spin"></i> Connecting... (${attempts}/${maxAttempts})`;
+  try{
+    const d=await api('/api/agora-token','POST',{room_id:CR});
+    if(!d.success)throw new Error(d.error||'Agora not configured');
+    if(!window.AgoraRTC)throw new Error('Agora SDK not loaded');
     
-    try{
-      const d=await api('/api/livekit-token','POST',{room_id:CR});
-      if(!d.success||!d.url)throw new Error(d.error||'LiveKit not configured');
-      if(!window.LivekitClient)throw new Error('SDK not loaded');
-      
-      const {Room,RoomEvent,ConnectionState}=window.LivekitClient;
-      lkRoom=new Room({
-        adaptiveStream:true,
-        dynacast:true,
-        publishDefaults:{
-          videoCodec:'vp8',
-          audioPreset:{maxBitrate:128000}
-        },
-        // TURN servers for better connectivity
-        rtcConfig:{
-          iceServers:[
-            {urls:'stun:stun.l.google.com:19302'},
-            {urls:'stun:stun1.l.google.com:19302'},
-            {urls:'stun:stun2.l.google.com:19302'},
-            {urls:'stun:stun3.l.google.com:19302'},
-            {urls:'stun:stun4.l.google.com:19302'}
-          ]
-        }
-      });
-      
-      lkRoom.on(RoomEvent.Disconnected,()=>{
-        voiceBar.style.display='none';
-        voiceBtn.style.display='block';
-        voiceBtn.disabled=false;
-        voiceBtn.innerHTML='<i class="fas fa-microphone"></i> Start Voice';
-      });
-      
-      const connectPromise=lkRoom.connect(d.url,d.token);
-      const timeoutPromise=new Promise((_,reject)=>
-        setTimeout(()=>reject(new Error('Connection timeout - please try again')),45000)
-      );
-      
-      await Promise.race([connectPromise,timeoutPromise]);
-      
-      if(lkRoom.connectionState!==ConnectionState.Connected){
-        await new Promise((resolve,reject)=>{
-          const timeout=setTimeout(()=>reject(new Error('Connection timeout')),30000);
-          lkRoom.once(RoomEvent.Connected,()=>{
-            clearTimeout(timeout);
-            resolve();
-          });
-        });
+    const appId=C.agora_app_id;
+    if(!appId)throw new Error('Agora App ID not configured');
+    
+    agoraClient=AgoraRTC.createClient({mode:'rtc',codec:'vp8'});
+    
+    agoraClient.on('user-published',async(user,mediaType)=>{
+      await agoraClient.subscribe(user,mediaType);
+      if(mediaType==='audio'){
+        const audioTrack=user.audioTrack;
+        audioTrack.play();
       }
-      
-      await lkRoom.localParticipant.setMicrophoneEnabled(true);
-      
-      voiceBtn.style.display='none';
-      voiceBar.style.display='flex';
-      
-      lkRoom.on(RoomEvent.ParticipantConnected,()=>updVoice());
-      lkRoom.on(RoomEvent.ParticipantDisconnected,()=>updVoice());
-      lkRoom.on(RoomEvent.ConnectionStateChanged,(s)=>{
-        if(s!==ConnectionState.Connected){
-          voiceTxt.textContent='🔄 Reconnecting...';
-        }else{
-          updVoice();
-        }
-      });
-      
-      updVoice();
-      return;
-      
-    }catch(e){
-      console.error('Voice attempt '+attempts+' failed:',e);
-      
-      if(lkRoom){
-        try{await lkRoom.disconnect()}catch(_){}
-        lkRoom=null;
-      }
-      
-      if(attempts>=maxAttempts){
-        alert('Voice connection failed after '+maxAttempts+' attempts.\n\n'+
-              'Error: '+e.message+'\n\n'+
-              'This is likely due to:\n'+
-              '• High network latency from Ethiopia to Europe\n'+
-              '• Firewall blocking WebRTC connections\n'+
-              '• Mobile network restrictions\n\n'+
-              'Solutions:\n'+
-              '1. Try using WiFi instead of mobile data\n'+
-              '2. Use a VPN (connect to Europe server)\n'+
-              '3. Try again later when network is less congested');
-        voiceBar.style.display='none';
-        voiceBtn.style.display='block';
-        voiceBtn.disabled=false;
-        voiceBtn.innerHTML='<i class="fas fa-microphone"></i> Start Voice';
-        return;
-      }
-      
-      await new Promise(r=>setTimeout(r,3000));
-    }
+    });
+    
+    agoraClient.on('user-unpublished',(user)=>{
+      if(user.audioTrack)user.audioTrack.stop();
+    });
+    
+    await agoraClient.join(appId,d.channel,d.token,0);
+    
+    agoraLocalTrack=await AgoraRTC.createMicrophoneAudioTrack();
+    await agoraClient.publish(agoraLocalTrack);
+    
+    voiceBtn.style.display='none';
+    voiceBar.style.display='flex';
+    voiceTxt.textContent='🎙️ On voice...';
+    
+  }catch(e){
+    console.error('Voice error:',e);
+    alert('Voice error: '+e.message+'\n\nPlease check:\n1. Agora App ID is configured\n2. You have microphone permission\n3. Your internet connection');
+    voiceBtn.style.display='block';
+    voiceBtn.disabled=false;
+    voiceBtn.innerHTML='<i class="fas fa-microphone"></i> Start Voice';
   }
 }
-function updVoice(){
-  if(lkRoom){
-    const size=lkRoom.remoteParticipants?lkRoom.remoteParticipants.size:0;
-    voiceTxt.textContent='🎙️ On voice... ('+size+' others)';
+
+async function leaveVoice(){
+  if(agoraLocalTrack){
+    agoraLocalTrack.close();
+    agoraLocalTrack=null;
   }
+  if(agoraClient){
+    await agoraClient.leave();
+    agoraClient=null;
+  }
+  document.getElementById('voiceBar').style.display='none';
+  document.getElementById('voiceBtn').style.display='block';
+  document.getElementById('voiceBtn').innerHTML='<i class="fas fa-microphone"></i> Start Voice';
+  document.getElementById('voiceBtn').disabled=false;
 }
-async function leaveVoice(){if(lkRoom){try{await lkRoom.disconnect()}catch(e){}lkRoom=null}document.getElementById('voiceBar').style.display='none';document.getElementById('voiceBtn').style.display='block'}
 
 function renderPkgs(){const c=document.getElementById('pkgs');c.innerHTML='';C.packages.forEach(p=>{const d=document.createElement('div');d.className='pkg';d.innerHTML=`<div class="c">🪙 ${p.coins.toLocaleString()}</div><div class="p">${p.price} Birr</div>`;d.onclick=()=>{document.getElementById('tbAmt').textContent=p.price;openM('mBuy')};c.appendChild(d)})}
 function previewBuyShot(e){const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=ev=>{shotData=ev.target.result;document.getElementById('shotPrev').innerHTML='<img src="'+shotData+'" style="width:100%;max-height:130px;object-fit:cover;border-radius:8px;margin-bottom:8px">'};r.readAsDataURL(f)}
