@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>VoiceChat</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/livekit-client@2.5.7/dist/livekit-client.umd.min.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
@@ -185,6 +186,13 @@
                 </div>
                 <div class="coin-badge">🪙 <span id="coin-balance">0</span></div>
             </div>
+            <div id="voice-panel" class="card hidden">
+                <div class="section-title" id="voice-title">🎙️</div>
+                <div id="voice-status" style="margin-bottom:10px;"></div>
+                <button class="btn btn-success" id="mic-btn" onclick="toggleMic()">🎤 ማይክ አብራ</button>
+                <button class="btn" onclick="leaveRoom()" style="background:#ff4757;">🚪 ውጣ</button>
+                <div id="audio-box"></div>
+            </div>
             <div class="card">
                 <div class="section-title">🏠 አዲስ ክፍል ፍጠር</div>
                 <div class="input-group">
@@ -192,6 +200,10 @@
                     <input type="text" id="room-name" placeholder="ለምሳሌ፡ ሙዚቃ፣ ዜና...">
                 </div>
                 <button class="btn btn-success" onclick="createRoom()">✨ ክፍል ፍጠር</button>
+            </div>
+            <div class="card">
+                <div class="section-title">📢 ክፍሎች</div>
+                <div id="rooms-list"></div>
             </div>
             <div class="card">
                 <div class="section-title">🎁 ስጦታ ላክ</div>
@@ -217,16 +229,13 @@
                     </div>
                 </div>
             </div>
-            <div class="card">
-                <div class="section-title">📢 ክፍሎች</div>
-                <div id="rooms-list"></div>
-            </div>
         </div>
     </div>
     <script>
         const tg = window.Telegram && window.Telegram.WebApp;
         if (tg) { tg.ready(); tg.expand(); }
         let userId = null, username = null;
+        let lkRoom = null;
 
         function hdrs() {
             return {
@@ -274,14 +283,6 @@
             } catch(e) { showToast('❌ ስህተት', 'error'); }
         }
 
-        async function updateBalance() {
-            try {
-                const r = await fetch('/api/balance', { headers: hdrs() });
-                const d = await r.json();
-                document.getElementById('coin-balance').textContent = d.coins;
-            } catch(e) {}
-        }
-
         async function createRoom() {
             const name = document.getElementById('room-name').value.trim();
             if (!name) { showToast('⚠️ የክፍል ስም አስገባ!', 'error'); return; }
@@ -312,10 +313,11 @@
                     return;
                 }
                 let html = '';
-                for (const room of Object.values(rooms)) {
+                for (const [rid, room] of Object.entries(rooms)) {
                     html += '<div class="room-card"><div class="room-icon">🎙️</div><div class="room-info"><div class="room-name">'
                         + esc(room.name) + '</div><div class="room-meta">👤 '
-                        + esc(room.creator_name || room.creator) + '</div></div></div>';
+                        + esc(room.creator_name || room.creator) + '</div></div>'
+                        + '<button class="btn" style="width:auto;padding:10px 16px;margin:0;" onclick="joinRoom(\'' + rid + '\')">ግባ</button></div>';
                 }
                 list.innerHTML = html;
             } catch(e) {}
@@ -339,6 +341,59 @@
                     showToast('❌ ' + d.error, 'error');
                 }
             } catch(e) { showToast('❌ ስህተት', 'error'); }
+        }
+
+        async function joinRoom(roomId) {
+            if (lkRoom) await leaveRoom();
+            try {
+                const r = await fetch('/api/livekit-token', {
+                    method: 'POST', headers: hdrs(),
+                    body: JSON.stringify({room_id: roomId})
+                });
+                const d = await r.json();
+                if (!d.success) { showToast('❌ ' + d.error, 'error'); return; }
+                lkRoom = new LivekitClient.Room();
+                lkRoom.on(LivekitClient.RoomEvent.TrackSubscribed, (track) => {
+                    if (track.kind === 'audio') {
+                        document.getElementById('audio-box').appendChild(track.attach());
+                    }
+                });
+                lkRoom.on(LivekitClient.RoomEvent.ParticipantConnected, updateStatus);
+                lkRoom.on(LivekitClient.RoomEvent.ParticipantDisconnected, updateStatus);
+                await lkRoom.connect(d.url, d.token);
+                await lkRoom.startAudio();
+                document.getElementById('voice-panel').classList.remove('hidden');
+                document.getElementById('voice-title').textContent = '🎙️ ክፍል ውስጥ ነህ';
+                document.getElementById('mic-btn').style.display = d.is_host ? 'block' : 'none';
+                updateStatus();
+                window.scrollTo(0, 0);
+                showToast('✅ ገብተሃል!');
+            } catch (e) {
+                showToast('❌ መግባት አልተሳካም', 'error');
+            }
+        }
+
+        function updateStatus() {
+            if (!lkRoom) return;
+            const n = lkRoom.remoteParticipants.size + 1;
+            document.getElementById('voice-status').textContent = '👥 ' + n + ' ሰው ክፍሉ ውስጥ አለ';
+        }
+
+        async function toggleMic() {
+            if (!lkRoom) return;
+            const on = lkRoom.localParticipant.isMicrophoneEnabled;
+            try {
+                await lkRoom.localParticipant.setMicrophoneEnabled(!on);
+                document.getElementById('mic-btn').textContent = on ? '🎤 ማይክ አብራ' : '🔇 ማይክ አጥፋ';
+            } catch (e) {
+                showToast('❌ ማይክ ፈቃድ አልተሰጠም', 'error');
+            }
+        }
+
+        async function leaveRoom() {
+            if (lkRoom) { await lkRoom.disconnect(); lkRoom = null; }
+            document.getElementById('audio-box').innerHTML = '';
+            document.getElementById('voice-panel').classList.add('hidden');
         }
 
         setInterval(loadRooms, 5000);
