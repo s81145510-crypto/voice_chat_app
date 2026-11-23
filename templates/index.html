@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>VoiceChat</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
@@ -169,10 +170,7 @@
             </div>
             <div class="card">
                 <div class="section-title">👋 እንኳን ደህና መጣህ</div>
-                <div class="input-group">
-                    <label>ስምህን አስገባ</label>
-                    <input type="text" id="username" placeholder="ለምሳሌ፡ አበበ">
-                </div>
+                <p id="login-msg">በመግባት ላይ...</p>
                 <button class="btn" onclick="register()">🚀 ጀምር</button>
             </div>
         </div>
@@ -199,7 +197,7 @@
                 <div class="section-title">🎁 ስጦታ ላክ</div>
                 <div class="input-group">
                     <label>የተቀባይ ID</label>
-                    <input type="text" id="recipient-id" placeholder="user_xxxxxxx">
+                    <input type="text" id="recipient-id" placeholder="tg_123456789">
                 </div>
                 <div class="gifts-grid">
                     <div class="gift-card" onclick="sendGift('coffee')">
@@ -226,99 +224,125 @@
         </div>
     </div>
     <script>
+        const tg = window.Telegram && window.Telegram.WebApp;
+        if (tg) { tg.ready(); tg.expand(); }
         let userId = null, username = null;
+
+        function hdrs() {
+            return {
+                'Content-Type': 'application/json',
+                'X-Telegram-Init-Data': tg ? tg.initData : ''
+            };
+        }
+        function esc(s) {
+            const d = document.createElement('div');
+            d.textContent = s;
+            return d.innerHTML;
+        }
         function showToast(msg, type='success') {
             const t = document.getElementById('toast');
             t.textContent = msg;
             t.className = 'toast show ' + type;
             setTimeout(() => t.className = 'toast', 3000);
         }
-        function generateUserId() { return 'user_' + Math.random().toString(36).substr(2, 9); }
+
         async function register() {
-            username = document.getElementById('username').value.trim();
-            if (!username) { showToast('⚠️ ስምህን አስገባ!', 'error'); return; }
-            userId = generateUserId();
+            if (!tg || !tg.initData) {
+                document.getElementById('login-msg').textContent = '⚠️ ይህን መተግበሪያ ከቴሌግራም ቦት ውስጥ ክፈት።';
+                showToast('⚠️ ከቴሌግራም ውስጥ ክፈት!', 'error');
+                return;
+            }
             try {
                 const r = await fetch('/api/register', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({user_id: userId, username: username})
+                    method: 'POST', headers: hdrs(), body: '{}'
                 });
                 const d = await r.json();
                 if (d.success) {
+                    userId = d.user_id;
+                    username = d.user.username;
                     document.getElementById('register-section').classList.add('hidden');
                     document.getElementById('main-section').classList.remove('hidden');
                     document.getElementById('user-display').textContent = username;
                     document.getElementById('user-id-display').textContent = userId;
                     document.getElementById('user-avatar').textContent = username.charAt(0).toUpperCase();
-                    updateBalance();
+                    document.getElementById('coin-balance').textContent = d.user.coins;
                     loadRooms();
                     showToast('🎉 እንኳን ደህና መጣህ ' + username + '!');
+                } else {
+                    showToast('❌ ' + (d.error || 'ስህተት'), 'error');
                 }
             } catch(e) { showToast('❌ ስህተት', 'error'); }
         }
+
         async function updateBalance() {
             try {
-                const r = await fetch('/api/balance?user_id=' + userId);
+                const r = await fetch('/api/balance', { headers: hdrs() });
                 const d = await r.json();
                 document.getElementById('coin-balance').textContent = d.coins;
             } catch(e) {}
         }
+
         async function createRoom() {
             const name = document.getElementById('room-name').value.trim();
             if (!name) { showToast('⚠️ የክፍል ስም አስገባ!', 'error'); return; }
             const roomId = 'room_' + Math.random().toString(36).substr(2, 9);
             try {
                 const r = await fetch('/api/rooms/create', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({room_id: roomId, room_name: name, user_id: userId})
+                    method: 'POST', headers: hdrs(),
+                    body: JSON.stringify({room_id: roomId, room_name: name})
                 });
                 const d = await r.json();
                 if (d.success) {
                     showToast('✅ ክፍል "' + name + '" ተፈጥሯል!');
                     document.getElementById('room-name').value = '';
                     loadRooms();
+                } else {
+                    showToast('❌ ' + (d.error || 'ስህተት'), 'error');
                 }
             } catch(e) { showToast('❌ ስህተት', 'error'); }
         }
+
         async function loadRooms() {
             try {
                 const r = await fetch('/api/rooms');
                 const rooms = await r.json();
                 const list = document.getElementById('rooms-list');
-                const keys = Object.keys(rooms);
-                if (keys.length === 0) {
+                if (Object.keys(rooms).length === 0) {
                     list.innerHTML = '<div style="text-align:center;padding:40px;color:rgba(255,255,255,0.6);"><div style="font-size:60px;">🔇</div><p>ገና ምንም ክፍል የለም</p></div>';
                     return;
                 }
-                list.innerHTML = '';
-                for (const [id, room] of Object.entries(rooms)) {
-                    list.innerHTML += '<div class="room-card"><div class="room-icon">🎙️</div><div class="room-info"><div class="room-name">' + room.name + '</div><div class="room-meta">👤 ' + room.creator + '</div></div></div>';
+                let html = '';
+                for (const room of Object.values(rooms)) {
+                    html += '<div class="room-card"><div class="room-icon">🎙️</div><div class="room-info"><div class="room-name">'
+                        + esc(room.name) + '</div><div class="room-meta">👤 '
+                        + esc(room.creator_name || room.creator) + '</div></div></div>';
                 }
+                list.innerHTML = html;
             } catch(e) {}
         }
+
         async function sendGift(type) {
             const to = document.getElementById('recipient-id').value.trim();
             if (!to) { showToast('⚠️ የተቀባይ ID አስገባ!', 'error'); return; }
             const names = {coffee: '☕ ቡና', rose: '🌹 ሮዝ', car: '🚗 መኪና'};
             try {
                 const r = await fetch('/api/gifts/send', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({user_id: userId, gift_type: type, recipient_id: to})
+                    method: 'POST', headers: hdrs(),
+                    body: JSON.stringify({gift_type: type, recipient_id: to})
                 });
                 const d = await r.json();
                 if (d.success) {
                     showToast('🎁 ' + names[type] + ' ተልኳል!');
-                    updateBalance();
+                    document.getElementById('coin-balance').textContent = d.remaining_coins;
                     document.getElementById('recipient-id').value = '';
                 } else {
                     showToast('❌ ' + d.error, 'error');
                 }
             } catch(e) { showToast('❌ ስህተት', 'error'); }
         }
+
         setInterval(loadRooms, 5000);
+        register();
     </script>
 </body>
 </html>
