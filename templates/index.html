@@ -451,7 +451,7 @@ async function joinVoice(){
   btn.innerHTML='<i class="fas fa-spinner fa-spin"></i> Connecting...';
   
   let attempts=0;
-  const maxAttempts=3;
+  const maxAttempts=5;
   
   while(attempts<maxAttempts){
     attempts++;
@@ -469,6 +469,16 @@ async function joinVoice(){
         publishDefaults:{
           videoCodec:'vp8',
           audioPreset:{maxBitrate:128000}
+        },
+        // TURN servers for better connectivity
+        rtcConfig:{
+          iceServers:[
+            {urls:'stun:stun.l.google.com:19302'},
+            {urls:'stun:stun1.l.google.com:19302'},
+            {urls:'stun:stun2.l.google.com:19302'},
+            {urls:'stun:stun3.l.google.com:19302'},
+            {urls:'stun:stun4.l.google.com:19302'}
+          ]
         }
       });
       
@@ -481,14 +491,14 @@ async function joinVoice(){
       
       const connectPromise=lkRoom.connect(d.url,d.token);
       const timeoutPromise=new Promise((_,reject)=>
-        setTimeout(()=>reject(new Error('Connection timeout - please try again')),30000)
+        setTimeout(()=>reject(new Error('Connection timeout - please try again')),45000)
       );
       
       await Promise.race([connectPromise,timeoutPromise]);
       
       if(lkRoom.connectionState!==ConnectionState.Connected){
         await new Promise((resolve,reject)=>{
-          const timeout=setTimeout(()=>reject(new Error('Connection timeout')),20000);
+          const timeout=setTimeout(()=>reject(new Error('Connection timeout')),30000);
           lkRoom.once(RoomEvent.Connected,()=>{
             clearTimeout(timeout);
             resolve();
@@ -523,7 +533,16 @@ async function joinVoice(){
       }
       
       if(attempts>=maxAttempts){
-        alert('Voice error: '+e.message+'\n\nTips:\n• Check your internet connection\n• Try using WiFi instead of mobile data\n• The server may be far from your location');
+        alert('Voice connection failed after '+maxAttempts+' attempts.\n\n'+
+              'Error: '+e.message+'\n\n'+
+              'This is likely due to:\n'+
+              '• High network latency from Ethiopia to Europe\n'+
+              '• Firewall blocking WebRTC connections\n'+
+              '• Mobile network restrictions\n\n'+
+              'Solutions:\n'+
+              '1. Try using WiFi instead of mobile data\n'+
+              '2. Use a VPN (connect to Europe server)\n'+
+              '3. Try again later when network is less congested');
         voiceBar.style.display='none';
         voiceBtn.style.display='block';
         voiceBtn.disabled=false;
@@ -531,7 +550,7 @@ async function joinVoice(){
         return;
       }
       
-      await new Promise(r=>setTimeout(r,2000));
+      await new Promise(r=>setTimeout(r,3000));
     }
   }
 }
