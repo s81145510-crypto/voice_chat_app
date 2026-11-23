@@ -1,6 +1,6 @@
 from flask import Flask, render_template, request, jsonify
-import json
-import os
+import json, os, hmac, hashlib, time
+from urllib.parse import parse_qsl
 from datetime import datetime
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -9,15 +9,40 @@ DATA_DIR = os.path.join(BASE_DIR, 'data')
 DATA_FILE = os.path.join(DATA_DIR, 'db.json')
 
 app = Flask(__name__, template_folder=TEMPLATE_DIR)
-app.secret_key = 'voice_chat_secret_key_2024'
+BOT_TOKEN = os.environ.get('BOT_TOKEN', '')
+
+
+def verify_init_data(init_data):
+    try:
+        if not BOT_TOKEN:
+            return None
+        pairs = dict(parse_qsl(init_data, keep_blank_values=True))
+        received = pairs.pop('hash', None)
+        if not received:
+            return None
+        check = '\n'.join(f'{k}={v}' for k, v in sorted(pairs.items()))
+        secret = hmac.new(b'WebAppData', BOT_TOKEN.encode(), hashlib.sha256).digest()
+        calc = hmac.new(secret, check.encode(), hashlib.sha256).hexdigest()
+        if not hmac.compare_digest(calc, received):
+            return None
+        if time.time() - int(pairs.get('auth_date', 0)) > 86400:
+            return None
+        return json.loads(pairs['user'])
+    except Exception:
+        return None
+
+
+def current_user_id():
+    tg = verify_init_data(request.headers.get('X-Telegram-Init-Data', ''))
+    return (f"tg_{tg['id']}", tg) if tg else (None, None)
+
 
 def load_data():
     if os.path.exists(DATA_FILE):
         with open(DATA_FILE, 'r') as f:
             return json.load(f)
     return {
-        'users': {},
-        'rooms': {},
+        'users': {}, 'rooms': {},
         'gifts': {
             'coffee': {'name': 'Coffee', 'price': 10, 'icon': '☕'},
             'rose': {'name': 'Rose', 'price': 50, 'icon': '🌹'},
@@ -26,60 +51,94 @@ def load_data():
         'transactions': []
     }
 
+
 def save_data(data):
     os.makedirs(DATA_DIR, exist_ok=True)
     with open(DATA_FILE, 'w') as f:
         json.dump(data, f, indent=2)
 
+
+def unauthorized():
+    return jsonify({'success': False, 'error': 'Unauthorized'}), 401
+
+
 @app.route('/')
 def index():
     return render_template('index.html')
 
+
 @app.route('/api/register', methods=['POST'])
 def register():
+    uid, tg = current_user_id()
+    if not uid:
+        return unauthorized()
     data = load_data()
-    user_id = request.json.get('user_id')
-    username = request.json.get('username')
-    if user_id not in data['users']:
-        data['users'][user_id] = {'username': username, 'coins': 100, 'joined': datetime.now().isoformat()}
+    if uid not in data['users']:
+        data['users'][uid] = {
+            'username': tg.get('first_name', 'User'),
+            'coins': 100,
+            'joined': datetime.now().isoformat()
+        }
         save_data(data)
-    return jsonify({'success': True, 'user': data['users'][user_id]})
+    return jsonify({'success': True, 'user_id': uid, 'user': data['users'][uid]})
+
 
 @app.route('/api/rooms', methods=['GET'])
 def get_rooms():
     return jsonify(load_data()['rooms'])
 
+
 @app.route('/api/rooms/create', methods=['POST'])
 def create_room():
+    uid, tg = current_user_id()
+    if not uid:
+        return unauthorized()
+    body = request.get_json(silent=True) or {}
+    room_id = str(body.get('room_id', ''))[:40]
+    room_name = str(body.get('room_name', '')).strip()[:50]
+    if not room_id or not room_name:
+        return jsonify({'success': False, 'error': 'Invalid room'})
     data = load_data()
-    room_id = request.json.get('room_id')
-    room_name = request.json.get('room_name')
-    user_id = request.json.get('user_id')
-    data['rooms'][room_id] = {'name': room_name, 'creator': user_id, 'created': datetime.now().isoformat(), 'listeners': []}
+    data['rooms'][room_id] = {
+        'name': room_name, 'creator': uid,
+        'creator_name': tg.get('first_name', 'User'),
+        'created': datetime.now().isoformat(), 'listeners': []
+    }
     save_data(data)
     return jsonify({'success': True})
 
+
 @app.route('/api/gifts/send', methods=['POST'])
 def send_gift():
+    uid, tg = current_user_id()
+    if not uid:
+        return unauthorized()
+    body = request.get_json(silent=True) or {}
+    gift_type = body.get('gift_type')
+    recipient_id = body.get('recipient_id')
     data = load_data()
-    user_id = request.json.get('user_id')
-    gift_type = request.json.get('gift_type')
-    recipient_id = request.json.get('recipient_id')
-    if user_id not in data['users']:
+    if uid not in data['users']:
         return jsonify({'success': False, 'error': 'User not found'})
-    user = data['users'][user_id]
+    if recipient_id == uid or recipient_id not in data['users']:
+        return jsonify({'success': False, 'error': 'Invalid recipient'})
     gift = data['gifts'].get(gift_type)
+    user = data['users'][uid]
     if not gift or user['coins'] < gift['price']:
         return jsonify({'success': False, 'error': 'Not enough coins'})
     user['coins'] -= gift['price']
-    if recipient_id in data['users']:
-        data['users'][recipient_id]['coins'] += int(gift['price'] * 0.7)
-    data['transactions'].append({'from': user_id, 'to': recipient_id, 'gift': gift_type, 'amount': gift['price'], 'timestamp': datetime.now().isoformat()})
+    data['users'][recipient_id]['coins'] += int(gift['price'] * 0.7)
+    data['transactions'].append({
+        'from': uid, 'to': recipient_id, 'gift': gift_type,
+        'amount': gift['price'], 'timestamp': datetime.now().isoformat()
+    })
     save_data(data)
     return jsonify({'success': True, 'remaining_coins': user['coins']})
 
+
 @app.route('/api/balance', methods=['GET'])
 def get_balance():
+    uid, _ = current_user_id()
+    if not uid:
+        return unauthorized()
     data = load_data()
-    user_id = request.args.get('user_id')
-    return jsonify({'coins': data['users'].get(user_id, {}).get('coins', 0)})
+    return jsonify({'coins': data['users'].get(uid, {}).get('coins', 0)})
