@@ -3,7 +3,7 @@ import json, os, re, hmac, hashlib, time, uuid, base64, random
 from functools import wraps
 from urllib.parse import parse_qsl
 from datetime import datetime
-from livekit import api as lkapi
+from agora_token_builder import RtcTokenBuilder
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 TEMPLATE_DIR = os.path.join(BASE_DIR, 'templates')
@@ -254,7 +254,8 @@ def register():
             'telebirr': {'number': TELEBIRR_NUMBER, 'name': TELEBIRR_NAME},
             'rate': WITHDRAW_RATE_ETB, 'min_withdraw': MIN_WITHDRAW,
             'fee_percent': int(round((1 - RECEIVER_SHARE) * 100)),
-            'seats': MAX_SEATS
+            'seats': MAX_SEATS,
+            'agora_app_id': os.environ.get('AGORA_APP_ID', '')
         }
     })
 
@@ -831,8 +832,8 @@ def admin_room(aid):
     save_data(data)
     return jsonify({'success': True})
 
-@app.route('/api/livekit-token', methods=['POST'])
-def livekit_token():
+@app.route('/api/agora-token', methods=['POST'])
+def agora_token():
     uid, tg = current_user_id()
     if not uid:
         return unauthorized()
@@ -842,17 +843,27 @@ def livekit_token():
     room = data['rooms'].get(room_id)
     if not room:
         return err('Room not found')
+    
+    app_id = os.environ.get('AGORA_APP_ID', '')
+    app_cert = os.environ.get('AGORA_APP_CERTIFICATE', '')
+    
+    if not app_id or not app_cert:
+        return jsonify({'success': False, 'error': 'Agora not configured'})
+    
     try:
-        token = (
-            lkapi.AccessToken(os.environ.get('LIVEKIT_API_KEY', ''), os.environ.get('LIVEKIT_API_SECRET', ''))
-            .with_identity(uid)
-            .with_name(display_name(tg))
-            .with_grants(lkapi.VideoGrants(room_join=True, room=room_id, can_publish=True, can_subscribe=True, can_publish_data=True))
-            .to_jwt()
+        token = RtcTokenBuilder.buildTokenWithUid(
+            app_id, app_cert, room_id, 0, 2, 3600
         )
     except Exception as e:
-        return jsonify({'success': False, 'error': 'LiveKit not configured: ' + str(e)})
-    return jsonify({'success': True, 'token': token, 'url': os.environ.get('LIVEKIT_URL', ''), 'is_host': room['creator'] == uid})
+        return jsonify({'success': False, 'error': 'Token generation failed: ' + str(e)})
+    
+    return jsonify({
+        'success': True,
+        'token': token,
+        'channel': room_id,
+        'uid': 0,
+        'is_host': room['creator'] == uid
+    })
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=10000)
