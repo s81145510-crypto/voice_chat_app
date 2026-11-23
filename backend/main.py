@@ -3,9 +3,13 @@ import json
 import os
 from datetime import datetime
 
-app = Flask(__name__, template_folder='../templates', static_folder='../static')
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+TEMPLATE_DIR = os.path.join(BASE_DIR, 'templates')
+DATA_DIR = os.path.join(BASE_DIR, 'data')
+DATA_FILE = os.path.join(DATA_DIR, 'db.json')
+
+app = Flask(__name__, template_folder=TEMPLATE_DIR)
 app.secret_key = 'voice_chat_secret_key_2024'
-DATA_FILE = 'data/db.json'
 
 def load_data():
     if os.path.exists(DATA_FILE):
@@ -23,7 +27,7 @@ def load_data():
     }
 
 def save_data(data):
-    os.makedirs(os.path.dirname(DATA_FILE), exist_ok=True)
+    os.makedirs(DATA_DIR, exist_ok=True)
     with open(DATA_FILE, 'w') as f:
         json.dump(data, f, indent=2)
 
@@ -79,6 +83,3 @@ def get_balance():
     data = load_data()
     user_id = request.args.get('user_id')
     return jsonify({'coins': data['users'].get(user_id, {}).get('coins', 0)})
-
-if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000, debug=True)
