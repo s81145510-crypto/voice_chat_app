@@ -1,6 +1,6 @@
 {% raw %}
 <!DOCTYPE html>
-<html lang="am">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
@@ -10,256 +10,354 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <style>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:linear-gradient(160deg,#0f0518 0%,#1a0a2e 50%,#0f0518 100%);color:#fff;min-height:100vh;overflow-x:hidden;padding-bottom:75px}
-.hdr{background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);padding:14px 18px;display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:100;box-shadow:0 4px 25px rgba(102,126,234,.4)}
-.hdr-l{display:flex;align-items:center;gap:12px}
-.av{width:46px;height:46px;border-radius:50%;background:linear-gradient(135deg,#f093fb,#f5576c);display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:bold;border:3px solid rgba(255,255,255,.3);cursor:pointer;overflow:hidden;box-shadow:0 4px 15px rgba(240,147,251,.4)}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:linear-gradient(160deg,#0a0118 0%,#1a0a2e 50%,#0a0118 100%);color:#fff;min-height:100vh;overflow-x:hidden;padding-bottom:65px;font-size:12px}
+.hdr{background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);padding:8px 12px;display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:100;box-shadow:0 4px 20px rgba(102,126,234,.4)}
+.hdr-l{display:flex;align-items:center;gap:8px}
+.av{width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,#f093fb,#f5576c);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:bold;border:2px solid rgba(255,255,255,.3);cursor:pointer;overflow:hidden}
 .av img{width:100%;height:100%;object-fit:cover}
-.hdr-l h3{font-size:16px;font-weight:700}.hdr-l p{font-size:11px;opacity:.85}
-.coin{background:linear-gradient(135deg,#ffd700,#ffed4e);color:#333;padding:8px 16px;border-radius:24px;font-weight:bold;display:flex;align-items:center;gap:7px;font-size:14px;cursor:pointer;box-shadow:0 4px 18px rgba(255,215,0,.5);transition:.3s}
-.coin:active{transform:scale(.95)}
-.page{display:none;animation:fi .4s}.page.active{display:block}
-@keyframes fi{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
-.nav{position:fixed;bottom:0;left:0;right:0;background:rgba(15,5,24,.98);backdrop-filter:blur(25px);display:flex;justify-content:space-around;padding:10px 0;border-top:1px solid rgba(255,255,255,.1);z-index:1000;box-shadow:0 -4px 20px rgba(0,0,0,.5)}
-.ni{display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer;padding:6px 14px;transition:.3s}
-.ni i{font-size:22px;opacity:.5;transition:.3s}.ni span{font-size:11px;opacity:.5;transition:.3s}
+.hdr-l h3{font-size:13px;font-weight:700}.hdr-l p{font-size:9px;opacity:.85}
+.coin{background:linear-gradient(135deg,#ffd700,#ffed4e);color:#333;padding:5px 10px;border-radius:18px;font-weight:bold;display:flex;align-items:center;gap:4px;font-size:11px;cursor:pointer;box-shadow:0 3px 12px rgba(255,215,0,.5)}
+.page{display:none;animation:fi .3s}.page.active{display:block}
+@keyframes fi{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.nav{position:fixed;bottom:0;left:0;right:0;background:rgba(10,1,24,.98);backdrop-filter:blur(20px);display:flex;justify-content:space-around;padding:6px 0;border-top:1px solid rgba(255,255,255,.1);z-index:1000}
+.ni{display:flex;flex-direction:column;align-items:center;gap:2px;cursor:pointer;padding:3px 8px}
+.ni i{font-size:16px;opacity:.5}.ni span{font-size:8px;opacity:.5}
 .ni.on i{opacity:1;color:#f093fb;transform:scale(1.15)}.ni.on span{opacity:1;color:#f093fb}
-.sec{padding:18px}
-.st{font-size:20px;font-weight:bold;margin-bottom:14px;display:flex;align-items:center;gap:10px}
-.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
-.card{background:linear-gradient(135deg,rgba(102,126,234,.3),rgba(118,75,162,.3));border-radius:16px;padding:16px;cursor:pointer;border:1px solid rgba(255,255,255,.12);position:relative;overflow:hidden;transition:.3s;box-shadow:0 4px 20px rgba(102,126,234,.2)}
-.card:active{transform:scale(.97);box-shadow:0 8px 30px rgba(102,126,234,.4)}
-.card h4{font-size:16px;margin-bottom:8px}.card .host{font-size:13px;opacity:.85;margin-bottom:10px}
-.card .row{display:flex;justify-content:space-between;align-items:center;font-size:13px;opacity:.85}
-.live{background:#ff4757;padding:3px 10px;border-radius:12px;font-size:11px;font-weight:bold;animation:pu 2s infinite}
+.sec{padding:10px}
+.st{font-size:14px;font-weight:bold;margin-bottom:8px;display:flex;align-items:center;gap:6px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.card{background:linear-gradient(135deg,rgba(102,126,234,.3),rgba(118,75,162,.3));border-radius:10px;padding:10px;cursor:pointer;border:1px solid rgba(255,255,255,.1);transition:.3s}
+.card:active{transform:scale(.97)}
+.card h4{font-size:12px;margin-bottom:4px}.card .host{font-size:10px;opacity:.8;margin-bottom:6px}
+.card .row{display:flex;justify-content:space-between;align-items:center;font-size:10px;opacity:.85}
+.live{background:#ff4757;padding:2px 6px;border-radius:8px;font-size:8px;font-weight:bold;animation:pu 2s infinite}
 @keyframes pu{0%,100%{opacity:1}50%{opacity:.6}}
-.chips{display:flex;gap:10px;overflow-x:auto;padding:0 18px 18px;scrollbar-width:none}.chips::-webkit-scrollbar{display:none}
-.chip{background:rgba(255,255,255,.1);padding:8px 16px;border-radius:20px;font-size:13px;white-space:nowrap;cursor:pointer;transition:.3s}
-.chip.on{background:linear-gradient(135deg,#667eea,#764ba2);box-shadow:0 4px 15px rgba(102,126,234,.4)}
-.btn{background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;border:none;padding:14px;border-radius:26px;font-size:16px;font-weight:700;cursor:pointer;width:100%;margin:10px 0;transition:.3s;box-shadow:0 6px 20px rgba(102,126,234,.4)}
-.btn:active{transform:scale(.97);box-shadow:0 8px 25px rgba(102,126,234,.6)}
-.btn.red{background:linear-gradient(135deg,#ff4757,#ff6348);box-shadow:0 6px 20px rgba(255,71,87,.4)}
-.btn.grn{background:linear-gradient(135deg,#2ed573,#7bed9f);color:#0a3d1f;box-shadow:0 6px 20px rgba(46,213,115,.4)}
-.btn.gold{background:linear-gradient(135deg,#ffd700,#ffed4e);color:#333;box-shadow:0 6px 20px rgba(255,215,0,.5)}
-.btn.sm{padding:9px 16px;font-size:14px;width:auto;display:inline-block;margin:0}
-.wh{background:linear-gradient(135deg,#ffd700,#ffed4e);padding:30px 18px;text-align:center;color:#333;box-shadow:0 8px 30px rgba(255,215,0,.3)}
-.wh .bal{font-size:48px;font-weight:bold;text-shadow:0 2px 10px rgba(0,0,0,.1)}.wh .lbl{font-size:14px;opacity:.85}
-.pkg{background:rgba(255,255,255,.1);border-radius:16px;padding:18px;text-align:center;cursor:pointer;border:2px solid transparent;transition:.3s;box-shadow:0 4px 20px rgba(0,0,0,.2)}
-.pkg:active{border-color:#ffd700;transform:scale(.97);box-shadow:0 8px 30px rgba(255,215,0,.3)}
-.pkg .c{font-size:24px;font-weight:bold;color:#ffd700}.pkg .p{font-size:13px;opacity:.8;margin-top:6px}
-.rh{background:linear-gradient(135deg,#667eea,#764ba2);padding:18px;text-align:center;box-shadow:0 4px 25px rgba(102,126,234,.4)}
-.rh h2{font-size:22px}.rh p{font-size:13px;opacity:.9}
-.seats{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;padding:18px}
-.seat{background:rgba(255,255,255,.1);border-radius:16px;padding:18px 10px;text-align:center;cursor:pointer;border:2px solid transparent;transition:.3s;position:relative;box-shadow:0 4px 15px rgba(0,0,0,.2)}
+.chips{display:flex;gap:6px;overflow-x:auto;padding:0 10px 10px;scrollbar-width:none}
+.chips::-webkit-scrollbar{display:none}
+.chip{background:rgba(255,255,255,.1);padding:5px 10px;border-radius:14px;font-size:10px;white-space:nowrap;cursor:pointer}
+.chip.on{background:linear-gradient(135deg,#667eea,#764ba2)}
+.btn{background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;border:none;padding:9px;border-radius:18px;font-size:12px;font-weight:700;cursor:pointer;width:100%;margin:6px 0}
+.btn:active{transform:scale(.97)}
+.btn.red{background:linear-gradient(135deg,#ff4757,#ff6348)}
+.btn.grn{background:linear-gradient(135deg,#2ed573,#7bed9f);color:#0a3d1f}
+.btn.gold{background:linear-gradient(135deg,#ffd700,#ffed4e);color:#333}
+.btn.sm{padding:6px 10px;font-size:10px;width:auto;display:inline-block;margin:0}
+.wh{background:linear-gradient(135deg,#ffd700,#ffed4e);padding:16px 12px;text-align:center;color:#333}
+.wh .bal{font-size:32px;font-weight:bold}.wh .lbl{font-size:11px;opacity:.85}
+.pkg{background:rgba(255,255,255,.1);border-radius:10px;padding:10px;text-align:center;cursor:pointer;border:2px solid transparent;transition:.3s}
+.pkg:active{border-color:#ffd700;transform:scale(.97)}
+.pkg .c{font-size:16px;font-weight:bold;color:#ffd700}.pkg .p{font-size:10px;opacity:.8;margin-top:3px}
+.rh{background:linear-gradient(135deg,#667eea,#764ba2);padding:12px;text-align:center}
+.rh h2{font-size:16px}.rh p{font-size:10px;opacity:.9}
+.seats{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;padding:10px}
+.seat{background:rgba(255,255,255,.08);border-radius:10px;padding:8px 4px;text-align:center;cursor:pointer;border:2px solid transparent;transition:.3s}
 .seat:active{transform:scale(.95)}
-.seat.host{background:linear-gradient(135deg,#ffd700,#ffed4e);border-color:#ffd700;color:#333;box-shadow:0 6px 25px rgba(255,215,0,.5)}
-.seat.occ{background:linear-gradient(135deg,#667eea,#764ba2);border-color:#667eea;box-shadow:0 6px 25px rgba(102,126,234,.5)}
-.seat .ic{font-size:28px;margin-bottom:8px}.seat .nm{font-size:12px;font-weight:700;word-break:break-word}.seat .no{font-size:11px;opacity:.7;margin-top:4px}
-.chat{background:rgba(0,0,0,.3);border-radius:14px;margin:0 18px 14px;padding:14px;max-height:240px;overflow-y:auto;font-size:14px;box-shadow:0 4px 20px rgba(0,0,0,.3)}
-.msg{margin-bottom:8px;padding:8px 12px;background:rgba(255,255,255,.1);border-radius:10px}
-.msg.sys{background:rgba(240,147,251,.2);font-style:italic}
-.msg.gift{background:linear-gradient(135deg,rgba(255,215,0,.25),rgba(240,147,251,.25));font-weight:700}
-.ci{display:flex;gap:10px;padding:0 18px 14px}
-.ci input{flex:1;background:rgba(255,255,255,.12);border:none;padding:12px 16px;border-radius:24px;color:#fff;font-size:15px}
-.ci input::placeholder{color:rgba(255,255,255,.5)}
-.send{background:linear-gradient(135deg,#667eea,#764ba2);border:none;padding:12px 18px;border-radius:24px;color:#fff;cursor:pointer;box-shadow:0 4px 15px rgba(102,126,234,.4)}
-.ph{background:linear-gradient(135deg,#667eea,#764ba2);padding:35px 18px;text-align:center;box-shadow:0 8px 30px rgba(102,126,234,.4)}
-.pav{width:100px;height:100px;border-radius:50%;background:linear-gradient(135deg,#f093fb,#f5576c);display:flex;align-items:center;justify-content:center;font-size:40px;font-weight:bold;margin:0 auto 14px;border:4px solid rgba(255,255,255,.3);overflow:hidden;box-shadow:0 8px 30px rgba(240,147,251,.5)}
+.seat.host{background:linear-gradient(135deg,#ffd700,#ffed4e);border-color:#ffd700;color:#333}
+.seat.occ{background:linear-gradient(135deg,#667eea,#764ba2);border-color:#667eea}
+.seat .ic{font-size:18px;margin-bottom:2px}.seat .nm{font-size:8px;font-weight:700;word-break:break-word}.seat .no{font-size:7px;opacity:.7}
+.chat{background:rgba(0,0,0,.3);border-radius:8px;margin:0 10px 8px;padding:8px;max-height:150px;overflow-y:auto;font-size:11px}
+.msg{margin-bottom:4px;padding:5px 8px;background:rgba(255,255,255,.08);border-radius:6px}
+.msg.sys{background:rgba(240,147,251,.15);font-style:italic}
+.msg.gift{background:linear-gradient(135deg,rgba(255,215,0,.2),rgba(240,147,251,.2));font-weight:700}
+.ci{display:flex;gap:6px;padding:0 10px 8px}
+.ci input{flex:1;background:rgba(255,255,255,.1);border:none;padding:8px 12px;border-radius:18px;color:#fff;font-size:12px}
+.ci input::placeholder{color:rgba(255,255,255,.4)}
+.send{background:linear-gradient(135deg,#667eea,#764ba2);border:none;padding:8px 12px;border-radius:18px;color:#fff;cursor:pointer}
+.ph{background:linear-gradient(135deg,#667eea,#764ba2);padding:20px 12px;text-align:center}
+.pav{width:70px;height:70px;border-radius:50%;background:linear-gradient(135deg,#f093fb,#f5576c);display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:bold;margin:0 auto 8px;border:3px solid rgba(255,255,255,.3);overflow:hidden}
 .pav img{width:100%;height:100%;object-fit:cover}
-.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;padding:18px}
-.stat{background:rgba(255,255,255,.1);border-radius:14px;padding:16px;text-align:center;box-shadow:0 4px 20px rgba(0,0,0,.2)}
-.stat b{font-size:22px;color:#ffd700}.stat span{font-size:12px;opacity:.75;display:block;margin-top:6px}
-.modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.9);z-index:2000;justify-content:center;align-items:center;padding:18px;backdrop-filter:blur(10px)}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;padding:10px}
+.stat{background:rgba(255,255,255,.08);border-radius:8px;padding:10px;text-align:center}
+.stat b{font-size:16px;color:#ffd700}.stat span{font-size:9px;opacity:.7;display:block;margin-top:3px}
+.modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.9);z-index:2000;justify-content:center;align-items:center;padding:12px}
 .modal.on{display:flex;animation:fi .3s}
-.mc{background:linear-gradient(160deg,#1a0a2e,#0f0518);border-radius:20px;padding:24px;max-width:440px;width:100%;max-height:88vh;overflow-y:auto;border:1px solid rgba(255,255,255,.15);box-shadow:0 12px 40px rgba(0,0,0,.6)}
-.mt{font-size:20px;font-weight:bold;margin-bottom:18px;text-align:center}
-.in{width:100%;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);padding:12px 16px;border-radius:12px;color:#fff;font-size:15px;margin-bottom:14px;transition:.3s}
-.in:focus{border-color:#667eea;box-shadow:0 0 15px rgba(102,126,234,.3)}
-.in::placeholder{color:rgba(255,255,255,.5)}
-textarea.in{min-height:90px;resize:vertical}
-.ggrid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
-.gi{background:rgba(255,255,255,.1);border-radius:12px;padding:12px 6px;text-align:center;cursor:pointer;border:2px solid transparent;transition:.3s}
-.gi:active,.gi.sel{border-color:#ffd700;background:rgba(255,215,0,.2);transform:scale(1.05)}
-.gi .e{font-size:24px}.gi .n{font-size:10px;margin-top:4px}.gi .pr{font-size:11px;color:#ffd700;font-weight:bold}
-.post{background:rgba(255,255,255,.08);border-radius:16px;padding:16px;margin-bottom:14px;box-shadow:0 4px 20px rgba(0,0,0,.2)}
-.post .hd{display:flex;align-items:center;gap:12px;margin-bottom:10px}
-.post .hd .av{width:38px;height:38px;font-size:16px}
-.post .tx{font-size:15px;line-height:1.6;margin-bottom:12px;white-space:pre-wrap}
-.post .ft{display:flex;justify-content:space-between;align-items:center;font-size:13px;opacity:.75}
-.post .ft i{cursor:pointer;font-size:16px;margin-right:16px;transition:.3s}
-.post .ft i:active{transform:scale(1.2)}
+.mc{background:linear-gradient(160deg,#1a0a2e,#0a0118);border-radius:14px;padding:16px;max-width:380px;width:100%;max-height:85vh;overflow-y:auto;border:1px solid rgba(255,255,255,.15)}
+.mt{font-size:15px;font-weight:bold;margin-bottom:12px;text-align:center}
+.in{width:100%;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.15);padding:9px 11px;border-radius:8px;color:#fff;font-size:12px;margin-bottom:8px}
+.in:focus{border-color:#667eea}
+.in::placeholder{color:rgba(255,255,255,.4)}
+textarea.in{min-height:60px;resize:vertical}
+.ggrid{display:grid;grid-template-columns:repeat(4,1fr);gap:5px}
+.gi{background:rgba(255,255,255,.08);border-radius:8px;padding:6px 3px;text-align:center;cursor:pointer;border:2px solid transparent;transition:.3s}
+.gi:active,.gi.sel{border-color:#ffd700;background:rgba(255,215,0,.15);transform:scale(1.05)}
+.gi .e{font-size:16px}.gi .n{font-size:7px;margin-top:1px}.gi .pr{font-size:8px;color:#ffd700;font-weight:bold}
+.gi.rarity-common{border-left:3px solid #7bed9f}
+.gi.rarity-rare{border-left:3px solid #1e90ff}
+.gi.rarity-epic{border-left:3px solid #a55eea}
+.gi.rarity-legendary{border-left:3px solid #ffd700}
+.gi.rarity-mythic{border-left:3px solid #ff4757;box-shadow:0 0 8px rgba(255,71,87,.3)}
+.post{background:rgba(255,255,255,.06);border-radius:10px;padding:10px;margin-bottom:8px}
+.post .hd{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+.post .hd .av{width:28px;height:28px;font-size:11px}
+.post .tx{font-size:11px;line-height:1.4;margin-bottom:6px;white-space:pre-wrap}
+.post .ft{display:flex;justify-content:space-between;font-size:10px;opacity:.7}
+.post .ft i{cursor:pointer;font-size:12px;margin-right:10px}
 .post .ft .lk{color:#ff4757}
-.post .img{width:100%;border-radius:12px;margin-bottom:12px;max-height:300px;object-fit:cover}
-.job{background:rgba(255,255,255,.08);border-radius:16px;padding:16px;margin-bottom:14px;box-shadow:0 4px 20px rgba(0,0,0,.2)}
-.job h4{margin-bottom:8px;font-size:17px}.job p{font-size:14px;opacity:.9;margin-bottom:10px}
-.job .ct{font-size:13px;color:#7bed9f}
-.job .img{width:100%;border-radius:12px;margin-bottom:12px;max-height:250px;object-fit:cover}
-.subtabs{display:flex;gap:10px;padding:18px 18px 0}
-.subtab{flex:1;text-align:center;padding:12px;border-radius:12px;background:rgba(255,255,255,.1);cursor:pointer;font-size:15px;font-weight:700;transition:.3s}
-.subtab.on{background:linear-gradient(135deg,#667eea,#764ba2);box-shadow:0 4px 15px rgba(102,126,234,.4)}
-.astat{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:18px}
-.astat .stat b{font-size:18px}
-.arow{background:rgba(255,255,255,.08);border-radius:14px;padding:14px;margin-bottom:12px;font-size:14px;box-shadow:0 4px 15px rgba(0,0,0,.2)}
-.arow .top{display:flex;justify-content:space-between;margin-bottom:8px}
-.arow .btns{display:flex;gap:8px;margin-top:10px}
+.post .img{width:100%;border-radius:8px;margin-bottom:6px;max-height:180px;object-fit:cover}
+.job{background:rgba(255,255,255,.06);border-radius:10px;padding:10px;margin-bottom:8px}
+.job h4{margin-bottom:4px;font-size:13px}.job p{font-size:11px;opacity:.9;margin-bottom:6px}
+.job .ct{font-size:10px;color:#7bed9f}
+.job .img{width:100%;border-radius:8px;margin-bottom:6px;max-height:160px;object-fit:cover}
+.subtabs{display:flex;gap:6px;padding:10px 10px 0}
+.subtab{flex:1;text-align:center;padding:8px;border-radius:8px;background:rgba(255,255,255,.08);cursor:pointer;font-size:11px;font-weight:700}
+.subtab.on{background:linear-gradient(135deg,#667eea,#764ba2)}
+.astat{display:grid;grid-template-columns:1fr 1fr;gap:6px;padding:10px}
+.astat .stat b{font-size:14px}
+.arow{background:rgba(255,255,255,.06);border-radius:8px;padding:8px;margin-bottom:6px;font-size:11px}
+.arow .top{display:flex;justify-content:space-between;margin-bottom:4px}
+.arow .btns{display:flex;gap:4px;margin-top:6px}
 .arow .btns .btn{margin:0}
-.shotimg{width:100%;border-radius:12px;margin:12px 0}
-.info{background:rgba(255,215,0,.15);border:1px solid rgba(255,215,0,.4);border-radius:12px;padding:14px;font-size:14px;margin-bottom:14px;line-height:1.7}
+.shotimg{width:100%;border-radius:8px;margin:8px 0}
+.info{background:rgba(255,215,0,.12);border:1px solid rgba(255,215,0,.3);border-radius:8px;padding:8px;font-size:11px;margin-bottom:8px;line-height:1.5}
 .info b{color:#ffd700}
-.voice{display:flex;align-items:center;gap:12px;padding:12px 18px;background:rgba(46,213,115,.2);border:1px solid rgba(46,213,115,.5);border-radius:14px;margin:0 18px 14px;font-size:14px;box-shadow:0 4px 20px rgba(46,213,115,.3)}
-.voice .dot{width:12px;height:12px;border-radius:50%;background:#2ed573;animation:pu 1s infinite}
-.load{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;gap:18px}
-.sp{width:48px;height:48px;border:4px solid rgba(255,255,255,.15);border-top-color:#667eea;border-radius:50%;animation:sp 1s linear infinite}
+.voice{display:flex;align-items:center;gap:8px;padding:8px 12px;background:rgba(46,213,115,.15);border:1px solid rgba(46,213,115,.4);border-radius:10px;margin:0 10px 8px;font-size:11px}
+.voice .dot{width:8px;height:8px;border-radius:50%;background:#2ed573;animation:pu 1s infinite}
+.load{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;gap:12px}
+.sp{width:36px;height:36px;border:3px solid rgba(255,255,255,.15);border-top-color:#667eea;border-radius:50%;animation:sp 1s linear infinite}
 @keyframes sp{to{transform:rotate(360deg)}}
-.gpop{position:fixed;top:45%;left:50%;transform:translate(-50%,-50%);font-size:100px;z-index:3000;pointer-events:none;animation:gp 1.8s ease-out forwards;text-shadow:0 0 50px rgba(255,215,0,.9)}
-@keyframes gp{0%{transform:translate(-50%,-50%) scale(0) rotate(-30deg);opacity:0}20%{transform:translate(-50%,-50%) scale(1.5) rotate(10deg);opacity:1}60%{transform:translate(-50%,-60%) scale(1.2);opacity:1}100%{transform:translate(-50%,-120%) scale(.7);opacity:0}}
+.gpop{position:fixed;top:40%;left:50%;transform:translate(-50%,-50%);font-size:70px;z-index:3000;pointer-events:none;animation:gp 1.5s ease-out forwards;text-shadow:0 0 40px rgba(255,215,0,.8)}
+@keyframes gp{0%{transform:translate(-50%,-50%) scale(0) rotate(-30deg);opacity:0}20%{transform:translate(-50%,-50%) scale(1.3) rotate(10deg);opacity:1}60%{transform:translate(-50%,-55%) scale(1);opacity:1}100%{transform:translate(-50%,-100%) scale(.5);opacity:0}}
 .photo-input{display:none}
-.photo-btn{background:rgba(255,255,255,.12);border:2px dashed rgba(255,255,255,.3);border-radius:12px;padding:12px;text-align:center;cursor:pointer;margin-bottom:14px;transition:.3s}
-.photo-btn:active{background:rgba(255,255,255,.2);border-color:#667eea}
-.photo-btn i{font-size:22px;color:#667eea;margin-right:8px}
-.photo-preview{width:100%;max-height:200px;object-fit:cover;border-radius:12px;margin-bottom:14px}
-.lang-switch{position:fixed;top:70px;right:14px;background:rgba(255,255,255,.15);padding:8px 14px;border-radius:20px;cursor:pointer;z-index:1001;font-size:13px;backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,.2)}
-.lang-switch:active{transform:scale(.95)}
+.photo-btn{background:rgba(255,255,255,.1);border:2px dashed rgba(255,255,255,.25);border-radius:8px;padding:8px;text-align:center;cursor:pointer;margin-bottom:8px;font-size:11px}
+.photo-btn:active{background:rgba(255,255,255,.18)}
+.photo-preview{width:100%;max-height:130px;object-fit:cover;border-radius:8px;margin-bottom:8px}
+.min-btn{position:fixed;top:55px;left:8px;background:rgba(46,213,115,.25);padding:5px 8px;border-radius:14px;cursor:pointer;z-index:1001;font-size:10px;border:1px solid rgba(46,213,115,.4);display:none}
+.room-min{position:fixed;bottom:72px;left:50%;transform:translateX(-50%);background:linear-gradient(135deg,#667eea,#764ba2);padding:6px 14px;border-radius:16px;cursor:pointer;z-index:999;font-size:11px;box-shadow:0 3px 15px rgba(102,126,234,.5);display:none}
+.game-card{background:linear-gradient(135deg,rgba(255,71,87,.2),rgba(255,99,72,.2));border-radius:12px;padding:12px;margin-bottom:10px;border:1px solid rgba(255,71,87,.3);cursor:pointer;transition:.3s}
+.game-card:active{transform:scale(.97)}
+.game-card h4{font-size:14px;margin-bottom:4px;color:#ff4757}
+.game-card p{font-size:11px;opacity:.85}
+.game-card .stats-row{display:flex;justify-content:space-between;margin-top:6px;font-size:10px;opacity:.7}
+.dice-display{font-size:60px;text-align:center;margin:16px 0;animation:diceRoll .5s}
+@keyframes diceRoll{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}
+.flip-display{font-size:80px;text-align:center;margin:16px 0}
+.wheel-container{position:relative;width:200px;height:200px;margin:16px auto}
+.wheel{width:200px;height:200px;border-radius:50%;border:4px solid #ffd700;transition:transform 3s cubic-bezier(.17,.67,.12,.99)}
+.wheel-pointer{position:absolute;top:-10px;left:50%;transform:translateX(-50%);font-size:24px;color:#ffd700;z-index:10}
+.level-badge{display:inline-block;padding:2px 6px;border-radius:8px;font-size:8px;font-weight:bold;margin-left:4px}
+.ref-info{background:rgba(46,213,115,.1);border:1px solid rgba(46,213,115,.3);border-radius:8px;padding:8px;margin:8px 0;font-size:11px}
+.ref-info b{color:#2ed573}
 </style>
 </head>
 <body>
-<div class="lang-switch" onclick="toggleLang()">🌐 <span id="langTxt">EN</span></div>
+<div class="min-btn" id="minBtn" onclick="minimizeRoom()">⬇ Minimize</div>
+<div class="room-min" id="roomMin" onclick="restoreRoom()">🎙️ <span id="roomMinName">Room</span></div>
 
-<div id="loading" class="load"><div class="sp"></div><span data-am="እየተጫነ ነው..." data-en="Loading...">እየተጫነ ነው...</span></div>
+<div id="loading" class="load"><div class="sp"></div><span>Loading...</span></div>
 
 <div id="app" style="display:none">
 <div class="hdr">
   <div class="hdr-l"><div class="av" id="hAv" onclick="go('profile')">T</div>
-  <div><h3 id="hName">User</h3><p id="hSub" data-am="ደረጃ 1" data-en="Level 1">ደረጃ 1</p></div></div>
+  <div><h3 id="hName">User</h3><p id="hSub">Level 1</p></div></div>
   <div class="coin" onclick="go('wallet')"><i class="fas fa-coins"></i><span id="hCoins">0</span></div>
 </div>
 
 <div id="p-home" class="page active">
-  <div class="sec"><div class="st"><i class="fas fa-fire" style="color:#ff4757"></i> <span data-am="ተወዳጅ ክፍሎች" data-en="Featured Rooms">ተወዳጅ ክፍሎች</span></div><div class="grid2" id="featRooms"></div></div>
-  <div class="st" style="padding:0 18px"><i class="fas fa-layer-group" style="color:#667eea"></i> <span data-am="ምድቦች" data-en="Categories">ምድቦች</span></div>
-  <div class="chips"><div class="chip on">🎵 <span data-am="ሙዚቃ" data-en="Music">ሙዚቃ</span></div><div class="chip">💬 <span data-am="ውይይት" data-en="Chat">ውይይት</span></div><div class="chip">🎮 <span data-am="ጌሚንግ" data-en="Gaming">ጌሚንግ</span></div><div class="chip">📚 <span data-am="ትምህርት" data-en="Education">ትምህርት</span></div><div class="chip">❤️ <span data-am="ፍቅር" data-en="Love">ፍቅር</span></div><div class="chip">🎭 <span data-am="መዝናኛ" data-en="Entertainment">መዝናኛ</span></div></div>
-  <div class="sec"><button class="btn" onclick="go('rooms')"><i class="fas fa-door-open"></i> <span data-am="ሁሉንም ክፍሎች ይመልከቱ" data-en="View All Rooms">ሁሉንም ክፍሎች ይመልከቱ</span></button></div>
+  <div class="sec"><div class="st"><i class="fas fa-fire" style="color:#ff4757"></i> Featured Rooms</div><div class="grid2" id="featRooms"></div></div>
+  <div class="st" style="padding:0 10px"><i class="fas fa-layer-group" style="color:#667eea"></i> Categories</div>
+  <div class="chips" id="catChips">
+    <div class="chip on" onclick="filterCat('',this)">🌐 All</div>
+    <div class="chip" onclick="filterCat('music',this)">🎵 Music</div>
+    <div class="chip" onclick="filterCat('chat',this)">💬 Chat</div>
+    <div class="chip" onclick="filterCat('gaming',this)">🎮 Gaming</div>
+    <div class="chip" onclick="filterCat('education',this)">📚 Education</div>
+    <div class="chip" onclick="filterCat('love',this)">❤️ Love</div>
+    <div class="chip" onclick="filterCat('entertainment',this)">🎭 Entertainment</div>
+  </div>
+  <div class="sec"><button class="btn" onclick="go('rooms')"><i class="fas fa-door-open"></i> View All Rooms</button></div>
+  <div class="sec"><button class="btn gold" onclick="go('games')"><i class="fas fa-gamepad"></i> Play Games & Win!</button></div>
 </div>
 
-<div id="p-rooms" class="page"><div class="sec"><div class="st"><i class="fas fa-door-open" style="color:#667eea"></i> <span data-am="ክፍሎች" data-en="Rooms">ክፍሎች</span></div><div id="allRooms"></div><button class="btn grn" onclick="openM('mRoom')"><i class="fas fa-plus"></i> <span data-am="አዲስ ክፍል" data-en="New Room">አዲስ ክፍል</span></button></div></div>
+<div id="p-rooms" class="page"><div class="sec"><div class="st"><i class="fas fa-door-open" style="color:#667eea"></i> Rooms</div><div id="allRooms"></div><button class="btn grn" onclick="openM('mRoom')"><i class="fas fa-plus"></i> New Room</button></div></div>
 
 <div id="p-wallet" class="page">
-  <div class="wh"><div class="lbl" data-am="የእርስዎ ሳንቲሞች" data-en="Your Coins">የእርስዎ ሳንቲሞች</div><div class="bal" id="wCoins">0</div><div class="lbl">🪙 Coins</div>
-  <div style="margin-top:16px;display:flex;gap:10px;justify-content:center"><div style="background:rgba(0,0,0,.2);padding:10px 18px;border-radius:16px;font-size:14px"><span data-am="ገቢ" data-en="Earnings">ገቢ</span>: <b id="wEarn">0</b></div></div></div>
-  <div class="sec"><div class="st"><i class="fas fa-shopping-cart" style="color:#ffd700"></i> <span data-am="ሳንቲም ይግዙ" data-en="Buy Coins">ሳንቲም ይግዙ</span></div><div class="grid2" id="pkgs"></div>
-  <button class="btn gold" onclick="openM('mWith')"><i class="fas fa-money-bill-wave"></i> <span data-am="ገቢ ያውጡ" data-en="Withdraw">ገቢ ያውጡ</span></button></div>
-  <div class="sec"><div class="st"><i class="fas fa-history" style="color:#667eea"></i> <span data-am="ታሪክ" data-en="History">ታሪክ</span></div><div id="hist"></div></div>
+  <div class="wh"><div class="lbl">Your Coins</div><div class="bal" id="wCoins">0</div><div class="lbl">🪙 Coins</div>
+  <div style="margin-top:10px;display:flex;gap:6px;justify-content:center;flex-wrap:wrap">
+    <div style="background:rgba(0,0,0,.15);padding:6px 10px;border-radius:10px;font-size:11px">Earnings: <b id="wEarn">0</b></div>
+    <div style="background:rgba(0,0,0,.15);padding:6px 10px;border-radius:10px;font-size:11px">👥 Refs: <b id="wRef">0</b></div>
+    <div style="background:rgba(0,0,0,.15);padding:6px 10px;border-radius:10px;font-size:11px">Bonus: <b id="wBonus">0</b></div>
+  </div></div>
+  <div class="ref-info">🎁 <b>Referral Bonus:</b> When someone you invite buys coins, you get <b>10%</b> bonus! Share your ID: <b id="myUid">-</b></div>
+  <div class="sec"><div class="st"><i class="fas fa-shopping-cart" style="color:#ffd700"></i> Buy Coins</div><div class="grid2" id="pkgs"></div>
+  <button class="btn gold" onclick="openM('mWith')"><i class="fas fa-money-bill-wave"></i> Withdraw</button></div>
+  <div class="sec"><div class="st"><i class="fas fa-history" style="color:#667eea"></i> History</div><div id="hist"></div></div>
 </div>
 
 <div id="p-community" class="page">
-  <div class="subtabs"><div class="subtab on" onclick="subTab('posts',this)">📝 <span data-am="ጽሑፎች" data-en="Posts">ጽሑፎች</span></div><div class="subtab" onclick="subTab('jobs',this)">💼 <span data-am="ሥራዎች" data-en="Jobs">ሥራዎች</span></div></div>
-  <div class="sec" id="sub-posts"><div id="posts"></div><button class="btn" onclick="openM('mPost')"><i class="fas fa-pen"></i> <span data-am="ጽሑፍ ይለጥፉ" data-en="Create Post">ጽሑፍ ይለጥፉ</span></button></div>
-  <div class="sec" id="sub-jobs" style="display:none"><div id="jobs"></div><button class="btn" onclick="openM('mJob')"><i class="fas fa-briefcase"></i> <span data-am="ሥራ ይለጥፉ" data-en="Post Job">ሥራ ይለጥፉ</span></button></div>
+  <div class="subtabs"><div class="subtab on" onclick="subTab('posts',this)">📝 Posts</div><div class="subtab" onclick="subTab('jobs',this)">💼 Jobs</div></div>
+  <div class="sec" id="sub-posts"><div id="posts"></div><button class="btn" onclick="openM('mPost')"><i class="fas fa-pen"></i> Create Post</button></div>
+  <div class="sec" id="sub-jobs" style="display:none"><div id="jobs"></div><button class="btn" onclick="openM('mJob')"><i class="fas fa-briefcase"></i> Post Job</button></div>
+</div>
+
+<div id="p-games" class="page">
+  <div class="sec">
+    <div class="st"><i class="fas fa-gamepad" style="color:#ff4757"></i> Games <span style="font-size:10px;opacity:.7;margin-left:auto">70% RTP • 30% House Edge</span></div>
+    <div class="game-card" onclick="openGame('dice')">
+      <h4>🎲 Dice Roll</h4>
+      <p>Pick a number 1-6. Win 4.2x your bet!</p>
+      <div class="stats-row"><span>Min: 10</span><span>Max: 10,000</span><span>Win: 4.2x</span></div>
+    </div>
+    <div class="game-card" onclick="openGame('flip')">
+      <h4>🪙 Coin Flip</h4>
+      <p>Heads or Tails. Win 1.4x your bet!</p>
+      <div class="stats-row"><span>Min: 10</span><span>Max: 50,000</span><span>Win: 1.4x</span></div>
+    </div>
+    <div class="game-card" onclick="openGame('wheel')">
+      <h4>🎡 Lucky Wheel</h4>
+      <p>Spin the wheel! Multipliers up to 5x!</p>
+      <div class="stats-row"><span>Min: 10</span><span>Max: 100,000</span><span>Win: up to 5x</span></div>
+    </div>
+    <div class="st" style="margin-top:16px"><i class="fas fa-history" style="color:#667eea"></i> My Games</div>
+    <div id="myGames"></div>
+  </div>
 </div>
 
 <div id="p-profile" class="page">
-  <div class="ph"><div class="pav" id="pAv">T</div><h2 id="pName">User</h2><p id="pId" style="opacity:.85;font-size:14px"></p><p id="pBio" style="font-size:14px;opacity:.9;margin-top:10px"></p></div>
-  <div class="stats"><div class="stat"><b id="sCoins">0</b><span data-am="ሳንቲሞች" data-en="Coins">ሳንቲሞች</span></div><div class="stat"><b id="sEarn">0</b><span data-am="ገቢ" data-en="Earnings">ገቢ</span></div><div class="stat"><b id="sPhone">—</b><span>Telebirr</span></div></div>
+  <div class="ph"><div class="pav" id="pAv">T</div><h2 id="pName">User</h2><p id="pId" style="opacity:.85;font-size:11px"></p><p id="pBio" style="font-size:11px;opacity:.9;margin-top:6px"></p><div id="pLevel" style="margin-top:6px"></div></div>
+  <div class="stats">
+    <div class="stat"><b id="sCoins">0</b><span>Coins</span></div>
+    <div class="stat"><b id="sEarn">0</b><span>Earnings</span></div>
+    <div class="stat"><b id="sRef">0</b><span>Ref Bonus</span></div>
+  </div>
+  <div class="stats">
+    <div class="stat"><b id="sGiftSent">0</b><span>Gifts Sent</span></div>
+    <div class="stat"><b id="sGiftRec">0</b><span>Gifts Received</span></div>
+    <div class="stat"><b id="sGiftLevel">-</b><span>Gift Level</span></div>
+  </div>
   <div class="sec">
-    <button class="btn" onclick="openEdit()"><i class="fas fa-edit"></i> <span data-am="ፕሮፋይል ያርቱ" data-en="Edit Profile">ፕሮፋይል ያርቱ</span></button>
-    <button class="btn gold" onclick="openM('mWith')"><i class="fas fa-money-bill-wave"></i> <span data-am="ገቢ ያውጡ" data-en="Withdraw">ገቢ ያውጡ</span></button>
-    <button class="btn red" id="admBtn" style="display:none" onclick="go('admin')"><i class="fas fa-shield-halved"></i> <span data-am="የአድሚን ፓነል" data-en="Admin Panel">የአድሚን ፓነል</span></button>
+    <button class="btn" onclick="openEdit()"><i class="fas fa-edit"></i> Edit Profile</button>
+    <button class="btn gold" onclick="openM('mWith')"><i class="fas fa-money-bill-wave"></i> Withdraw</button>
+    <button class="btn red" id="admBtn" style="display:none" onclick="go('admin')"><i class="fas fa-shield-halved"></i> Admin Panel</button>
   </div>
 </div>
 
 <div id="p-admin" class="page">
-  <div class="sec"><div class="st"><i class="fas fa-shield-halved" style="color:#ffd700"></i> <span data-am="አድሚን" data-en="Admin">አድሚን</span></div>
+  <div class="sec"><div class="st"><i class="fas fa-shield-halved" style="color:#ffd700"></i> Admin</div>
   <div class="astat" id="admStats"></div></div>
-  <div class="subtabs"><div class="subtab on" onclick="admTab('purch',this)">🧾 <span data-am="ግዢ" data-en="Purchases">ግዢ</span></div><div class="subtab" onclick="admTab('with',this)">💸 <span data-am="ማውጫ" data-en="Withdrawals">ማውጫ</span></div><div class="subtab" onclick="admTab('users',this)">👥 <span data-am="ተጠቃሚ" data-en="Users">ተጠቃሚ</span></div><div class="subtab" onclick="admTab('rooms',this)">🚪 <span data-am="ክፍሎች" data-en="Rooms">ክፍሎች</span></div></div>
-  <div class="sec"><div id="admPurch"></div><div id="admWith" style="display:none"></div><div id="admUsers" style="display:none"><input class="in" id="uSearch" placeholder="ፍለጋ ስም/ID" oninput="admUsers()"></div><div id="admRooms" style="display:none"></div></div>
+  <div class="subtabs"><div class="subtab on" onclick="admTab('purch',this)">🧾 Purchases</div><div class="subtab" onclick="admTab('with',this)">💸 Withdrawals</div><div class="subtab" onclick="admTab('users',this)">👥 Users</div><div class="subtab" onclick="admTab('rooms',this)">🚪 Rooms</div></div>
+  <div class="sec"><div id="admPurch"></div><div id="admWith" style="display:none"></div><div id="admUsers" style="display:none"><input class="in" id="uSearch" placeholder="Search name/ID" oninput="admUsers()"></div><div id="admRooms" style="display:none"></div></div>
 </div>
 
 <div id="roomView" style="display:none">
   <div class="rh"><h2 id="rvName">Room</h2><p id="rvHost"></p></div>
-  <div class="voice" id="voiceBar" style="display:none"><div class="dot"></div><span id="voiceTxt" data-am="በድምጽ ላይ..." data-en="On voice...">በድምጽ ላይ...</span><button class="btn sm red" style="margin-left:auto" onclick="leaveVoice()" data-am="ቅጠር" data-en="Leave">ቅጠር</button></div>
-  <button class="btn grn" style="margin:14px 18px;width:calc(100% - 36px)" id="voiceBtn" onclick="joinVoice()"><i class="fas fa-microphone"></i> <span data-am="ድምጽ ይጀምሩ" data-en="Start Voice">ድምጽ ይጀምሩ</span></button>
+  <div class="voice" id="voiceBar" style="display:none"><div class="dot"></div><span id="voiceTxt">On voice...</span><button class="btn sm red" style="margin-left:auto" onclick="leaveVoice()">Leave</button></div>
+  <button class="btn grn" style="margin:8px 10px;width:calc(100% - 20px)" id="voiceBtn" onclick="joinVoice()"><i class="fas fa-microphone"></i> Start Voice</button>
   <div class="seats" id="seatGrid"></div>
   <div class="chat" id="chatBox"></div>
-  <div class="ci"><input id="chatIn" placeholder="መልዕክት ይጻፉ..." onkeydown="if(event.key==='Enter')sendChat()"><button class="send" onclick="sendChat()"><i class="fas fa-paper-plane"></i></button></div>
-  <div style="padding:0 18px 18px"><button class="btn red" onclick="exitRoom()"><i class="fas fa-sign-out-alt"></i> <span data-am="ውጣ" data-en="Exit">ውጣ</span></button></div>
+  <div class="ci"><input id="chatIn" placeholder="Type message..." onkeydown="if(event.key==='Enter')sendChat()"><button class="send" onclick="sendChat()"><i class="fas fa-paper-plane"></i></button></div>
+  <div style="padding:0 10px 10px"><button class="btn red" onclick="exitRoom()"><i class="fas fa-sign-out-alt"></i> Exit</button></div>
 </div>
 </div>
 
 <div class="nav" id="navBar" style="display:none">
-  <div class="ni on" onclick="go('home')"><i class="fas fa-home"></i><span data-am="መነሻ" data-en="Home">መነሻ</span></div>
-  <div class="ni" onclick="go('rooms')"><i class="fas fa-door-open"></i><span data-am="ክፍሎች" data-en="Rooms">ክፍሎች</span></div>
-  <div class="ni" onclick="go('wallet')"><i class="fas fa-wallet"></i><span data-am="ኪስ" data-en="Wallet">ኪስ</span></div>
-  <div class="ni" onclick="go('community')"><i class="fas fa-users"></i><span data-am="ማኅበረሰብ" data-en="Community">ማኅበረሰብ</span></div>
-  <div class="ni" onclick="go('profile')"><i class="fas fa-user"></i><span data-am="ፕሮፋይል" data-en="Profile">ፕሮፋይል</span></div>
+  <div class="ni on" onclick="go('home')"><i class="fas fa-home"></i><span>Home</span></div>
+  <div class="ni" onclick="go('rooms')"><i class="fas fa-door-open"></i><span>Rooms</span></div>
+  <div class="ni" onclick="go('wallet')"><i class="fas fa-wallet"></i><span>Wallet</span></div>
+  <div class="ni" onclick="go('community')"><i class="fas fa-users"></i><span>Community</span></div>
+  <div class="ni" onclick="go('games')"><i class="fas fa-gamepad"></i><span>Games</span></div>
+  <div class="ni" onclick="go('profile')"><i class="fas fa-user"></i><span>Profile</span></div>
 </div>
 
-<div class="modal" id="mRoom"><div class="mc"><div class="mt" data-am="አዲስ ክፍል" data-en="New Room">አዲስ ክፍል</div><input class="in" id="nrId" placeholder="Room ID (A-Z a-z 0-9 _)"><input class="in" id="nrName" placeholder="የክፍሉ ስም"><button class="btn" onclick="createRoom()" data-am="ፍጠር" data-en="Create">ፍጠር</button><button class="btn red" onclick="closeM('mRoom')" data-am="ይቅር" data-en="Cancel">ይቅር</button></div></div>
+<!-- Modals -->
+<div class="modal" id="mRoom"><div class="mc"><div class="mt">New Room</div>
+<input class="in" id="nrId" placeholder="Room ID (A-Z a-z 0-9 _)">
+<input class="in" id="nrName" placeholder="Room name">
+<select class="in" id="nrCat" style="color:#fff">
+  <option value="chat">💬 Chat</option>
+  <option value="music">🎵 Music</option>
+  <option value="gaming">🎮 Gaming</option>
+  <option value="education">📚 Education</option>
+  <option value="love">❤️ Love</option>
+  <option value="entertainment">🎭 Entertainment</option>
+</select>
+<button class="btn" onclick="createRoom()">Create</button><button class="btn red" onclick="closeM('mRoom')">Cancel</button></div></div>
 
-<div class="modal" id="mBuy"><div class="mc"><div class="mt" data-am="ሳንቲም ግዢ" data-en="Buy Coins">ሳንቲም ግዢ</div>
-<div class="info"><span data-am="በ" data-en="Pay with">በ</span> <b>Telebirr</b> <span data-am="ይክፈሉ" data-en="">ይክፈሉ</span><br><span data-am="ቁጥር" data-en="Number">ቁጥር</span>: <b id="tbNum"></b> (<span id="tbName"></span>)<br><span data-am="መጠን" data-en="Amount">መጠን</span>: <b id="tbAmt"></b> <span data-am="ብር" data-en="Birr">ብር</span><br><span data-am="ከገቢዎ በኋላ የግብይት ቁጥር (Ref) እና ስክሪንሾት ይላኩ" data-en="After payment, send Ref number and screenshot">ከገቢዎ በኋላ የግብይት ቁጥር (Ref) እና ስክሪንሾት ይላኩ</span></div>
-<input class="in" id="buyRef" placeholder="የግብይት ቁጥር (Ref No.)">
+<div class="modal" id="mBuy"><div class="mc"><div class="mt">Buy Coins</div>
+<div class="info">Pay with <b>Telebirr</b><br>Number: <b id="tbNum"></b> (<span id="tbName"></span>)<br>Amount: <b id="tbAmt"></b> Birr<br>After payment, send Ref number and screenshot</div>
+<input class="in" id="buyRef" placeholder="Transaction Ref No.">
 <input type="file" id="buyShot" accept="image/*" class="photo-input" onchange="previewBuyShot(event)">
-<div class="photo-btn" onclick="document.getElementById('buyShot').click()"><i class="fas fa-camera"></i> <span data-am="ስክሪንሾት ይምረጡ" data-en="Select Screenshot">ስክሪንሾት ይምረጡ</span></div>
+<div class="photo-btn" onclick="document.getElementById('buyShot').click()"><i class="fas fa-camera"></i> Select Screenshot</div>
 <div id="shotPrev"></div>
-<button class="btn gold" onclick="submitBuy()" data-am="ላክ" data-en="Send">ላክ</button><button class="btn red" onclick="closeM('mBuy')" data-am="ይቅር" data-en="Cancel">ይቅር</button></div></div>
+<button class="btn gold" onclick="submitBuy()">Send</button><button class="btn red" onclick="closeM('mBuy')">Cancel</button></div></div>
 
-<div class="modal" id="mWith"><div class="mc"><div class="mt" data-am="ገቢ ማውጣት" data-en="Withdraw">ገቢ ማውጣት</div>
-<div class="info"><span data-am="ዝቅተኛ" data-en="Minimum">ዝቅተኛ</span>: <b id="wMin"></b> <span data-am="ገቢ ሳንቲም" data-en="earnings coins">ገቢ ሳንቲም</span>. <span data-am="መጠን ×" data-en="Amount ×">መጠን ×</span> <b id="wRate"></b> <span data-am="ብር ይከፈልዎታል" data-en="Birr paid">ብር ይከፈልዎታል</span></div>
-<input class="in" id="wPhone" placeholder="Telebirr ቁጥር (09xxxxxxxx)">
-<input class="in" id="wAcc" placeholder="በTelebirr ላይ ያለው ስም">
-<input class="in" id="wAmt" type="number" placeholder="መጠን (ገቢ ሳንቲም)">
-<button class="btn grn" onclick="submitWith()" data-am="ጠይቅ" data-en="Request">ጠይቅ</button><button class="btn red" onclick="closeM('mWith')" data-am="ይቅር" data-en="Cancel">ይቅር</button></div></div>
+<div class="modal" id="mWith"><div class="mc"><div class="mt">Withdraw</div>
+<div class="info">Minimum: <b id="wMin"></b> earnings coins. Amount × <b id="wRate"></b> Birr paid<br><small>1 coin = 0.4 Birr (e.g., 1000 coins = 400 Birr)</small></div>
+<input class="in" id="wPhone" placeholder="Telebirr number (09xxxxxxxx)">
+<input class="in" id="wAcc" placeholder="Name on Telebirr">
+<input class="in" id="wAmt" type="number" placeholder="Amount (earnings coins)">
+<button class="btn grn" onclick="submitWith()">Request</button><button class="btn red" onclick="closeM('mWith')">Cancel</button></div></div>
 
-<div class="modal" id="mEdit"><div class="mc"><div class="mt" data-am="ፕሮፋይል ያርቱ" data-en="Edit Profile">ፕሮፋይል ያርቱ</div>
-<div style="text-align:center;margin-bottom:16px">
-  <div id="photoPreview" style="width:110px;height:110px;border-radius:50%;background:linear-gradient(135deg,#f093fb,#f5576c);margin:0 auto 12px;display:flex;align-items:center;justify-content:center;font-size:44px;overflow:hidden;border:3px solid rgba(255,255,255,.3);box-shadow:0 6px 25px rgba(240,147,251,.5)">T</div>
+<div class="modal" id="mEdit"><div class="mc"><div class="mt">Edit Profile</div>
+<div style="text-align:center;margin-bottom:10px">
+  <div id="photoPreview" style="width:80px;height:80px;border-radius:50%;background:linear-gradient(135deg,#f093fb,#f5576c);margin:0 auto 8px;display:flex;align-items:center;justify-content:center;font-size:32px;overflow:hidden;border:3px solid rgba(255,255,255,.3)">T</div>
   <input type="file" id="ePhoto" accept="image/*" class="photo-input" onchange="previewPhoto(event)">
-  <button class="btn sm" onclick="document.getElementById('ePhoto').click()" style="width:auto"><i class="fas fa-camera"></i> <span data-am="ፎቶ ቀይር" data-en="Change Photo">ፎቶ ቀይር</span></button>
+  <button class="btn sm" onclick="document.getElementById('ePhoto').click()" style="width:auto"><i class="fas fa-camera"></i> Change Photo</button>
 </div>
-<input class="in" id="eName" placeholder="ስም"><textarea class="in" id="eBio" placeholder="Bio (150 ቁምፊ)"></textarea><input class="in" id="ePhone" placeholder="Telebirr ቁጥር (09...)">
-<button class="btn" onclick="saveProfile()" data-am="አስቀምጥ" data-en="Save">አስቀምጥ</button><button class="btn red" onclick="closeM('mEdit')" data-am="ይቅር" data-en="Cancel">ይቅር</button></div></div>
+<input class="in" id="eName" placeholder="Name"><textarea class="in" id="eBio" placeholder="Bio (150 chars)"></textarea><input class="in" id="ePhone" placeholder="Telebirr number (09...)">
+<button class="btn" onclick="saveProfile()">Save</button><button class="btn red" onclick="closeM('mEdit')">Cancel</button></div></div>
 
-<div class="modal" id="mGift"><div class="mc"><div class="mt">🎁 <span data-am="ስጦታ ላክ" data-en="Send Gift">ስጦታ ላክ</span></div><div id="gRec" style="font-size:14px;opacity:.85;text-align:center;margin-bottom:14px"></div><div class="ggrid" id="gGrid"></div><button class="btn gold" onclick="sendGift()" data-am="ላክ" data-en="Send">ላክ</button><button class="btn red" onclick="closeM('mGift')" data-am="ይቅር" data-en="Cancel">ይቅር</button></div></div>
+<div class="modal" id="mGift"><div class="mc"><div class="mt">🎁 Send Gift</div><div id="gRec" style="font-size:11px;opacity:.85;text-align:center;margin-bottom:8px"></div><div class="ggrid" id="gGrid"></div><button class="btn gold" onclick="sendGift()">Send</button><button class="btn red" onclick="closeM('mGift')">Cancel</button></div></div>
 
-<div class="modal" id="mPost"><div class="mc"><div class="mt" data-am="ጽሑፍ ይለጥፉ" data-en="Create Post">ጽሑፍ ይለጥፉ</div>
-<textarea class="in" id="postTx" placeholder="ምን አዲስ? (500 ቁምፊ)"></textarea>
+<div class="modal" id="mPost"><div class="mc"><div class="mt">Create Post</div>
+<textarea class="in" id="postTx" placeholder="What's new? (500 chars)"></textarea>
 <input type="file" id="postPhoto" accept="image/*" class="photo-input" onchange="previewPostPhoto(event)">
-<div class="photo-btn" onclick="document.getElementById('postPhoto').click()"><i class="fas fa-camera"></i> <span data-am="ፎቶ ይምረጡ (አማራጭ)" data-en="Select Photo (Optional)">ፎቶ ይምረጡ (አማራጭ)</span></div>
+<div class="photo-btn" onclick="document.getElementById('postPhoto').click()"><i class="fas fa-camera"></i> Select Photo (Optional)</div>
 <div id="postPhotoPrev"></div>
-<button class="btn" onclick="createPost()" data-am="ለጥፍ" data-en="Post">ለጥፍ</button><button class="btn red" onclick="closeM('mPost')" data-am="ይቅር" data-en="Cancel">ይቅር</button></div></div>
+<button class="btn" onclick="createPost()">Post</button><button class="btn red" onclick="closeM('mPost')">Cancel</button></div></div>
 
-<div class="modal" id="mJob"><div class="mc"><div class="mt" data-am="ሥራ ይለጥፉ" data-en="Post Job">ሥራ ይለጥፉ</div>
-<input class="in" id="jTitle" placeholder="ርዕስ">
-<textarea class="in" id="jDesc" placeholder="መግለጫ"></textarea>
-<input class="in" id="jContact" placeholder="ማግኛ (ስልክ/@username)">
+<div class="modal" id="mJob"><div class="mc"><div class="mt">Post Job</div>
+<input class="in" id="jTitle" placeholder="Title">
+<textarea class="in" id="jDesc" placeholder="Description"></textarea>
+<input class="in" id="jContact" placeholder="Contact (phone/@username)">
 <input type="file" id="jobPhoto" accept="image/*" class="photo-input" onchange="previewJobPhoto(event)">
-<div class="photo-btn" onclick="document.getElementById('jobPhoto').click()"><i class="fas fa-camera"></i> <span data-am="ፎቶ ይምረጡ (አማራጭ)" data-en="Select Photo (Optional)">ፎቶ ይምረጡ (አማራጭ)</span></div>
+<div class="photo-btn" onclick="document.getElementById('jobPhoto').click()"><i class="fas fa-camera"></i> Select Photo (Optional)</div>
 <div id="jobPhotoPrev"></div>
-<button class="btn" onclick="createJob()" data-am="ለጥፍ" data-en="Post">ለጥፍ</button><button class="btn red" onclick="closeM('mJob')" data-am="ይቅር" data-en="Cancel">ይቅር</button></div></div>
+<button class="btn" onclick="createJob()">Post</button><button class="btn red" onclick="closeM('mJob')">Cancel</button></div></div>
 
-<div class="modal" id="mShot"><div class="mc"><div class="mt" data-am="ስክሪንሾት" data-en="Screenshot">ስክሪንሾት</div><img id="shotImg" class="shotimg"><button class="btn red" onclick="closeM('mShot')" data-am="ዝጋ" data-en="Close">ዝጋ</button></div></div>
+<div class="modal" id="mShot"><div class="mc"><div class="mt">Screenshot</div><img id="shotImg" class="shotimg"><button class="btn red" onclick="closeM('mShot')">Close</button></div></div>
 
-<div class="modal" id="mGrant"><div class="mc"><div class="mt" data-am="ሳንቲም ስጥ" data-en="Give Coins">ሳንቲም ስጥ</div><input class="in" id="grUid" readonly><input class="in" id="grAmt" type="number" placeholder="መጠን (አሉታዊ = መቀነስ)"><button class="btn gold" onclick="doGrant()" data-am="አረጋግጥ" data-en="Confirm">አረጋግጥ</button><button class="btn red" onclick="closeM('mGrant')" data-am="ይቅር" data-en="Cancel">ይቅር</button></div></div>
+<div class="modal" id="mGrant"><div class="mc"><div class="mt">Give Coins</div><input class="in" id="grUid" readonly><input class="in" id="grAmt" type="number" placeholder="Amount (negative = deduct)"><button class="btn gold" onclick="doGrant()">Confirm</button><button class="btn red" onclick="closeM('mGrant')">Cancel</button></div></div>
+
+<div class="modal" id="mGame"><div class="mc"><div class="mt" id="gameTitle">Game</div>
+<div id="gameContent"></div>
+<div style="margin-top:10px">
+  <input class="in" id="gameBet" type="number" placeholder="Bet amount">
+  <div id="gameExtra"></div>
+  <button class="btn gold" id="gamePlayBtn" onclick="playGame()">Play</button>
+  <button class="btn red" onclick="closeM('mGame')">Cancel</button>
+</div>
+<div id="gameResult" style="margin-top:10px;text-align:center;font-size:14px"></div>
+</div></div>
 
 <script>
 const tg=window.Telegram?.WebApp; if(tg)tg.ready();
-let U=null,C=null,init='',CR=null,RS=null,lkRoom=null,selGift=null,giftTo=null,shotData='',postShotData='',jobShotData='',photoShotData='',lang='am';
+let U=null,C=null,init='',CR=null,RS=null,lkRoom=null,selGift=null,giftTo=null,shotData='',postShotData='',jobShotData='',photoShotData='',roomMinimized=false,currentGame=null,currentCat='';
 
 async function api(u,m='GET',b=null){const h={'Content-Type':'application/json'};if(init)h['X-Telegram-Init-Data']=init;const o={method:m,headers:h};if(b)o.body=JSON.stringify(b);const r=await fetch(u,o);return r.json()}
 function openM(i){document.getElementById(i).classList.add('on')}
 function closeM(i){document.getElementById(i).classList.remove('on')}
-function toggleLang(){lang=lang==='am'?'en':'am';document.getElementById('langTxt').textContent=lang.toUpperCase();document.querySelectorAll('[data-am]').forEach(el=>{el.textContent=el.getAttribute('data-'+lang)})}
 
 async function initApp(){
   init=tg?.initData||'';
-  const d=await api('/api/register','POST');
-  if(!d.success){document.getElementById('loading').innerHTML='<div style="text-align:center;padding:30px"><i class="fas fa-exclamation-triangle" style="font-size:48px;color:#ff4757"></i><p style="margin-top:16px">'+(d.error||'Error')+'</p></div>';return}
+  const referrer=new URLSearchParams(window.location.search).get('ref')||'';
+  const d=await api('/api/register','POST',{referrer});
+  if(!d.success){document.getElementById('loading').innerHTML='<div style="text-align:center;padding:20px"><i class="fas fa-exclamation-triangle" style="font-size:36px;color:#ff4757"></i><p style="margin-top:10px">'+(d.error||'Error')+'</p></div>';return}
   U=d.user;C=d.config;U.admin=d.admin;U.uid=d.user_id;
   document.getElementById('loading').style.display='none';
   document.getElementById('app').style.display='block';
   document.getElementById('navBar').style.display='flex';
   paint();renderPkgs();loadRooms();
   if(U.admin)document.getElementById('admBtn').style.display='block';
+  document.getElementById('myUid').textContent=U.uid;
+}
+
+function getLevel(coins){
+  if(coins>=100000)return{name:'King',icon:'👑',color:'#ffd700'};
+  if(coins>=50000)return{name:'Diamond',icon:'💎',color:'#b9f2ff'};
+  if(coins>=10000)return{name:'Gold',icon:'🥇',color:'#ffd700'};
+  if(coins>=5000)return{name:'Silver',icon:'🥈',color:'#c0c0c0'};
+  if(coins>=1000)return{name:'Bronze',icon:'🥉',color:'#cd7f32'};
+  return{name:'Newbie',icon:'🌱',color:'#7bed9f'};
 }
 
 function paint(){
@@ -270,7 +368,15 @@ function paint(){
   hName.textContent=U.username;pName.textContent=U.username;pId.textContent=U.uid;pBio.textContent=U.bio||'';
   hCoins.textContent=U.coins;wCoins.textContent=U.coins;sCoins.textContent=U.coins;
   wEarn.textContent=U.earnings;sEarn.textContent=U.earnings;
-  sPhone.textContent=U.phone||'—';
+  wRef.textContent=U.referral_count||0;wBonus.textContent=U.referral_bonus||0;
+  sRef.textContent=U.referral_bonus||0;
+  sGiftSent.textContent=U.total_gifts_sent||0;
+  sGiftRec.textContent=U.total_gifts_received||0;
+  const gl=getLevel(U.total_gifts_received||0);
+  sGiftLevel.textContent=gl.icon+' '+gl.name;
+  const lvl=getLevel(U.coins);
+  hSub.textContent=lvl.icon+' '+lvl.name;
+  pLevel.innerHTML=`<span class="level-badge" style="background:${lvl.color};color:#333">${lvl.icon} ${lvl.name}</span>`;
   document.getElementById('tbNum').textContent=C.telebirr.number;
   document.getElementById('tbName').textContent=C.telebirr.name;
   document.getElementById('wMin').textContent=C.min_withdraw;
@@ -278,129 +384,271 @@ function paint(){
 }
 
 function go(p){
+  if(CR&&!roomMinimized&&p!=='home'){minimizeRoom()}
   document.querySelectorAll('.page').forEach(x=>x.classList.remove('active'));
   document.getElementById('p-'+p).classList.add('active');
   document.querySelectorAll('.ni').forEach(x=>x.classList.remove('on'));
-  const idx={home:0,rooms:1,wallet:2,community:3,profile:4}[p];
-  if(idx!==undefined)document.querySelectorAll('.ni')[idx].classList.add('on');
+  const idx={home:0,rooms:1,wallet:2,community:3,games:4,profile:5}[p];
+  if(idx!==undefined)document.querySelectorAll('.ni')[idx]?.classList.add('on');
   if(p==='rooms')loadAll();if(p==='wallet')loadHist();if(p==='community'){loadPosts();loadJobs()}
-  if(p==='admin')admOverview();
+  if(p==='admin')admOverview();if(p==='games')loadGames();
   window.scrollTo(0,0);
+}
+
+function minimizeRoom(){
+  roomMinimized=true;
+  document.getElementById('roomView').style.display='none';
+  document.getElementById('minBtn').style.display='none';
+  document.getElementById('roomMin').style.display='block';
+  document.getElementById('roomMinName').textContent=RS?RS.name:'Room';
+  document.getElementById('navBar').style.display='flex';
+  document.querySelectorAll('.page').forEach(p=>p.style.display='');
+  go('home');
+}
+
+function restoreRoom(){
+  roomMinimized=false;
+  document.getElementById('roomMin').style.display='none';
+  document.getElementById('roomView').style.display='block';
+  document.getElementById('navBar').style.display='none';
+  document.querySelectorAll('.page').forEach(p=>p.style.display='none');
 }
 
 function subTab(t,el){document.querySelectorAll('.subtab').forEach(x=>x.classList.remove('on'));el.classList.add('on');document.getElementById('sub-posts').style.display=t==='posts'?'block':'none';document.getElementById('sub-jobs').style.display=t==='jobs'?'block':'none'}
 
-async function loadRooms(){const r=await api('/api/rooms');const c=document.getElementById('featRooms');c.innerHTML='';const ks=Object.keys(r);if(!ks.length){c.innerHTML='<div style="grid-column:1/-1;text-align:center;padding:30px;opacity:.6">ምንም ክፍል የለም</div>';return}ks.slice(0,6).forEach(rid=>{const rm=r[rid];c.innerHTML+=card(rid,rm)})}
-async function loadAll(){const r=await api('/api/rooms');const c=document.getElementById('allRooms');c.innerHTML='';const ks=Object.keys(r);if(!ks.length){c.innerHTML='<div style="text-align:center;padding:30px;opacity:.6">ምንም ክፍል የለም</div>';return}ks.forEach(rid=>{const d=document.createElement('div');d.className='card';d.style.marginBottom='12px';d.onclick=()=>joinRoom(rid);d.innerHTML=`<h4>${esc(r[rid].name)}</h4><div class="host">👤 ${esc(r[rid].creator_name)}</div><div class="row"><span>👥 ${r[rid].count}</span><span class="live">LIVE</span></div>`;c.appendChild(d)})}
+function filterCat(cat,el){
+  currentCat=cat;
+  document.querySelectorAll('#catChips .chip').forEach(c=>c.classList.remove('on'));
+  el.classList.add('on');
+  loadRooms();
+}
+
+async function loadRooms(){
+  const r=await api('/api/rooms'+(currentCat?'?category='+currentCat:''));
+  const c=document.getElementById('featRooms');c.innerHTML='';
+  const ks=Object.keys(r);
+  if(!ks.length){c.innerHTML='<div style="grid-column:1/-1;text-align:center;padding:16px;opacity:.6">No rooms found</div>';return}
+  ks.slice(0,6).forEach(rid=>{const rm=r[rid];c.innerHTML+=card(rid,rm)})
+}
+async function loadAll(){
+  const r=await api('/api/rooms'+(currentCat?'?category='+currentCat:''));
+  const c=document.getElementById('allRooms');c.innerHTML='';
+  const ks=Object.keys(r);
+  if(!ks.length){c.innerHTML='<div style="text-align:center;padding:16px;opacity:.6">No rooms found</div>';return}
+  ks.forEach(rid=>{const d=document.createElement('div');d.className='card';d.style.marginBottom='8px';d.onclick=()=>joinRoom(rid);d.innerHTML=`<h4>${esc(r[rid].name)}</h4><div class="host">👤 ${esc(r[rid].creator_name)}</div><div class="row"><span>👥 ${r[rid].count}</span><span class="live">LIVE</span></div>`;c.appendChild(d)})
+}
 function card(rid,rm){return `<div class="card" onclick="joinRoom('${rid}')"><h4>${esc(rm.name)}</h4><div class="host">👤 ${esc(rm.creator_name)}</div><div class="row"><span>👥 ${rm.count}</span><span class="live">LIVE</span></div></div>`}
 function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
 
-async function createRoom(){const id=nrId.value.trim(),nm=nrName.value.trim();if(!id||!nm){alert('ሁለቱንም ይሙሉ');return}const d=await api('/api/rooms/create','POST',{room_id:id,room_name:nm});if(d.success){closeM('mRoom');nrId.value='';nrName.value='';joinRoom(id)}else alert(d.error)}
+async function createRoom(){
+  const id=nrId.value.trim(),nm=nrName.value.trim(),cat=nrCat.value;
+  if(!id||!nm){alert('Fill both fields');return}
+  const d=await api('/api/rooms/create','POST',{room_id:id,room_name:nm,category:cat});
+  if(d.success){closeM('mRoom');nrId.value='';nrName.value='';joinRoom(id)}else alert(d.error)
+}
 
 async function joinRoom(rid){
   const d=await api(`/api/rooms/${rid}/state`);
   if(!d.success){alert(d.error);return}
-  CR=rid;RS=d;
+  CR=rid;RS=d;roomMinimized=false;
   document.querySelectorAll('.page').forEach(p=>p.style.display='none');
   document.getElementById('navBar').style.display='none';
   document.getElementById('roomView').style.display='block';
+  document.getElementById('minBtn').style.display='block';
   rvName.textContent=d.name;rvHost.textContent='👑 Host: '+esc(d.host||'');
   U.coins=d.coins;U.earnings=d.earnings;paint();
   renderSeats();renderMsgs(d.messages);
   poll=setInterval(pollRoom,3000);
 }
 let poll=null;
-async function pollRoom(){if(!CR)return;const d=await api(`/api/rooms/${CR}/state?since=${RS?RS.lastId||0:0}`);if(d.success){RS=d;renderSeats();renderMsgs(d.messages);U.coins=d.coins;paint()}}
+async function pollRoom(){if(!CR||roomMinimized)return;const d=await api(`/api/rooms/${CR}/state?since=${RS?RS.lastId||0:0}`);if(d.success){RS=d;renderSeats();renderMsgs(d.messages);U.coins=d.coins;paint()}}
 function renderSeats(){
   const g=document.getElementById('seatGrid');g.innerHTML='';const s=RS.seats||{};
   for(let i=0;i<C.seats;i++){const st=s[i]||s[String(i)];const div=document.createElement('div');div.className='seat';
     if(i===0){div.classList.add('host');div.innerHTML=`<div class="ic">👑</div><div class="nm">${esc(st?st.name:'Host')}</div>`}
-    else if(st){div.classList.add('occ');div.innerHTML=`<div class="ic">🎙️</div><div class="nm">${esc(st.name)}</div><div class="no">Seat ${i}</div>`}
-    else{div.innerHTML=`<div class="ic">🛋️</div><div class="no">Seat ${i}</div>`}
+    else if(st){div.classList.add('occ');div.innerHTML=`<div class="ic">🎙️</div><div class="nm">${esc(st.name)}</div><div class="no">${i}</div>`}
+    else{div.innerHTML=`<div class="ic">🛋️</div><div class="no">${i}</div>`}
     div.onclick=()=>seatTap(i,st);g.appendChild(div)}
 }
 async function seatTap(i,st){
-  if(st&&st.uid!==U.uid){giftTo=st.uid;document.getElementById('gRec').textContent='ለ: '+st.name;openM('mGift');renderGifts();return}
+  if(st&&st.uid!==U.uid){giftTo=st.uid;document.getElementById('gRec').textContent='To: '+st.name;openM('mGift');renderGifts();return}
   const d=await api(`/api/rooms/${CR}/seat`,'POST',{seat:i});
   if(d.success){const s=await api(`/api/rooms/${CR}/state`);RS=s;renderSeats()}else alert(d.error);
 }
-function renderGifts(){const g=document.getElementById('gGrid');g.innerHTML='';selGift=null;C.gifts.forEach(x=>{const d=document.createElement('div');d.className='gi';d.innerHTML=`<div class="e">${x.icon}</div><div class="n">${x.name}</div><div class="pr">${x.price}</div>`;d.onclick=()=>{document.querySelectorAll('.gi').forEach(y=>y.classList.remove('sel'));d.classList.add('sel');selGift=x.id};g.appendChild(d)})}
-async function sendGift(){if(!selGift||!giftTo){alert('ስጦታ ይምረጡ');return}const d=await api(`/api/rooms/${CR}/gift`,'POST',{gift_type:selGift,recipient_id:giftTo});if(d.success){closeM('mGift');U.coins=d.remaining_coins;paint();const gf=C.gifts.find(x=>x.id===selGift);pop(gf.icon);const s=await api(`/api/rooms/${CR}/state`);RS=s;renderMsgs(s.messages)}else alert(d.error)}
-function pop(ic){const e=document.createElement('div');e.className='gpop';e.textContent=ic;document.body.appendChild(e);setTimeout(()=>e.remove(),1800)}
+function renderGifts(){
+  const g=document.getElementById('gGrid');g.innerHTML='';selGift=null;
+  C.gifts.forEach(x=>{
+    const d=document.createElement('div');
+    d.className='gi rarity-'+(x.rarity||'common');
+    d.innerHTML=`<div class="e">${x.icon}</div><div class="n">${x.name}</div><div class="pr">${x.price}</div>`;
+    d.onclick=()=>{document.querySelectorAll('.gi').forEach(y=>y.classList.remove('sel'));d.classList.add('sel');selGift=x.id};
+    g.appendChild(d)
+  })
+}
+async function sendGift(){
+  if(!selGift||!giftTo){alert('Select a gift');return}
+  const d=await api(`/api/rooms/${CR}/gift`,'POST',{gift_type:selGift,recipient_id:giftTo});
+  if(d.success){closeM('mGift');U.coins=d.remaining_coins;paint();const gf=C.gifts.find(x=>x.id===selGift);pop(gf.icon);const s=await api(`/api/rooms/${CR}/state`);RS=s;renderMsgs(s.messages)}else alert(d.error)
+}
+function pop(ic){const e=document.createElement('div');e.className='gpop';e.textContent=ic;document.body.appendChild(e);setTimeout(()=>e.remove(),1500)}
 
 function renderMsgs(ms){const b=document.getElementById('chatBox');b.innerHTML='';let last=0;(ms||[]).forEach(m=>{last=m.id;const d=document.createElement('div');d.className='msg'+(m.sys?' sys':'')+(m.gift?' gift':'');d.textContent=m.sys?m.text:m.name+': '+m.text;b.appendChild(d)});if(RS)RS.lastId=last;b.scrollTop=b.scrollHeight}
-async function sendChat(){const t=chatIn.value.trim();if(!t)return;await api(`/api/rooms/${CR}/chat`,'POST',{text:t});chatIn.value='';const s=await api(`/api/rooms/${CR}/state?since=${RS.lastId||0}`);if(s.success){RS=s;renderMsgs(s.messages)}}
-async function exitRoom(){await api(`/api/rooms/${CR}/exit`,'POST');leaveVoice();clearInterval(poll);CR=null;document.getElementById('roomView').style.display='none';document.querySelectorAll('.page').forEach(p=>p.style.display='');document.getElementById('navBar').style.display='flex';go('rooms')}
+async function sendChat(){const t2=chatIn.value.trim();if(!t2)return;await api(`/api/rooms/${CR}/chat`,'POST',{text:t2});chatIn.value='';const s=await api(`/api/rooms/${CR}/state?since=${RS.lastId||0}`);if(s.success){RS=s;renderMsgs(s.messages)}}
+async function exitRoom(){await api(`/api/rooms/${CR}/exit`,'POST');leaveVoice();clearInterval(poll);CR=null;RS=null;roomMinimized=false;document.getElementById('roomView').style.display='none';document.getElementById('roomMin').style.display='none';document.getElementById('minBtn').style.display='none';document.querySelectorAll('.page').forEach(p=>p.style.display='');document.getElementById('navBar').style.display='flex';go('rooms')}
 
 async function joinVoice(){
   try{
     const d=await api('/api/livekit-token','POST',{room_id:CR});
-    if(!d.success||!d.url){alert('ድምጽ አልተገናኘም: '+(d.error||'LiveKit የለም'));return}
+    if(!d.success||!d.url){alert('Error: '+(d.error||'LiveKit not configured'));return}
+    if(!window.LivekitClient){alert('LiveKit SDK not loaded');return}
     const {Room,RoomEvent}=window.LivekitClient;
     lkRoom=new Room();await lkRoom.connect(d.url,d.token);
     await lkRoom.localParticipant.setMicrophoneEnabled(true);
-    voiceBtn.style.display='none';voiceBar.style.display='flex';
+    document.getElementById('voiceBtn').style.display='none';
+    document.getElementById('voiceBar').style.display='flex';
     lkRoom.on(RoomEvent.ParticipantConnected,()=>updVoice());
     lkRoom.on(RoomEvent.ParticipantDisconnected,()=>updVoice());
     updVoice();
-  }catch(e){alert('ድምጽ ስህተት: '+e.message)}
+  }catch(e){alert('Voice error: '+e.message)}
 }
-function updVoice(){if(lkRoom)voiceTxt.textContent='🎙️ በድምጽ ላይ ('+lkRoom.connectedParticipants.size+' ሰዎች)'}
-async function leaveVoice(){if(lkRoom){try{await lkRoom.disconnect()}catch(e){}lkRoom=null}voiceBar.style.display='none';voiceBtn.style.display='block'}
+function updVoice(){
+  if(lkRoom){
+    const size=lkRoom.remoteParticipants?lkRoom.remoteParticipants.size:0;
+    voiceTxt.textContent='🎙️ On voice... ('+size+' others)';
+  }
+}
+async function leaveVoice(){if(lkRoom){try{await lkRoom.disconnect()}catch(e){}lkRoom=null}document.getElementById('voiceBar').style.display='none';document.getElementById('voiceBtn').style.display='block'}
 
-function renderPkgs(){const c=document.getElementById('pkgs');c.innerHTML='';C.packages.forEach(p=>{const d=document.createElement('div');d.className='pkg';d.innerHTML=`<div class="c">🪙 ${p.coins.toLocaleString()}</div><div class="p">${p.price} ብር</div>`;d.onclick=()=>{document.getElementById('tbAmt').textContent=p.price;openM('mBuy')};c.appendChild(d)})}
+function renderPkgs(){const c=document.getElementById('pkgs');c.innerHTML='';C.packages.forEach(p=>{const d=document.createElement('div');d.className='pkg';d.innerHTML=`<div class="c">🪙 ${p.coins.toLocaleString()}</div><div class="p">${p.price} Birr</div>`;d.onclick=()=>{document.getElementById('tbAmt').textContent=p.price;openM('mBuy')};c.appendChild(d)})}
 function previewBuyShot(e){const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=ev=>{shotData=ev.target.result;document.getElementById('shotPrev').innerHTML='<img src="'+shotData+'" class="photo-preview">'};r.readAsDataURL(f)}
-async function submitBuy(){const ref=buyRef.value.trim();if(!ref){alert('Ref ቁጥር ያስገቡ');return}if(!shotData){alert('ስክሪንሾት ይምረጡ');return}const pkg=C.packages.find(p=>p.price==tbAmt.textContent);const d=await api('/api/coins/buy','POST',{package_id:pkg.id,ref,shot:shotData});if(d.success){alert('✅ ጥያቄዎ ተልኳል! አድሚን ሲያጸድቅ ሳንቲሙ ይጨምራል።');closeM('mBuy');buyRef.value='';shotData='';shotPrev.innerHTML='';loadHist()}else alert(d.error)}
-async function submitWith(){const ph=wPhone.value,ac=wAcc.value,am=parseInt(wAmt.value);if(!ph||!ac||!am){alert('ሁሉንም ይሙሉ');return}const d=await api('/api/withdraw','POST',{phone:ph,acc_name:ac,amount:am});if(d.success){alert('✅ ጥያቄ ተልኳል');U.earnings=d.earnings;paint();closeM('mWith');loadHist()}else alert(d.error)}
+async function submitBuy(){const ref=buyRef.value.trim();if(!ref){alert('Enter Ref number');return}if(!shotData){alert('Select screenshot');return}const pkg=C.packages.find(p=>p.price==tbAmt.textContent);const d=await api('/api/coins/buy','POST',{package_id:pkg.id,ref,shot:shotData});if(d.success){alert('✅ Request sent! Admin will approve soon.');closeM('mBuy');buyRef.value='';shotData='';shotPrev.innerHTML='';loadHist()}else alert(d.error)}
+async function submitWith(){const ph=wPhone.value,ac=wAcc.value,am=parseInt(wAmt.value);if(!ph||!ac||!am){alert('Fill all fields');return}const d=await api('/api/withdraw','POST',{phone:ph,acc_name:ac,amount:am});if(d.success){alert('✅ Request sent');U.earnings=d.earnings;paint();closeM('mWith');loadHist()}else alert(d.error)}
 async function loadHist(){const d=await api('/api/wallet');if(!d.success)return;const c=document.getElementById('hist');c.innerHTML='';
-  d.purchases.forEach(p=>{c.innerHTML+=`<div class="arow"><div class="top"><span>🪙 ${p.coins} → ${p.price} ብር</span><b style="color:${p.status==='approved'?'#2ed573':p.status==='rejected'?'#ff4757':'#ffd700'}">${p.status}</b></div><div style="font-size:12px;opacity:.6">Ref: ${p.ref}</div></div>`});
-  d.withdrawals.forEach(w=>{c.innerHTML+=`<div class="arow"><div class="top"><span>💸 ${w.amount} ገቢ = ${w.birr} ብር</span><b style="color:${w.status==='paid'?'#2ed573':w.status==='rejected'?'#ff4757':'#ffd700'}">${w.status}</b></div></div>`});
-  if(!d.purchases.length&&!d.withdrawals.length)c.innerHTML='<div style="opacity:.6;text-align:center;padding:20px">ታሪክ የለም</div>'}
+  d.purchases.forEach(p=>{c.innerHTML+=`<div class="arow"><div class="top"><span>🪙 ${p.coins} → ${p.price} Birr</span><b style="color:${p.status==='approved'?'#2ed573':p.status==='rejected'?'#ff4757':'#ffd700'}">${p.status}</b></div><div style="font-size:9px;opacity:.6">Ref: ${p.ref}</div></div>`});
+  d.withdrawals.forEach(w=>{c.innerHTML+=`<div class="arow"><div class="top"><span>💸 ${w.amount} = ${w.birr} Birr</span><b style="color:${w.status==='paid'?'#2ed573':w.status==='rejected'?'#ff4757':'#ffd700'}">${w.status}</b></div></div>`});
+  if(!d.purchases.length&&!d.withdrawals.length)c.innerHTML='<div style="opacity:.6;text-align:center;padding:12px">No history</div>'}
 
 function openEdit(){eName.value=U.username||'';eBio.value=U.bio||'';ePhone.value=U.phone||'';openM('mEdit')}
 function previewPhoto(e){const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=ev=>{photoShotData=ev.target.result;document.getElementById('photoPreview').innerHTML='<img src="'+photoShotData+'" style="width:100%;height:100%;object-fit:cover">'};r.readAsDataURL(f)}
 async function saveProfile(){
-  if(photoShotData){
-    const d=await api('/api/profile/photo','POST',{photo:photoShotData});
-    if(d.success){U.photo=d.photo}
-  }
+  if(photoShotData){const d=await api('/api/profile/photo','POST',{photo:photoShotData});if(d.success){U.photo=d.photo}}
   const d=await api('/api/profile','POST',{name:eName.value,bio:eBio.value,phone:ePhone.value});
   if(d.success){U=d.user;paint();closeM('mEdit');photoShotData='';alert('✅ Saved')}else alert(d.error)
 }
 
-async function loadPosts(){const d=await api('/api/posts');if(!d.success)return;const c=document.getElementById('posts');c.innerHTML='';if(!d.posts.length){c.innerHTML='<div style="opacity:.6;text-align:center;padding:20px">ጽሑፍ የለም</div>';return}
-  d.posts.forEach(p=>{const el=document.createElement('div');el.className='post';el.innerHTML=`<div class="hd"><div class="av">${esc((p.name||'U')[0].toUpperCase())}</div><div><b>${esc(p.name)}</b><div style="font-size:11px;opacity:.6">${p.created}</div></div>${p.mine?`<i class="fas fa-trash" style="margin-left:auto;color:#ff4757" onclick="delPost('${p.id}')"></i>`:''}</div>${p.photo_url?`<img src="${p.photo_url}" class="img">`:''}<div class="tx">${esc(p.text)}</div><div class="ft"><span><i class="fa${p.liked?'s':'r'} fa-heart ${p.liked?'lk':''}" onclick="likePost('${p.id}')"></i>${p.likes}</span></div>`;c.appendChild(el)})}
+async function loadPosts(){const d=await api('/api/posts');if(!d.success)return;const c=document.getElementById('posts');c.innerHTML='';if(!d.posts.length){c.innerHTML='<div style="opacity:.6;text-align:center;padding:12px">No posts</div>';return}
+  d.posts.forEach(p=>{const el=document.createElement('div');el.className='post';el.innerHTML=`<div class="hd"><div class="av">${esc((p.name||'U')[0].toUpperCase())}</div><div><b>${esc(p.name)}</b><div style="font-size:9px;opacity:.6">${p.created}</div></div>${p.mine?`<i class="fas fa-trash" style="margin-left:auto;color:#ff4757" onclick="delPost('${p.id}')"></i>`:''}</div>${p.photo_url?`<img src="${p.photo_url}" class="img">`:''}<div class="tx">${esc(p.text)}</div><div class="ft"><span><i class="fa${p.liked?'s':'r'} fa-heart ${p.liked?'lk':''}" onclick="likePost('${p.id}')"></i>${p.likes}</span></div>`;c.appendChild(el)})}
 function previewPostPhoto(e){const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=ev=>{postShotData=ev.target.result;document.getElementById('postPhotoPrev').innerHTML='<img src="'+postShotData+'" class="photo-preview">'};r.readAsDataURL(f)}
-async function createPost(){const t=postTx.value.trim();if(!t&&!postShotData)return;const d=await api('/api/posts/create','POST',{text:t,photo:postShotData});if(d.success){closeM('mPost');postTx.value='';postShotData='';postPhotoPrev.innerHTML='';loadPosts()}else alert(d.error)}
+async function createPost(){const t2=postTx.value.trim();if(!t2&&!postShotData)return;const d=await api('/api/posts/create','POST',{text:t2,photo:postShotData});if(d.success){closeM('mPost');postTx.value='';postShotData='';postPhotoPrev.innerHTML='';loadPosts()}else alert(d.error)}
 async function likePost(id){await api(`/api/posts/${id}/like`,'POST');loadPosts()}
-async function delPost(id){if(confirm('ይሰረዝ?')){await api(`/api/posts/${id}/delete`,'POST');loadPosts()}}
-async function loadJobs(){const d=await api('/api/jobs');if(!d.success)return;const c=document.getElementById('jobs');c.innerHTML='';if(!d.jobs.length){c.innerHTML='<div style="opacity:.6;text-align:center;padding:20px">ሥራ የለም</div>';return}
-  d.jobs.forEach(j=>{const el=document.createElement('div');el.className='job';el.innerHTML=`<h4>${esc(j.title)}</h4>${j.photo_url?`<img src="${j.photo_url}" class="img">`:''}<p>${esc(j.desc)}</p><div class="ct"><i class="fas fa-phone"></i> ${esc(j.contact)}</div><div style="font-size:12px;opacity:.6;margin-top:8px">👤 ${esc(j.name)} • ${j.created}${j.mine?` • <i class="fas fa-trash" style="color:#ff4757;cursor:pointer" onclick="delJob('${j.id}')"></i>`:''}</div>`;c.appendChild(el)})}
+async function delPost(id){if(confirm('Delete?')){await api(`/api/posts/${id}/delete`,'POST');loadPosts()}}
+async function loadJobs(){const d=await api('/api/jobs');if(!d.success)return;const c=document.getElementById('jobs');c.innerHTML='';if(!d.jobs.length){c.innerHTML='<div style="opacity:.6;text-align:center;padding:12px">No jobs</div>';return}
+  d.jobs.forEach(j=>{const el=document.createElement('div');el.className='job';el.innerHTML=`<h4>${esc(j.title)}</h4>${j.photo_url?`<img src="${j.photo_url}" class="img">`:''}<p>${esc(j.desc)}</p><div class="ct"><i class="fas fa-phone"></i> ${esc(j.contact)}</div><div style="font-size:9px;opacity:.6;margin-top:4px">👤 ${esc(j.name)} • ${j.created}${j.mine?` • <i class="fas fa-trash" style="color:#ff4757;cursor:pointer" onclick="delJob('${j.id}')"></i>`:''}</div>`;c.appendChild(el)})}
 function previewJobPhoto(e){const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=ev=>{jobShotData=ev.target.result;document.getElementById('jobPhotoPrev').innerHTML='<img src="'+jobShotData+'" class="photo-preview">'};r.readAsDataURL(f)}
 async function createJob(){const d=await api('/api/jobs/create','POST',{title:jTitle.value,desc:jDesc.value,contact:jContact.value,photo:jobShotData});if(d.success){closeM('mJob');jTitle.value=jDesc.value=jContact.value='';jobShotData='';jobPhotoPrev.innerHTML='';loadJobs()}else alert(d.error)}
-async function delJob(id){if(confirm('ይሰረዝ?')){await api(`/api/jobs/${id}/delete`,'POST');loadJobs()}}
+async function delJob(id){if(confirm('Delete?')){await api(`/api/jobs/${id}/delete`,'POST');loadJobs()}}
 
+// ---- GAMES ----
+async function loadGames(){
+  const d=await api('/api/games');
+  if(!d.success)return;
+  U.coins=d.user_coins;paint();
+  const c=document.getElementById('myGames');c.innerHTML='';
+  if(!d.my_games.length){c.innerHTML='<div style="opacity:.6;text-align:center;padding:12px">No games played yet</div>';return}
+  d.my_games.forEach(g=>{
+    const el=document.createElement('div');el.className='arow';
+    const icon=g.game==='dice'?'🎲':g.game==='flip'?'🪙':'🎡';
+    el.innerHTML=`<div class="top"><span>${icon} ${g.game} - Bet: ${g.bet}</span><b style="color:${g.won?'#2ed573':'#ff4757'}">${g.won?'Won '+g.payout:'Lost'}</b></div><div style="font-size:9px;opacity:.6">${g.created}</div>`;
+    c.appendChild(el)
+  })
+}
+
+function openGame(type){
+  currentGame=type;
+  const cfg=C.games[type];
+  document.getElementById('gameTitle').textContent=cfg.name;
+  document.getElementById('gameBet').value='';
+  document.getElementById('gameResult').innerHTML='';
+  const extra=document.getElementById('gameExtra');
+  if(type==='dice'){
+    extra.innerHTML='<div style="display:grid;grid-template-columns:repeat(6,1fr);gap:4px;margin:8px 0">'+[1,2,3,4,5,6].map(n=>`<button class="btn sm" onclick="selectDice(${n})" id="dice${n}">${n}</button>`).join('')+'</div>';
+    window._diceNum=null;
+  }else if(type==='flip'){
+    extra.innerHTML='<div style="display:flex;gap:8px;margin:8px 0"><button class="btn sm" onclick="selectFlip(\'heads\')" id="flipH">👑 Heads</button><button class="btn sm" onclick="selectFlip(\'tails\')" id="flipT">🌿 Tails</button></div>';
+    window._flipChoice=null;
+  }else{
+    extra.innerHTML='<div style="text-align:center;margin:8px 0;font-size:11px;opacity:.7">Spin the wheel!</div>';
+  }
+  openM('mGame');
+}
+
+function selectDice(n){
+  window._diceNum=n;
+  for(let i=1;i<=6;i++)document.getElementById('dice'+i).style.background=i===n?'#ffd700':'';
+  for(let i=1;i<=6;i++)document.getElementById('dice'+i).style.color=i===n?'#333':'';
+}
+function selectFlip(c){
+  window._flipChoice=c;
+  document.getElementById('flipH').style.background=c==='heads'?'#ffd700':'';
+  document.getElementById('flipH').style.color=c==='heads'?'#333':'';
+  document.getElementById('flipT').style.background=c==='tails'?'#ffd700':'';
+  document.getElementById('flipT').style.color=c==='tails'?'#333':'';
+}
+
+async function playGame(){
+  const bet=parseInt(gameBet.value);
+  if(!bet||bet<10){alert('Minimum bet is 10');return}
+  if(bet>U.coins){alert('Not enough coins');return}
+  const btn=document.getElementById('gamePlayBtn');btn.disabled=true;btn.textContent='Playing...';
+  document.getElementById('gameResult').innerHTML='<div class="sp" style="margin:10px auto"></div>';
+  try{
+    let d;
+    if(currentGame==='dice'){
+      if(!window._diceNum){alert('Pick a number 1-6');btn.disabled=false;btn.textContent='Play';return}
+      d=await api('/api/games/dice','POST',{bet,number:window._diceNum});
+      if(d.success){
+        const emojis=['','⚀','⚁','⚂','⚃','⚄','⚅'];
+        document.getElementById('gameResult').innerHTML=`<div class="dice-display">${emojis[d.result]}</div><div style="font-size:16px;color:${d.won?'#2ed573':'#ff4757'}">${d.won?'🎉 YOU WON '+d.payout+'!':'😢 You lost'}</div><div style="font-size:11px;opacity:.7;margin-top:4px">Rolled: ${d.result} | Your pick: ${window._diceNum}</div>`;
+      }
+    }else if(currentGame==='flip'){
+      if(!window._flipChoice){alert('Pick heads or tails');btn.disabled=false;btn.textContent='Play';return}
+      d=await api('/api/games/flip','POST',{bet,choice:window._flipChoice});
+      if(d.success){
+        document.getElementById('gameResult').innerHTML=`<div class="flip-display">${d.result==='heads'?'👑':'🌿'}</div><div style="font-size:16px;color:${d.won?'#2ed573':'#ff4757'}">${d.won?'🎉 YOU WON '+d.payout+'!':'😢 You lost'}</div><div style="font-size:11px;opacity:.7;margin-top:4px">Result: ${d.result} | Your pick: ${window._flipChoice}</div>`;
+      }
+    }else{
+      d=await api('/api/games/wheel','POST',{bet});
+      if(d.success){
+        document.getElementById('gameResult').innerHTML=`<div style="font-size:50px;margin:10px 0">🎡</div><div style="font-size:20px;color:${d.won?'#2ed573':'#ff4757'}">${d.segment}</div><div style="font-size:16px;color:${d.won?'#2ed573':'#ff4757'}">${d.won?'🎉 Won '+d.payout+'!':'😢 Lost'}</div>`;
+      }
+    }
+    if(d&&d.success){U.coins=d.remaining_coins;paint();loadGames()}
+  }catch(e){alert('Error: '+e.message)}
+  btn.disabled=false;btn.textContent='Play';
+}
+
+// ---- ADMIN ----
 async function admOverview(){const d=await api('/api/admin/overview');if(!d.success)return;const s=d.stats;
-  document.getElementById('admStats').innerHTML=`<div class="stat"><b>${s.users}</b><span>ተጠቃሚዎች</span></div><div class="stat"><b>${s.banned}</b><span>የታገዱ</span></div><div class="stat"><b>${s.rooms}</b><span>ክፍሎች</span></div><div class="stat"><b>${s.posts}</b><span>ጽሑፎች</span></div><div class="stat"><b>${s.jobs}</b><span>ሥራዎች</span></div><div class="stat"><b>${s.gifts}</b><span>ስጦታ</span></div><div class="stat"><b>${s.revenue} ብር</b><span>ገቢ</span></div><div class="stat"><b>${s.paid_out} ብር</b><span>የተከፈለ</span></div>`;
+  document.getElementById('admStats').innerHTML=`<div class="stat"><b>${s.users}</b><span>Users</span></div><div class="stat"><b>${s.banned}</b><span>Banned</span></div><div class="stat"><b>${s.rooms}</b><span>Rooms</span></div><div class="stat"><b>${s.posts}</b><span>Posts</span></div><div class="stat"><b>${s.jobs}</b><span>Jobs</span></div><div class="stat"><b>${s.gifts}</b><span>🎁</span></div><div class="stat"><b>${s.revenue} Birr</b><span>Revenue</span></div><div class="stat"><b>${s.paid_out} Birr</b><span>Paid Out</span></div><div class="stat"><b>${s.game_profit} 🪙</b><span>Game Profit</span></div><div class="stat"><b>${s.game_total_bet} 🪙</b><span>Game Bets</span></div>`;
   const pc=document.getElementById('admPurch');pc.innerHTML='';
-  d.purchases.forEach(p=>{const el=document.createElement('div');el.className='arow';el.innerHTML=`<div class="top"><span>${esc(p.name)} → 🪙${p.coins} (${p.price} ብር)</span><span style="font-size:12px;opacity:.6">Ref:${p.ref}</span></div><div class="btns"><button class="btn sm" onclick="viewShot('${p.id}')">📷 ፎቶ</button><button class="btn sm grn" onclick="purch('${p.id}','approve')">አጽድቅ</button><button class="btn sm red" onclick="purch('${p.id}','reject')">ውድቅ</button></div>`;pc.appendChild(el)});
-  if(!d.purchases.length)pc.innerHTML='<div style="opacity:.6;text-align:center;padding:14px">ጥያቄ የለም</div>';
+  d.purchases.forEach(p=>{const el=document.createElement('div');el.className='arow';el.innerHTML=`<div class="top"><span>${esc(p.name)} → 🪙${p.coins} (${p.price} Birr)</span><span style="font-size:9px;opacity:.6">Ref:${p.ref}</span></div><div class="btns"><button class="btn sm" onclick="viewShot('${p.id}')">📷</button><button class="btn sm grn" onclick="purch('${p.id}','approve')">Approve</button><button class="btn sm red" onclick="purch('${p.id}','reject')">Reject</button></div>`;pc.appendChild(el)});
+  if(!d.purchases.length)pc.innerHTML='<div style="opacity:.6;text-align:center;padding:10px">No pending</div>';
   const wc=document.getElementById('admWith');wc.innerHTML='';
-  d.withdrawals.forEach(w=>{const el=document.createElement('div');el.className='arow';el.innerHTML=`<div class="top"><span>${esc(w.name)} → ${w.amount} ገቢ = ${w.birr} ብር</span><span style="font-size:12px">${w.phone}</span></div><div style="font-size:12px;opacity:.6">${esc(w.acc_name)}</div><div class="btns"><button class="btn sm grn" onclick="withd('${w.id}','paid')">ከፍል</button><button class="btn sm red" onclick="withd('${w.id}','reject')">ውድቅ</button></div>`;wc.appendChild(el)});
-  if(!d.withdrawals.length)wc.innerHTML='<div style="opacity:.6;text-align:center;padding:14px">ጥያቄ የለም</div>';
+  d.withdrawals.forEach(w=>{const el=document.createElement('div');el.className='arow';el.innerHTML=`<div class="top"><span>${esc(w.name)} → ${w.amount} = ${w.birr} Birr</span><span style="font-size:9px">${w.phone}</span></div><div style="font-size:9px;opacity:.6">${esc(w.acc_name)}</div><div class="btns"><button class="btn sm grn" onclick="withd('${w.id}','paid')">Paid</button><button class="btn sm red" onclick="withd('${w.id}','reject')">Reject</button></div>`;wc.appendChild(el)});
+  if(!d.withdrawals.length)wc.innerHTML='<div style="opacity:.6;text-align:center;padding:10px">No pending</div>';
   const rc=document.getElementById('admRooms');rc.innerHTML='';
-  d.rooms.forEach(r=>{const el=document.createElement('div');el.className='arow';el.innerHTML=`<div class="top"><span>${esc(r.name)} (${r.count})</span><span style="font-size:12px;opacity:.6">${esc(r.creator_name)}</span></div><div class="btns"><button class="btn sm red" onclick="delRoom('${r.id}')">ሰርዝ</button></div>`;rc.appendChild(el)});
+  d.rooms.forEach(r=>{const el=document.createElement('div');el.className='arow';el.innerHTML=`<div class="top"><span>${esc(r.name)} (${r.count}) [${r.category||'chat'}]</span><span style="font-size:9px;opacity:.6">${esc(r.creator_name)}</span></div><div class="btns"><button class="btn sm red" onclick="delRoom('${r.id}')">Delete</button></div>`;rc.appendChild(el)});
   admUsers();
 }
-function admTab(t,el){document.querySelectorAll('#p-admin .subtab').forEach(x=>x.classList.remove('on'));el.classList.add('on');['admPurch','admWith','admUsers','admRooms'].forEach(id=>document.getElementById(id).style.display='none');document.getElementById({purch:'admPurch',with:'admWith',users:'admUsers',rooms:'admRooms'}[t]).style.display='block'}
-async function viewShot(id){const r=await fetch('/api/admin/shot/'+id,{headers:{'X-Telegram-Init-Data':init}});if(!r.ok){alert('ፎቶ የለም');return}const b=await r.blob();shotImg.src=URL.createObjectURL(b);openM('mShot')}
+function admTab(t2,el){document.querySelectorAll('#p-admin .subtab').forEach(x=>x.classList.remove('on'));el.classList.add('on');['admPurch','admWith','admUsers','admRooms'].forEach(id=>document.getElementById(id).style.display='none');document.getElementById({purch:'admPurch',with:'admWith',users:'admUsers',rooms:'admRooms'}[t2]).style.display='block'}
+async function viewShot(id){const r=await fetch('/api/admin/shot/'+id,{headers:{'X-Telegram-Init-Data':init}});if(!r.ok){alert('No photo');return}const b=await r.blob();shotImg.src=URL.createObjectURL(b);openM('mShot')}
 async function purch(id,a){await api('/api/admin/purchase','POST',{id,action:a});admOverview()}
 async function withd(id,a){await api('/api/admin/withdraw','POST',{id,action:a});admOverview()}
-async function delRoom(id){if(confirm('ክፍሉ ይሰረዝ?')){await api('/api/admin/room','POST',{id});admOverview()}}
+async function delRoom(id){if(confirm('Delete room?')){await api('/api/admin/room','POST',{id});admOverview()}}
 async function admUsers(){const q=document.getElementById('uSearch').value;const d=await api('/api/admin/users?q='+encodeURIComponent(q));if(!d.success)return;const c=document.getElementById('admUsers');
-  c.innerHTML='<input class="in" id="uSearch" placeholder="ፍለጋ" value="'+esc(q)+'" oninput="admUsers()">';
-  d.users.forEach(u=>{const el=document.createElement('div');el.className='arow';el.innerHTML=`<div class="top"><span>${esc(u.username)} <span style="opacity:.5;font-size:12px">${u.uid}</span></span><b style="color:${u.banned?'#ff4757':'#2ed573'}">${u.banned?'ታግዶ':'ንቁ'}</b></div><div style="font-size:12px;opacity:.7">🪙${u.coins} • ገቢ${u.earnings}</div><div class="btns"><button class="btn sm" onclick="grant('${u.uid}')">ሰጥ</button>${u.banned?`<button class="btn sm grn" onclick="uact('${u.uid}','unban')">ክፈት</button>`:`<button class="btn sm red" onclick="uact('${u.uid}','ban')">አግድ</button>`}<button class="btn sm red" onclick="uact('${u.uid}','delete')">ሰርዝ</button></div>`;c.appendChild(el)})}
-async function uact(uid,a){if(a==='delete'&&!confirm('ተጠቃሚው ይሰረዝ?'))return;const d=await api('/api/admin/user','POST',{uid,action:a});if(d.success)admUsers();else alert(d.error)}
+  c.innerHTML='<input class="in" id="uSearch" placeholder="Search" value="'+esc(q)+'" oninput="admUsers()">';
+  d.users.forEach(u=>{const el=document.createElement('div');el.className='arow';el.innerHTML=`<div class="top"><span>${esc(u.username)} <span style="opacity:.5;font-size:9px">${u.uid}</span></span><b style="color:${u.banned?'#ff4757':'#2ed573'}">${u.banned?'Banned':'Active'}</b></div><div style="font-size:9px;opacity:.7">🪙${u.coins} • Earn:${u.earnings} • 👥${u.referral_count||0} • 🎁${u.total_gifts_received||0}</div><div class="btns"><button class="btn sm" onclick="grant('${u.uid}')">Give</button>${u.banned?`<button class="btn sm grn" onclick="uact('${u.uid}','unban')">Unban</button>`:`<button class="btn sm red" onclick="uact('${u.uid}','ban')">Ban</button>`}<button class="btn sm red" onclick="uact('${u.uid}','delete')">Delete</button></div>`;c.appendChild(el)})}
+async function uact(uid,a){if(a==='delete'&&!confirm('Delete user?'))return;const d=await api('/api/admin/user','POST',{uid,action:a});if(d.success)admUsers();else alert(d.error)}
 function grant(uid){grUid.value=uid;grAmt.value='';openM('mGrant')}
 async function doGrant(){const d=await api('/api/admin/user','POST',{uid:grUid.value,action:'grant',amount:parseInt(grAmt.value)});if(d.success){closeM('mGrant');admUsers()}else alert(d.error)}
 
