@@ -1,9 +1,8 @@
 from flask import Flask, render_template, request, jsonify, Response, g
-import json, os, re, hmac, hashlib, time, uuid, base64, random
+import json, os, re, hmac, hashlib, time, uuid, base64, random, struct
 from functools import wraps
 from urllib.parse import parse_qsl
 from datetime import datetime
-from agora_token_builder import RtcTokenBuilder
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 TEMPLATE_DIR = os.path.join(BASE_DIR, 'templates')
@@ -63,6 +62,84 @@ COIN_PACKAGES = [
     {'id': 'p7', 'coins': 50000, 'price': 21000},
 ]
 
+# ============ AGORA TOKEN BUILDER (Pure Python - No External Package) ============
+def _pack_uint32(val):
+    return struct.pack('<I', val & 0xFFFFFFFF)
+
+def _pack_int64(val):
+    return struct.pack('<q', val)
+
+def _pack_string(val):
+    encoded = val.encode('utf-8') if isinstance(val, str) else val
+    return _pack_uint32(len(encoded)) + encoded
+
+def build_agora_rtc_token(app_id, app_certificate, channel_name, uid=0, role=1, expire_seconds=86400):
+    """
+    Build Agora RTC Token v2 using only Python standard library.
+    role: 1 = PUBLISHER, 2 = SUBSCRIBER
+    """
+    try:
+        current_ts = int(time.time())
+        expired_ts = current_ts + expire_seconds
+        
+        # Salt (random 4 bytes as uint32)
+        salt = random.randint(1, 0xFFFFFFFF)
+        
+        # Service type: 1 = RTC
+        service_type = 1
+        
+        # Packed privileges
+        privilege = b''
+        if role == 1:  # PUBLISHER
+            privilege += _pack_uint32(1) + _pack_int64(expired_ts)  # PUBLISH
+            privilege += _pack_uint32(2) + _pack_int64(expired_ts)  # SUBSCRIBE
+        else:  # SUBSCRIBER
+            privilege += _pack_uint32(2) + _pack_int64(expired_ts)  # SUBSCRIBE
+        
+        # Packed user identity
+        uid_str = str(uid) if uid else ""
+        
+        # Message for SHA256 hash
+        message = (
+            _pack_string(app_id) +
+            _pack_string(channel_name) +
+            _pack_uint32(salt) +
+            _pack_uint32(expired_ts) +
+            _pack_uint32(len(privilege)) + privilege +
+            _pack_string(uid_str)
+        )
+        
+        # SHA256 hash
+        sha256_hash = hashlib.sha256(message).digest()
+        
+        # Signature using certificate
+        sign_content = _pack_uint32(service_type) + sha256_hash
+        signature = hmac.new(
+            app_certificate.encode('utf-8'),
+            sign_content,
+            hashlib.sha256
+        ).digest()
+        
+        # Final token content
+        token_content = (
+            _pack_uint32(service_type) +
+            sha256_hash +
+            _pack_uint32(salt) +
+            _pack_uint32(expired_ts) +
+            _pack_uint32(len(privilege)) + privilege +
+            _pack_string(uid_str) +
+            signature
+        )
+        
+        # Base64 encode
+        b64_content = base64.b64encode(token_content).decode('utf-8')
+        
+        # Final token: "007" + appId + base64_content
+        return "007" + app_id + b64_content
+    except Exception as e:
+        raise Exception(f"Token build failed: {str(e)}")
+
+# ============ HELPERS ============
 def verify_init_data(init_data):
     try:
         if not BOT_TOKEN:
@@ -221,6 +298,7 @@ def user_view(u):
             'phone': u.get('phone', ''), 'joined': u.get('joined', ''),
             'photo': u.get('photo', '')}
 
+# ============ ROUTES ============
 @app.route('/')
 def index():
     return render_template('index.html')
@@ -851,16 +929,14 @@ def agora_token():
         return jsonify({'success': False, 'error': 'Agora App ID not configured'})
     
     try:
-        current_time = int(time.time())
-        privilege_expired_ts = current_time + 86400  # 24 hours
-        
-        token = RtcTokenBuilder.buildTokenWithUid(
-            app_id, 
-            app_cert if app_cert else '',
-            room_id, 
-            0,  # uid = 0 means any user
-            1,  # role = 1 (publisher)
-            privilege_expired_ts
+        # Use custom token builder (no external package)
+        token = build_agora_rtc_token(
+            app_id,
+            app_cert,
+            room_id,
+            uid=0,
+            role=1,
+            expire_seconds=86400
         )
     except Exception as e:
         return jsonify({'success': False, 'error': 'Token generation failed: ' + str(e)})
