@@ -44,12 +44,10 @@ nav button i{font-style:normal;font-size:21px;filter:grayscale(.7)}nav button.on
 @keyframes pulse{50%{opacity:.3}}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .game{text-align:center;padding:18px 8px;border-radius:16px;background:var(--card);border:1px solid var(--line)}.game b{display:block;font-size:34px}.game span{font-size:12px;color:var(--gold)}
-/* modal */
 .ov{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:50;display:flex;align-items:flex-end;justify-content:center;animation:fade .2s}
 .sheet{width:100%;max-width:480px;max-height:88vh;overflow-y:auto;background:linear-gradient(180deg,#1d0f38,#12072a);border-radius:22px 22px 0 0;padding:16px 16px calc(16px + var(--sb));border:1px solid var(--line)}
 .sheet h3{color:#fff;font-size:17px;margin:0 0 12px}
 .toast{position:fixed;left:50%;top:calc(var(--st) + 14px);transform:translateX(-50%);background:#000d;padding:10px 16px;border-radius:14px;z-index:99;max-width:90%;text-align:center;animation:fade .2s;border:1px solid var(--line)}
-/* vip + avatar frames */
 .vip{display:inline-block;font-size:9px;font-weight:800;letter-spacing:.3px;padding:1px 5px;border-radius:6px;background:linear-gradient(135deg,#ffd700,#ff9f1c);color:#2a1a00;vertical-align:1px;white-space:nowrap}
 .msg b.vipn,.seat .nm.vipn,.vipn{color:var(--gold)}
 .vipc{border-color:rgba(255,215,0,.45);background:linear-gradient(135deg,rgba(255,215,0,.13),rgba(255,159,28,.06))}
@@ -69,17 +67,14 @@ nav button i{font-style:normal;font-size:21px;filter:grayscale(.7)}nav button.on
 .fg{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
 .fi{display:flex;flex-direction:column;align-items:center;gap:6px;padding:14px 4px 9px;border-radius:14px;background:var(--card);border:1px solid var(--line);font-size:12px;text-align:center}
 .fi.on{border-color:var(--gold);background:rgba(255,215,0,.12)}.fi .fp{color:var(--gold);font-size:11px}
-/* missions */
 .ms{display:flex;align-items:center;gap:12px;padding:11px 0;border-bottom:1px solid var(--line)}.ms:last-of-type{border-bottom:0}
 .ms .mut{white-space:nowrap}
-/* live */
 #live{position:fixed;inset:0;z-index:30;background:#000;display:none}#live.on{display:block}
 #lv-video{position:absolute;inset:0;background:radial-gradient(#2a0f4a,#000)}#lv-video video{object-fit:cover!important}
 .lv-top{position:absolute;top:calc(var(--st) + 10px);left:10px;right:10px;display:flex;align-items:center;gap:8px;z-index:2}
 .lv-bot{position:absolute;left:0;right:0;bottom:0;padding:30px 10px calc(10px + var(--sb));background:linear-gradient(transparent,#000c);z-index:2}
 #lv-chat{max-height:34vh;overflow-y:auto;display:flex;flex-direction:column;gap:4px;margin-bottom:8px;width:82%}#lv-chat .msg{background:#0006}
 .lv-tag{background:#ff2d55;border-radius:6px;padding:2px 7px;font-size:11px;font-weight:800;letter-spacing:.5px}
-/* room */
 #room{position:fixed;inset:0;z-index:30;background:linear-gradient(160deg,#0a0118,#1b0b33 60%,#2a0f4a);display:none;flex-direction:column;padding-top:var(--st)}
 #room.on{display:flex}
 .rh{display:flex;align-items:center;gap:10px;padding:10px 12px}.rh .t{flex:1;min-width:0}.rh button{background:var(--card);border-radius:12px;width:38px;height:38px;font-size:17px;color:#fff}
@@ -110,6 +105,8 @@ nav button i{font-style:normal;font-size:21px;filter:grayscale(.7)}nav button.on
 .splash{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;z-index:100;background:linear-gradient(160deg,var(--bg),var(--bg2))}
 .spin{width:36px;height:36px;border:4px solid #fff3;border-top-color:var(--gold);border-radius:50%;animation:rot 1s linear infinite}@keyframes rot{to{transform:rotate(360deg)}}
 .empty{text-align:center;color:var(--mut);padding:26px 0}
+.agent-tag{display:inline-block;font-size:9px;font-weight:800;letter-spacing:.3px;padding:1px 5px;border-radius:6px;background:linear-gradient(135deg,#9b5cff,#667eea);color:#fff;vertical-align:1px;white-space:nowrap;margin-left:4px}
+.host-tag{display:inline-block;font-size:9px;font-weight:800;letter-spacing:.3px;padding:1px 5px;border-radius:6px;background:linear-gradient(135deg,#2ee59d,#10b981);color:#fff;vertical-align:1px;white-space:nowrap;margin-left:4px}
 </style>
 </head>
 <body>
@@ -151,6 +148,8 @@ function hap(t='light'){try{tg&&tg.HapticFeedback&&tg.HapticFeedback.impactOccur
 function av(u,cls=''){const n=(u&&u.name||'?')[0].toUpperCase();const h=((u&&u.id)||0)*47%360;const f=u&&u.fr?` fr fr-${esc(u.fr)}`:'';
  return u&&u.photo?`<div class="av ${cls}${f}" style="background-image:url('${esc(u.photo)}')"></div>`:`<div class="av ${cls}${f}" style="background:hsl(${h},55%,42%)">${esc(n)}</div>`}
 const vipTag=u=>u&&u.vip?'<span class="vip">VIP</span>':'';
+const hostTag=u=>u&&u.host==='host'?'<span class="host-tag">HOST</span>':'';
+const agentTag=u=>u&&u.ag?'<span class="agent-tag">AGENT</span>':'';
 const vipLeft=m=>Math.max(0,Math.ceil(((m.vip_until||0)-Date.now()/1000)/86400));
 async function api(path,body,retry=true){
   const o={headers:{}};if(TOKEN)o.headers.Authorization='Bearer '+TOKEN;
@@ -182,7 +181,7 @@ setInterval(()=>{if(!document.hidden&&!R?.visible&&PAGE==='rooms')loadRoomList()
 /* ============================== home ============================== */
 async function renderHome(){
   const m=S.me,el=$('#p-home');
-  el.innerHTML=topbar()+`<div class="hero"><div class="row">${av(m,'l')}<div class="sp"><div style="font-size:18px;font-weight:700" class="ell">ሰላም ${esc(m.name)} 👋</div><div class="mut">${m.lvi} ${m.lvn} ${vipTag(m)} · 🪙 <span class="coins-n">${fmt(m.coins)}</span></div></div></div>
+  el.innerHTML=topbar()+`<div class="hero"><div class="row">${av(m,'l')}<div class="sp"><div style="font-size:18px;font-weight:700" class="ell">ሰላም ${esc(m.name)} 👋</div><div class="mut">${m.lvi} ${m.lvn} ${vipTag(m)}${hostTag(m)}${agentTag(m)} · 🪙 <span class="coins-n">${fmt(m.coins)}</span></div></div></div>
   <div class="row" style="margin-top:12px"><button class="btn gold sp" id="daily" ${m.daily_ready?'':'disabled'}>🎁 ${m.daily_ready?'የዕለት ሽልማት ውሰድ'+(m.vip?' (VIP +50%)':''):'ዛሬ ወስደሃል ✓'}</button><button class="btn sp" onclick="go('rooms')">🎧 ክፍል ግባ</button></div></div>
   <div id="h-ms"></div><h3>🔥 ሞቅ ያሉ ክፍሎች</h3><div id="h-rooms" class="empty">…</div><h3>🏆 ከፍተኛ ስጦታ ሰጪዎች</h3><div id="h-lb" class="empty">…</div>`;
   $('#daily').onclick=e=>run(e.target,async()=>{const d=await api('/api/daily',{});setMe(d.me);toast(`🎉 +${d.reward} ሳንቲም (ቀን ${d.streak})`);hap('medium');renderHome()});
@@ -198,7 +197,7 @@ async function loadRoomList(){try{const d=await api('/api/rooms');const l=d.room
 function newRoom(kind){const lv=kind==='live';const m=modal(`<h3>${lv?'📹 ላይቭ ጀምር':'🎙 አዲስ ክፍል'}</h3><div class="col"><input id="nr-n" placeholder="${lv?'የላይቭ ርዕስ':'የክፍል ስም'}" maxlength="40">${lv?'':'<input id="nr-t" placeholder="ርዕስ (አማራጭ)" maxlength="100">'}<button class="btn ${lv?'bad':''}" id="nr-b">${lv?'📹 ጀምር':'ክፈት'}</button></div>`);
   $('#nr-b').onclick=e=>run(e.target,async()=>{const d=await api('/api/rooms/create',{name:$('#nr-n').value,topic:lv?'':$('#nr-t').value,kind:lv?'live':'voice'});m.close();enterRoom(d.id)})}
 
-/* ============================== voice engine (Agora live mode) ============================== */
+/* ============================== voice engine ============================== */
 const V={client:null,track:null,rid:null,pub:false,busy:false,preparing:false,
  set(t,c){const e=$(R&&R.kind==='live'?'#lv-vs':'#r-vs');if(e){e.textContent=t;e.style.color=c||''}},
  async join(rid,kind,isHost){
@@ -219,7 +218,7 @@ const V={client:null,track:null,rid:null,pub:false,busy:false,preparing:false,
    try{await this.client.enableDualStream()}catch(e){}await this.client.publish([a,v]);this.pub=true;$('#lv-flip').style.display='';$('#lv-mic').style.display=''}
   catch(e){toast('📷 ካሜራ/ማይክ አልተፈቀደም — በስልክ ቅንብር ፍቀድ');exitRoom(true)}},
  async renew(){try{const d=await api('/api/agora-token',{room_id:this.rid});await this.client.renewToken(d.token)}catch(e){}},
- async prepMic(){ // ask permission BEFORE taking a seat
+ async prepMic(){
   if(this.track)return true;
   try{this.track=await AgoraRTC.createMicrophoneAudioTrack({AEC:true,ANS:true,AGC:true,encoderConfig:'music_standard'});return true}
   catch(e){toast('🎤 ማይክሮፎን አልተፈቀደም — በስልክ ቅንብር ፍቀድ');return false}},
@@ -276,7 +275,7 @@ async function seatTap(i){const r=R;if(!r)return;const s=r.seats[i];
     if(!await V.prepMic())return;
     try{await api(`/api/rooms/${r.id}/seat`,{idx:i});hap('medium');poll()}catch(e){toast(e.message);if(!V.pub&&V.track){V.track.close();V.track=null}} return}
   const u=s.u,mine=u.id===S.me.id,amHost=r.host===S.me.id||S.me.is_admin;
-  modal(`<div class="col" style="align-items:center;text-align:center">${av(u,'l')}<b style="font-size:18px">${esc(u.name)}</b><div><span class="badge">${u.lvi} ${u.lvn}</span> ${vipTag(u)}</div><div class="mut">${esc(u.bio||'')}</div></div>
+  modal(`<div class="col" style="align-items:center;text-align:center">${av(u,'l')}<b style="font-size:18px">${esc(u.name)}</b><div><span class="badge">${u.lvi} ${u.lvn}</span> ${vipTag(u)}${hostTag(u)}${agentTag(u)}</div><div class="mut">${esc(u.bio||'')}</div></div>
   <div class="row" style="margin-top:14px;flex-wrap:wrap;justify-content:center">
   ${mine?(i===0?'':`<button class="btn bad sm" onclick="seatLeave()">ወንበር ልቀቅ</button>`):`<button class="btn gold sm" onclick="closeModal();openGift(${u.id})">🎁 ስጦታ</button>`}
   ${amHost&&!mine&&u.id!==r.host?`<button class="btn ghost sm" onclick="seatAct(${u.id},'${s.m?'unmute':'mute'}')">${s.m?'🔊 ድምፅ ፍቀድ':'🔇 አጥፋ'}</button><button class="btn bad sm" onclick="seatAct(${u.id},'kick')">⛔ አስወጣ</button>`:''}</div>`)}
@@ -289,11 +288,10 @@ function addMsg(m,anim){const c=$(R&&R.kind==='live'?'#lv-chat':'#r-chat'),near=
   c.appendChild(d);while(c.children.length>120)c.firstChild.remove();if(near||!anim)c.scrollTop=c.scrollHeight}
 function flyGift(g,from){const e=document.createElement('div');e.className='fly'+(['luxury','legendary','mythic'].includes(g.tier)?' big':'');e.innerHTML=`${g.emoji}<small>${esc(from)} → ${esc(g.to_name)} ×${g.qty}</small>`;document.body.appendChild(e);setTimeout(()=>e.remove(),4000);hap('medium')}
 
-/* ---- live helpers ---- */
 function renderLiveHost(){const h=R&&R.seats[0];$('#lv-host').innerHTML=h?`${av(h.u,'s')}<div style="line-height:1.2"><b class="ell" style="display:block;max-width:110px">${esc(h.u.name)}</b><span class="mut ell" style="color:#ddd;display:block;max-width:110px">${esc(R.name)}</span></div>`:'…'}
 async function flipCam(){try{const c=await AgoraRTC.getCameras();if(c.length<2||!V.vtrack)return;V.camI=((V.camI||0)+1)%c.length;await V.vtrack.setDevice(c[V.camI].deviceId)}catch(e){toast('ካሜራ መቀየር አልተቻለም')}}
 async function liveMic(){if(!V.track||!R)return;R.selfMute=!R.selfMute;await V.track.setEnabled(!R.selfMute);$('#lv-mic').textContent=R.selfMute?'🔇':'🎤'}
-/* ---- gifts ---- */
+
 let GF={to:0,gift:null,qty:1};
 function openGift(to){if(!R)return;const r=R;
   const rec=Object.values(r.seats).filter(s=>s.u.id!==S.me.id);if(!rec.length)return toast('ስጦታ የሚቀበል ሰው የለም (ወንበር ላይ ያለ ሰው ይፈልጋል)');
@@ -337,8 +335,11 @@ function openGame(k){const g=GM[k];let bet=50,pick=g.pick?g.pick[0]:0;
 async function renderWallet(){
   const el=$('#p-wallet');el.innerHTML=topbar()+'<div class="empty">…</div>';
   try{const w=await api('/api/wallet');setMe(w.me);const m=w.me;
+  const totalAvail=(m.earnings||0)+(m.comm||0);
   el.innerHTML=topbar()+`<div class="grid2"><div class="card"><div class="mut">🪙 ሳንቲም</div><div style="font-size:26px;font-weight:800" class="gold coins-n">${fmt(m.coins)}</div><button class="btn gold sm" style="width:100%;margin-top:8px" onclick="buyModal()">ግዛ</button></div>
-  <div class="card"><div class="mut">💰 ገቢ</div><div style="font-size:26px;font-weight:800;color:var(--ok)">${fmt(m.earnings)}</div><div class="mut">≈ ${fmt(Math.floor(m.earnings*S.cfg.rate))} ብር</div><button class="btn sm" style="width:100%;margin-top:4px" onclick="withModal()">አውጣ</button></div></div>
+  <div class="card"><div class="mut">💰 ገቢ</div><div style="font-size:26px;font-weight:800;color:var(--ok)">${fmt(m.earnings)}</div><div class="mut">≈ ${fmt(Math.floor(m.earnings*S.cfg.rate))} ብር</div></div>
+  <div class="card"><div class="mut">🤝 ኮሚሽን</div><div style="font-size:26px;font-weight:800;color:var(--pri2)">${fmt(m.comm)}</div><div class="mut">≈ ${fmt(Math.floor((m.comm||0)*S.cfg.rate))} ብር</div></div>
+  <div class="card"><div class="mut">💵 ጠቅላላ ማውጣት</div><div style="font-size:26px;font-weight:800;color:#fff">${fmt(totalAvail)}</div><div class="mut">≈ ${fmt(Math.floor(totalAvail*S.cfg.rate))} ብር</div><button class="btn sm" style="width:100%;margin-top:4px" onclick="withModal()">አውጣ</button></div></div>
   <h3>የግዢ ታሪክ</h3>${w.purchases.map(p=>`<div class="card row"><div class="sp"><b>${fmt(p.coins)} 🪙</b> <span class="mut">${p.birr} ብር</span></div><span class="badge">${{pending:'⏳ በመጠባበቅ',approved:'✅ ጸድቋል',rejected:'❌ ውድቅ'}[p.status]}</span></div>`).join('')||'<div class="empty">—</div>'}
   <h3>የማውጣት ታሪክ</h3>${w.withdraws.map(p=>`<div class="card row"><div class="sp"><b>${fmt(p.coins)}</b> <span class="mut">${p.birr} ብር</span></div><span class="badge">${{pending:'⏳',paid:'✅ ተከፍሏል',rejected:'❌'}[p.status]}</span></div>`).join('')||'<div class="empty">—</div>'}
   <h3>እንቅስቃሴ</h3>${w.txs.map(t=>`<div class="row mut" style="padding:4px 0"><span class="sp ell">${esc(t.kind)} ${esc(t.note)}</span><b class="${t.amount>=0?'win':'lose'}">${t.amount>=0?'+':''}${fmt(t.amount)}</b><span>${ago(t.ts)}</span></div>`).join('')}`}catch(e){toast(e.message)}}
@@ -349,8 +350,9 @@ function buyModal(){let pk=S.cfg.packages[0];
   $$('#pk .card',m).forEach(c=>c.onclick=()=>{pk=S.cfg.packages.find(p=>p.coins==c.dataset.c);$$('#pk .card',m).forEach(x=>x.style.borderColor=x===c?'var(--gold)':'')});
   $('#b-go',m).onclick=e=>run(e.target,async()=>{const f=$('#b-f',m).files[0];if(!f)throw new Error('ስክሪንሾት ያያይዙ');const fd=new FormData();fd.append('coins',pk.coins);fd.append('ref',$('#b-ref',m).value);fd.append('file',await shrink(f),'s.jpg');
    await api('/api/coins/buy',fd);m.close();toast('✅ ተልኳል — admin ሲያጸድቅ ይታከላል');renderWallet()})}
-function withModal(){const m=modal(`<h3>💰 ገቢ አውጣ</h3><div class="mut" style="margin-bottom:8px">1 coin = ${S.cfg.rate} ብር · ዝቅተኛ ${S.cfg.min_withdraw}</div><div class="col"><input id="w-c" type="number" inputmode="numeric" placeholder="ብዛት" value="${S.me.earnings}"><input id="w-p" placeholder="Telebirr 09xxxxxxxx" value="${esc(S.me.phone)}" maxlength="10"><button class="btn" id="w-go">ጠይቅ</button></div>`);
-  $('#w-go',m).onclick=e=>run(e.target,async()=>{await api('/api/withdraw',{coins:+$('#w-c',m).value,phone:$('#w-p',m).value});m.close();toast('✅ ጥያቄ ተልኳል');renderWallet()})}
+function withModal(){const m=w_me=S.me;const totalAvail=(m.earnings||0)+(m.comm||0);
+  const m2=modal(`<h3>💰 ገቢ አውጣ</h3><div class="mut" style="margin-bottom:8px">1 coin = ${S.cfg.rate} ብር · ዝቅተኛ ${S.cfg.min_withdraw}</div><div class="mut" style="margin-bottom:8px">💰 ገቢ: ${fmt(m.earnings)} · 🤝 ኮሚሽን: ${fmt(m.comm||0)}</div><div class="col"><input id="w-c" type="number" inputmode="numeric" placeholder="ብዛት" value="${totalAvail}"><input id="w-p" placeholder="Telebirr 09xxxxxxxx" value="${esc(m.phone)}" maxlength="10"><button class="btn" id="w-go">ጠይቅ</button></div>`);
+  $('#w-go',m2).onclick=e=>run(e.target,async()=>{await api('/api/withdraw',{coins:+$('#w-c',m2).value,phone:$('#w-p',m2).value});m2.close();toast('✅ ጥያቄ ተልኳል');renderWallet()})}
 
 /* ============================== community ============================== */
 let CT='posts';
@@ -402,20 +404,37 @@ async function openShop(){
 async function renderMe(){
   try{const d=await api('/api/me');setMe(d.me)}catch(e){}
   const m=S.me,pct=m.next?Math.min(100,Math.round((m.spent-m.base)/(m.next-m.base)*100)):100,link=S.cfg.bot?`https://t.me/${S.cfg.bot}?startapp=ref_${m.tg_id}`:'';
-  $('#p-me').innerHTML=topbar()+`<div class="card" style="text-align:center"><div style="display:flex;justify-content:center">${av(m,'l')}</div><h2 style="margin:8px 0 2px">${esc(m.name)}</h2><span class="badge">${m.lvi} ${m.lvn}</span> ${vipTag(m)}<div class="mut" style="margin:6px 0">${esc(m.bio||'—')}</div>
+  $('#p-me').innerHTML=topbar()+`<div class="card" style="text-align:center"><div style="display:flex;justify-content:center">${av(m,'l')}</div><h2 style="margin:8px 0 2px">${esc(m.name)}</h2><span class="badge">${m.lvi} ${m.lvn}</span> ${vipTag(m)}${hostTag(m)}${agentTag(m)}<div class="mut" style="margin:6px 0">${esc(m.bio||'—')}</div>
   <div class="bar2"><i style="width:${pct}%"></i></div><div class="mut" style="margin-top:4px">${m.next?`ወደ ቀጣዩ ደረጃ ${fmt(m.next-m.spent)} 🪙 ቀርቷል`:'👑 ከፍተኛ ደረጃ'}</div></div>
   <div class="grid2"><div class="card" style="text-align:center"><div class="mut">የላክሁት ስጦታ</div><b class="gold">${fmt(m.sent)}</b></div><div class="card" style="text-align:center"><div class="mut">የተቀበልኩት</div><b class="gold">${fmt(m.recv)}</b></div></div>
-  <div class="col"><button class="btn gold" onclick="openShop()">✨ VIP እና ፍሬም${m.vip?` · ${vipLeft(m)} ቀን`:''}</button><button class="btn" onclick="editProfile()">✏️ ፕሮፋይል አስተካክል</button>${link?`<button class="btn ghost" onclick="navigator.clipboard&&navigator.clipboard.writeText('${link}');toast('📋 የመጋበዣ ሊንክ ተቀድቷል — 10% ቦነስ ታገኛለህ')">🔗 ጓደኛ ጋብዝ (10% ቦነስ)</button>`:''}${m.is_admin?`<button class="btn gold" onclick="openAdmin()">🛡 Admin</button>`:''}</div>`}
+  <div class="col">
+  <button class="btn gold" onclick="openShop()">✨ VIP እና ፍሬም${m.vip?` · ${vipLeft(m)} ቀን`:''}</button>
+  ${m.host==='none'?`<button class="btn ghost" onclick="applyHost()">🎤 Host ሁን (50% ድርሻ)</button>`:m.host==='pending'?`<button class="btn ghost" disabled>⏳ Host ጥያቄ በመጠባበቅ</button>`:`<button class="btn ghost" disabled>✅ Host ነህ</button>`}
+  ${m.host==='host'&&!m.ag?`<button class="btn ghost" onclick="applyAgent()">🤝 Agent ሁን</button>`:''}
+  ${m.ag?`<button class="btn" onclick="openAgent()">📊 Agent Dashboard</button>`:''}
+  <button class="btn" onclick="editProfile()">✏️ ፕሮፋይል አስተካክል</button>
+  ${link?`<button class="btn ghost" onclick="navigator.clipboard&&navigator.clipboard.writeText('${link}');toast('📋 የመጋበዣ ሊንክ ተቀድቷል — 10% ቦነስ ታገኛለህ')">🔗 ጓደኛ ጋብዝ (10% ቦነስ)</button>`:''}
+  ${m.is_admin?`<button class="btn gold" onclick="openAdmin()">🛡 Admin</button>`:''}</div>`}
 function editProfile(){const m=S.me;const o=modal(`<h3>✏️ ፕሮፋይል</h3><div class="col"><input id="e-p" type="file" accept="image/*"><input id="e-n" value="${esc(m.name)}" maxlength="30" placeholder="ስም"><input id="e-b" value="${esc(m.bio)}" maxlength="160" placeholder="ስለ እኔ"><input id="e-t" value="${esc(m.phone)}" maxlength="10" placeholder="ስልክ 09xxxxxxxx"><button class="btn" id="e-go">አስቀምጥ</button></div>`);
   $('#e-go',o).onclick=e=>run(e.target,async()=>{const f=$('#e-p',o).files[0];if(f){const fd=new FormData();fd.append('file',await shrink(f,320,.85),'p.jpg');setMe((await api('/api/profile/photo',fd)).me)}
    setMe((await api('/api/profile',{name:$('#e-n',o).value,bio:$('#e-b',o).value,phone:$('#e-t',o).value})).me);o.close();renderMe()})}
+
+/* ============================== host & agent ============================== */
+async function applyHost(){await run(null,async()=>{await api('/api/host/apply',{});toast('🎤 ጥያቄ ተልኳል — admin ሲያጸድቅ ይረጋገጣል');renderMe()})}
+async function applyAgent(){await run(null,async()=>{await api('/api/agent/apply',{});toast('🤝 Agent ሆነሃል!');renderMe()})}
+async function openAgent(){const m=modal('<div class="empty">…</div>');
+ try{const d=await api('/api/agent/dashboard');
+ m.firstChild.innerHTML=`<h3>📊 Agent Dashboard</h3><div class="grid2"><div class="card" style="margin:0"><div class="mut">🤝 ኮሚሽን</div><b class="gold">${fmt(d.comm)} 🪙</b><div class="mut">≈ ${fmt(Math.floor(d.comm*S.cfg.rate))} ብር</div></div><div class="card" style="margin:0"><div class="mut">ጠቅላላ ያገኘህ</div><b>${fmt(d.total)} 🪙</b></div></div>
+ <div class="card" style="margin-top:10px"><div class="mut">🔗 የመጋበዣ ሊንክህ</div><b style="font-size:12px;word-break:break-all">${esc(d.link)}</b><button class="btn sm gold" style="margin-top:6px" onclick="navigator.clipboard.writeText('${d.link}');toast('📋 ተቀድቷል')">ቅዳ</button></div>
+ <h3>🎤 Hosts (${d.hosts.length})</h3>${d.hosts.map(h=>`<div class="row" style="padding:5px 0">${av(h,'s')}<div class="sp ell">${esc(h.name)}</div><b class="gold">${fmt(h.earn)}</b></div>`).join('')||'<div class="empty">ገና የለም</div>'}
+ <h3>🤝 Sub-agents (${d.subs.length})</h3>${d.subs.map(s=>`<div class="row" style="padding:5px 0">${av(s,'s')}<div class="sp ell">${esc(s.name)}</div><b>${fmt(s.comm)} 🪙</b></div>`).join('')||'<div class="empty">ገና የለም</div>'}`}catch(e){m.close();toast(e.message)}}
 
 /* ============================== admin ============================== */
 function openAdmin(){const o=modal(`<div class="chips" id="at">${['overview','purchases','withdraws','users'].map((t,i)=>`<div class="chip ${i?'':'on'}" data-t="${t}">${t}</div>`).join('')}</div><div id="ab" style="margin-top:10px"></div>`);
   const load=async t=>{$$('#at .chip',o).forEach(c=>c.classList.toggle('on',c.dataset.t===t));const b=$('#ab',o);b.innerHTML='…';
    try{if(t==='overview'){const d=await api('/api/admin/overview');b.innerHTML=`<div class="grid2">${Object.entries(d).map(([k,v])=>`<div class="card" style="margin:0"><div class="mut">${k}</div><b>${fmt(v)}</b></div>`).join('')}</div>`}
    else if(t==='purchases'||t==='withdraws'){const d=await api('/api/admin/'+t);b.innerHTML=d.items.map(x=>`<div class="card"><b>${esc(x.name)}</b> · ${fmt(x.coins)} 🪙 · ${fmt(x.birr)} ብር<div class="mut">${esc(x.ref||x.phone)} · ${ago(x.ts)}</div><div class="row" style="margin-top:8px">${t==='purchases'?`<button class="btn ghost sm" onclick="viewShot(${x.id})">🖼</button><button class="btn sm" onclick="admAct('purchase',${x.id},'approve')">✅</button><button class="btn bad sm" onclick="admAct('purchase',${x.id},'reject')">❌</button>`:`<button class="btn sm" onclick="admAct('withdraw',${x.id},'paid')">💰 Paid</button><button class="btn bad sm" onclick="admAct('withdraw',${x.id},'reject')">❌</button>`}</div></div>`).join('')||'<div class="empty">ባዶ</div>'}
-   else{b.innerHTML=`<input id="uq" placeholder="ፈልግ (ስም / telegram id)"><div id="ul" style="margin-top:8px"></div>`;const ld=async()=>{const d=await api('/api/admin/users?q='+encodeURIComponent($('#uq',o).value));$('#ul',o).innerHTML=d.items.map(u=>`<div class="card"><b>${esc(u.name)}</b> ${u.banned?'🚫':''} ${u.vip?'<span class="vip">VIP</span>':''}<div class="mut">tg:${u.tg} · 🪙${fmt(u.coins)} · 💰${fmt(u.earn)}</div><div class="row" style="margin-top:6px;flex-wrap:wrap"><button class="btn sm ghost" onclick="admUser(${u.id},'${u.banned?'unban':'ban'}')">${u.banned?'Unban':'Ban'}</button><button class="btn sm gold" onclick="admGrant(${u.id})">+Coins</button><button class="btn sm ghost" onclick="admVip(${u.id})">+VIP</button><button class="btn sm bad" onclick="confirm('Delete?')&&admUser(${u.id},'delete')">🗑</button></div></div>`).join('')};$('#uq',o).oninput=()=>{clearTimeout(window._uq);window._uq=setTimeout(ld,350)};ld()}}catch(e){b.innerHTML=esc(e.message)}};
+   else{b.innerHTML=`<input id="uq" placeholder="ፈልግ (ስም / telegram id)"><div id="ul" style="margin-top:8px"></div>`;const ld=async()=>{const d=await api('/api/admin/users?q='+encodeURIComponent($('#uq',o).value));$('#ul',o).innerHTML=d.items.map(u=>`<div class="card"><b>${esc(u.name)}</b> ${u.banned?'🚫':''} ${u.vip?'<span class="vip">VIP</span>':''} ${u.host==='host'?'<span class="host-tag">HOST</span>':''} ${u.ag?'<span class="agent-tag">AGENT</span>':''}<div class="mut">tg:${u.tg} · 🪙${fmt(u.coins)} · 💰${fmt(u.earn)}</div><div class="row" style="margin-top:6px;flex-wrap:wrap"><button class="btn sm ghost" onclick="admUser(${u.id},'${u.banned?'unban':'ban'}')">${u.banned?'Unban':'Ban'}</button><button class="btn sm" onclick="admUser(${u.id},'host',1)">✅ Host</button><button class="btn sm" onclick="admUser(${u.id},'agent')">🤝 Agent</button><button class="btn sm gold" onclick="admGrant(${u.id})">+Coins</button><button class="btn sm ghost" onclick="admVip(${u.id})">+VIP</button><button class="btn sm bad" onclick="confirm('Delete?')&&admUser(${u.id},'delete')">🗑</button></div></div>`).join('')};$('#uq',o).oninput=()=>{clearTimeout(window._uq);window._uq=setTimeout(ld,350)};ld()}}catch(e){b.innerHTML=esc(e.message)}};
   $$('#at .chip',o).forEach(c=>c.onclick=()=>load(c.dataset.t));window._admLoad=load;window._admTab=()=>$('#at .chip.on',o).dataset.t;load('overview')}
 const admAct=(k,id,a)=>run(null,async()=>{await api('/api/admin/'+k,{id,action:a});window._admLoad(window._admTab())});
 const admUser=(id,a,amount)=>run(null,async()=>{await api('/api/admin/user',{id,action:a,amount});window._admLoad(window._admTab())});
