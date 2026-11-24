@@ -272,7 +272,7 @@ def ensure_columns():
             ('frame', "VARCHAR(20) DEFAULT ''"), 
             ('real_coins', 'INTEGER DEFAULT 0 NOT NULL'),
             ('host_status', "VARCHAR(8) DEFAULT 'none'"), 
-            ('is_agent', 'BOOLEAN DEFAULT 0'),
+            ('is_agent', 'BOOLEAN DEFAULT FALSE'),
             ('agent_id', 'INTEGER'), 
             ('parent_agent_id', 'INTEGER'), 
             ('commission', 'INTEGER DEFAULT 0 NOT NULL')
