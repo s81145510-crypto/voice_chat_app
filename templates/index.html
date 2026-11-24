@@ -1,229 +1,432 @@
-{% raw %}
 <!DOCTYPE html>
-<html lang="en">
+<html lang="am">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="theme-color" content="#0a0118">
 <title>Twenty One Party</title>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <script src="https://cdn.agora.io/sdk/release/AgoraRTC_N-4.20.0.js"></script>
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <style>
-*{margin:0;padding:0;box-sizing:border-box}
-body{font-family:-apple-system,sans-serif;background:linear-gradient(160deg,#0a0118,#1a0a2e);color:#fff;min-height:100vh;padding-bottom:65px;font-size:12px}
-.app-title{text-align:center;padding:8px;font-size:16px;font-weight:bold;background:linear-gradient(135deg,#ffd700,#ff4757);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
-.hdr{background:linear-gradient(135deg,#667eea,#764ba2);padding:8px 12px;display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:100}
-.hdr-l{display:flex;align-items:center;gap:8px}
-.av{width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,#f093fb,#f5576c);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:bold;border:2px solid rgba(255,255,255,.3);cursor:pointer;overflow:hidden}
-.av img{width:100%;height:100%;object-fit:cover}
-.hdr-l h3{font-size:13px}.hdr-l p{font-size:9px;opacity:.85}
-.coin{background:linear-gradient(135deg,#ffd700,#ffed4e);color:#333;padding:5px 10px;border-radius:18px;font-weight:bold;display:flex;align-items:center;gap:4px;font-size:11px;cursor:pointer}
-.page{display:none}.page.active{display:block}
-.nav{position:fixed;bottom:0;left:0;right:0;background:rgba(10,1,24,.98);display:flex;justify-content:space-around;padding:6px 0;border-top:1px solid rgba(255,255,255,.1);z-index:1000}
-.ni{display:flex;flex-direction:column;align-items:center;gap:2px;cursor:pointer;padding:3px 8px}
-.ni i{font-size:16px;opacity:.5}.ni span{font-size:8px;opacity:.5}
-.ni.on i{opacity:1;color:#f093fb}.ni.on span{opacity:1;color:#f093fb}
-.sec{padding:10px}.st{font-size:14px;font-weight:bold;margin-bottom:8px}
-.grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-.card{background:rgba(102,126,234,.3);border-radius:10px;padding:10px;cursor:pointer;border:1px solid rgba(255,255,255,.1)}
-.card h4{font-size:12px;margin-bottom:4px}.card .host{font-size:10px;opacity:.8}
-.card .row{display:flex;justify-content:space-between;font-size:10px;opacity:.85}
-.live{background:#ff4757;padding:2px 6px;border-radius:8px;font-size:8px;font-weight:bold}
-.btn{background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;border:none;padding:9px;border-radius:18px;font-size:12px;font-weight:700;cursor:pointer;width:100%;margin:6px 0}
-.btn.red{background:linear-gradient(135deg,#ff4757,#ff6348)}
-.btn.grn{background:linear-gradient(135deg,#2ed573,#7bed9f);color:#0a3d1f}
-.btn.gold{background:linear-gradient(135deg,#ffd700,#ffed4e);color:#333}
-.btn.sm{padding:6px 10px;font-size:10px;width:auto;display:inline-block;margin:0}
-.wh{background:linear-gradient(135deg,#ffd700,#ffed4e);padding:16px 12px;text-align:center;color:#333}
-.wh .bal{font-size:32px;font-weight:bold}.wh .lbl{font-size:11px;opacity:.85}
-.pkg{background:rgba(255,255,255,.1);border-radius:10px;padding:10px;text-align:center;cursor:pointer}
-.pkg .c{font-size:16px;font-weight:bold;color:#ffd700}.pkg .p{font-size:10px;opacity:.8}
-.rh{background:linear-gradient(135deg,#667eea,#764ba2);padding:12px;text-align:center}
-.rh h2{font-size:16px}.rh p{font-size:10px;opacity:.9}
-.seats{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;padding:10px}
-.seat{background:rgba(255,255,255,.08);border-radius:10px;padding:8px 4px;text-align:center;cursor:pointer}
-.seat.host{background:linear-gradient(135deg,#ffd700,#ffed4e);color:#333}
-.seat.occ{background:linear-gradient(135deg,#667eea,#764ba2)}
-.seat .ic{font-size:18px}.seat .nm{font-size:8px;font-weight:700}.seat .no{font-size:7px;opacity:.7}
-.chat{background:rgba(0,0,0,.3);border-radius:8px;margin:0 10px 8px;padding:8px;max-height:150px;overflow-y:auto;font-size:11px}
-.msg{margin-bottom:4px;padding:5px 8px;background:rgba(255,255,255,.08);border-radius:6px}
-.msg.sys{background:rgba(240,147,251,.15);font-style:italic}
-.ci{display:flex;gap:6px;padding:0 10px 8px}
-.ci input{flex:1;background:rgba(255,255,255,.1);border:none;padding:8px 12px;border-radius:18px;color:#fff;font-size:12px}
-.send{background:linear-gradient(135deg,#667eea,#764ba2);border:none;padding:8px 12px;border-radius:18px;color:#fff;cursor:pointer}
-.ph{background:linear-gradient(135deg,#667eea,#764ba2);padding:20px 12px;text-align:center}
-.pav{width:70px;height:70px;border-radius:50%;background:linear-gradient(135deg,#f093fb,#f5576c);display:flex;align-items:center;justify-content:center;font-size:28px;margin:0 auto 8px;border:3px solid rgba(255,255,255,.3);overflow:hidden}
-.pav img{width:100%;height:100%;object-fit:cover}
-.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;padding:10px}
-.stat{background:rgba(255,255,255,.08);border-radius:8px;padding:10px;text-align:center}
-.stat b{font-size:16px;color:#ffd700}.stat span{font-size:9px;opacity:.7;display:block;margin-top:3px}
-.modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.9);z-index:2000;justify-content:center;align-items:center;padding:12px}
-.modal.on{display:flex}
-.mc{background:linear-gradient(160deg,#1a0a2e,#0a0118);border-radius:14px;padding:16px;max-width:380px;width:100%;max-height:85vh;overflow-y:auto}
-.mt{font-size:15px;font-weight:bold;margin-bottom:12px;text-align:center}
-.in{width:100%;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.15);padding:9px 11px;border-radius:8px;color:#fff;font-size:12px;margin-bottom:8px}
-textarea.in{min-height:60px;resize:vertical}
-.voice{display:flex;align-items:center;gap:8px;padding:8px 12px;background:rgba(46,213,115,.15);border:1px solid rgba(46,213,115,.4);border-radius:10px;margin:0 10px 8px;font-size:11px}
-.voice .dot{width:8px;height:8px;border-radius:50%;background:#2ed573}
-.load{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;gap:12px}
-.sp{width:36px;height:36px;border:3px solid rgba(255,255,255,.15);border-top-color:#667eea;border-radius:50%;animation:sp 1s linear infinite}
-@keyframes sp{to{transform:rotate(360deg)}}
-.info{background:rgba(255,215,0,.12);border:1px solid rgba(255,215,0,.3);border-radius:8px;padding:8px;font-size:11px;margin-bottom:8px}
-.info b{color:#ffd700}
-.ref-info{background:rgba(46,213,115,.1);border:1px solid rgba(46,213,115,.3);border-radius:8px;padding:8px;margin:8px 0;font-size:11px}
-.ref-info b{color:#2ed573}
-.game-card{background:rgba(255,71,87,.2);border-radius:12px;padding:12px;margin-bottom:10px;border:1px solid rgba(255,71,87,.3);cursor:pointer}
-.game-card h4{font-size:14px;margin-bottom:4px;color:#ff4757}
-.game-card p{font-size:11px;opacity:.85}
-.game-card .stats-row{display:flex;justify-content:space-between;margin-top:6px;font-size:10px;opacity:.7}
-.subtabs{display:flex;gap:6px;padding:10px 10px 0}
-.subtab{flex:1;text-align:center;padding:8px;border-radius:8px;background:rgba(255,255,255,.08);cursor:pointer;font-size:11px;font-weight:700}
-.subtab.on{background:linear-gradient(135deg,#667eea,#764ba2)}
-.arow{background:rgba(255,255,255,.06);border-radius:8px;padding:8px;margin-bottom:6px;font-size:11px}
-.arow .top{display:flex;justify-content:space-between;margin-bottom:4px}
-.arow .btns{display:flex;gap:4px;margin-top:6px}
-.photo-input{display:none}
-.photo-btn{background:rgba(255,255,255,.1);border:2px dashed rgba(255,255,255,.25);border-radius:8px;padding:8px;text-align:center;cursor:pointer;margin-bottom:8px;font-size:11px}
-.min-btn{position:fixed;top:55px;left:8px;background:rgba(46,213,115,.25);padding:5px 8px;border-radius:14px;cursor:pointer;z-index:1001;font-size:10px;display:none}
-.room-min{position:fixed;bottom:72px;left:50%;transform:translateX(-50%);background:linear-gradient(135deg,#667eea,#764ba2);padding:6px 14px;border-radius:16px;cursor:pointer;z-index:999;font-size:11px;display:none}
-.level-badge{display:inline-block;padding:2px 6px;border-radius:8px;font-size:8px;font-weight:bold;margin-left:4px}
+:root{--bg:#0a0118;--bg2:#1a0a2e;--card:rgba(255,255,255,.065);--line:rgba(255,255,255,.1);--gold:#ffd700;--pri:#667eea;--pri2:#9b5cff;--ok:#2ee59d;--bad:#ff5c7a;--mut:#a99bc4;--sb:env(safe-area-inset-bottom,0px);--st:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%;overflow:hidden;background:linear-gradient(160deg,var(--bg),var(--bg2)) fixed;color:#fff;font:15px/1.4 -apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Noto Sans Ethiopic',sans-serif;overscroll-behavior:none}
+button,input,textarea,select{font:inherit;color:inherit}
+button{cursor:pointer;border:0}
+.page{position:fixed;inset:0;padding:calc(var(--st) + 12px) 14px calc(76px + var(--sb));overflow-y:auto;display:none;-webkit-overflow-scrolling:touch}
+.page.on{display:block;animation:fade .25s}
+@keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+h2{margin:6px 0 12px;font-size:20px}h3{margin:14px 0 8px;font-size:15px;color:var(--mut);font-weight:600}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:12px;margin-bottom:10px;backdrop-filter:blur(8px)}
+.row{display:flex;align-items:center;gap:10px}.sp{flex:1;min-width:0}.col{display:flex;flex-direction:column;gap:8px}
+.mut{color:var(--mut);font-size:12px}.gold{color:var(--gold)}.ell{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.btn{padding:11px 16px;border-radius:12px;background:linear-gradient(135deg,var(--pri),var(--pri2));font-weight:600;transition:.15s}
+.btn:active{transform:scale(.96)}.btn.gold{background:linear-gradient(135deg,#ffd700,#ff9f1c);color:#2a1a00}.btn.ghost{background:var(--card);border:1px solid var(--line)}
+.btn.bad{background:linear-gradient(135deg,#ff5c7a,#d6336c)}.btn.sm{padding:7px 12px;font-size:13px;border-radius:10px}.btn[disabled]{opacity:.5}
+.chip{padding:7px 13px;border-radius:20px;background:var(--card);border:1px solid var(--line);font-size:13px;white-space:nowrap}
+.chip.on{background:linear-gradient(135deg,var(--pri),var(--pri2));border-color:transparent}
+.chips{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px}.chips::-webkit-scrollbar{display:none}
+input,textarea,select{width:100%;padding:11px 12px;border-radius:12px;background:rgba(255,255,255,.08);border:1px solid var(--line);outline:0}
+input:focus,textarea:focus{border-color:var(--pri2)}select option{color:#000}
+.av{width:44px;height:44px;border-radius:50%;background:#444 center/cover;display:flex;align-items:center;justify-content:center;font-weight:700;flex:none;position:relative}
+.av.s{width:34px;height:34px;font-size:13px}.av.l{width:72px;height:72px;font-size:28px}
+.pill{display:inline-flex;gap:5px;align-items:center;padding:5px 11px;border-radius:20px;background:rgba(255,215,0,.12);border:1px solid rgba(255,215,0,.35);color:var(--gold);font-weight:700;font-size:13px}
+.badge{font-size:11px;padding:2px 7px;border-radius:8px;background:rgba(155,92,255,.25)}
+.top{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+.logo{font-weight:800;font-size:18px;background:linear-gradient(90deg,#ffd700,#ff9f1c,#9b5cff);-webkit-background-clip:text;color:transparent}
+nav{position:fixed;left:0;right:0;bottom:0;display:flex;padding:6px 6px calc(6px + var(--sb));background:rgba(10,1,24,.92);backdrop-filter:blur(14px);border-top:1px solid var(--line);z-index:20}
+nav button{flex:1;background:none;color:var(--mut);font-size:10px;padding:4px 0;display:flex;flex-direction:column;align-items:center;gap:2px}
+nav button i{font-style:normal;font-size:21px;filter:grayscale(.7)}nav button.on{color:#fff}nav button.on i{filter:none;transform:translateY(-2px)}
+.mini{position:fixed;left:10px;right:10px;bottom:calc(66px + var(--sb));z-index:19;display:none;align-items:center;gap:10px;padding:9px 12px;border-radius:16px;background:linear-gradient(135deg,#3b2a8f,#7a3fd1);box-shadow:0 6px 24px #0008}
+.mini.on{display:flex}
+.hero{background:linear-gradient(135deg,rgba(102,126,234,.35),rgba(155,92,255,.25));border-radius:18px;padding:14px;margin-bottom:12px;border:1px solid var(--line)}
+.room-card{display:flex;gap:12px;align-items:center}.live{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--ok);margin-right:5px;animation:pulse 1.4s infinite}
+@keyframes pulse{50%{opacity:.3}}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.game{text-align:center;padding:18px 8px;border-radius:16px;background:var(--card);border:1px solid var(--line)}.game b{display:block;font-size:34px}.game span{font-size:12px;color:var(--gold)}
+/* modal */
+.ov{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:50;display:flex;align-items:flex-end;justify-content:center;animation:fade .2s}
+.sheet{width:100%;max-width:480px;max-height:88vh;overflow-y:auto;background:linear-gradient(180deg,#1d0f38,#12072a);border-radius:22px 22px 0 0;padding:16px 16px calc(16px + var(--sb));border:1px solid var(--line)}
+.sheet h3{color:#fff;font-size:17px;margin:0 0 12px}
+.toast{position:fixed;left:50%;top:calc(var(--st) + 14px);transform:translateX(-50%);background:#000d;padding:10px 16px;border-radius:14px;z-index:99;max-width:90%;text-align:center;animation:fade .2s;border:1px solid var(--line)}
+/* vip + avatar frames */
+.vip{display:inline-block;font-size:9px;font-weight:800;letter-spacing:.3px;padding:1px 5px;border-radius:6px;background:linear-gradient(135deg,#ffd700,#ff9f1c);color:#2a1a00;vertical-align:1px;white-space:nowrap}
+.msg b.vipn,.seat .nm.vipn,.vipn{color:var(--gold)}
+.vipc{border-color:rgba(255,215,0,.45);background:linear-gradient(135deg,rgba(255,215,0,.13),rgba(255,159,28,.06))}
+.fr{--rw:3px}.av.l.fr{--rw:4px}.av.s.fr{--rw:2.5px}
+.fr::before{content:'';position:absolute;inset:-4px;border-radius:50%;pointer-events:none;box-shadow:0 0 10px var(--gl,transparent)}
+.fr::after{content:'';position:absolute;inset:-4px;border-radius:50%;pointer-events:none;background:var(--fr);-webkit-mask:radial-gradient(farthest-side,transparent calc(100% - var(--rw)),#000 calc(100% - var(--rw) + .6px));mask:radial-gradient(farthest-side,transparent calc(100% - var(--rw)),#000 calc(100% - var(--rw) + .6px))}
+.fr-neon{--fr:linear-gradient(135deg,#c4a1ff,#667eea);--gl:#9b5cff99}
+.fr-ice{--fr:conic-gradient(#e6fbff,#4cc9f0,#e6fbff,#4cc9f0,#e6fbff);--gl:#4cc9f066}
+.fr-fire{--fr:conic-gradient(#ff3d00,#ffb300,#ff3d00,#ffb300,#ff3d00);--gl:#ff6a0088}
+.fr-rose{--fr:conic-gradient(#ff5c7a,#ffd1dc,#ff5c7a,#d6336c,#ff5c7a);--gl:#ff5c7a66}
+.fr-rainbow{--fr:conic-gradient(#ff3b3b,#ffb300,#f5ff3b,#2ee59d,#4cc9f0,#667eea,#c77dff,#ff3b3b);--gl:#c77dff66}
+.fr-vgold{--fr:conic-gradient(#fff3b0,#ffd700,#b8860b,#ffd700,#fff3b0);--gl:#ffd70099}
+.fr-vaurora{--fr:conic-gradient(#2ee59d,#667eea,#c77dff,#4cc9f0,#2ee59d);--gl:#2ee59d66}
+.fr-fire::after,.fr-rainbow::after,.fr-vgold::after,.fr-vaurora::after{animation:frspin 3.2s linear infinite}
+@keyframes frspin{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.fr::after{animation:none!important}}
+.fg{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.fi{display:flex;flex-direction:column;align-items:center;gap:6px;padding:14px 4px 9px;border-radius:14px;background:var(--card);border:1px solid var(--line);font-size:12px;text-align:center}
+.fi.on{border-color:var(--gold);background:rgba(255,215,0,.12)}.fi .fp{color:var(--gold);font-size:11px}
+/* missions */
+.ms{display:flex;align-items:center;gap:12px;padding:11px 0;border-bottom:1px solid var(--line)}.ms:last-of-type{border-bottom:0}
+.ms .mut{white-space:nowrap}
+/* live */
+#live{position:fixed;inset:0;z-index:30;background:#000;display:none}#live.on{display:block}
+#lv-video{position:absolute;inset:0;background:radial-gradient(#2a0f4a,#000)}#lv-video video{object-fit:cover!important}
+.lv-top{position:absolute;top:calc(var(--st) + 10px);left:10px;right:10px;display:flex;align-items:center;gap:8px;z-index:2}
+.lv-bot{position:absolute;left:0;right:0;bottom:0;padding:30px 10px calc(10px + var(--sb));background:linear-gradient(transparent,#000c);z-index:2}
+#lv-chat{max-height:34vh;overflow-y:auto;display:flex;flex-direction:column;gap:4px;margin-bottom:8px;width:82%}#lv-chat .msg{background:#0006}
+.lv-tag{background:#ff2d55;border-radius:6px;padding:2px 7px;font-size:11px;font-weight:800;letter-spacing:.5px}
+/* room */
+#room{position:fixed;inset:0;z-index:30;background:linear-gradient(160deg,#0a0118,#1b0b33 60%,#2a0f4a);display:none;flex-direction:column;padding-top:var(--st)}
+#room.on{display:flex}
+.rh{display:flex;align-items:center;gap:10px;padding:10px 12px}.rh .t{flex:1;min-width:0}.rh button{background:var(--card);border-radius:12px;width:38px;height:38px;font-size:17px;color:#fff}
+.seats{padding:4px 10px 6px}.hostrow{display:flex;justify-content:center;margin-bottom:8px}
+.sg{display:grid;grid-template-columns:repeat(5,1fr);gap:7px 4px}
+.seat{display:flex;flex-direction:column;align-items:center;gap:3px;min-width:0;position:relative}
+.seat .av{width:50px;height:50px;border:2px solid transparent;transition:.15s}.seat.host .av{width:66px;height:66px;border-color:var(--gold);box-shadow:0 0 18px #ffd70066}
+.seat.empty .av{background:rgba(255,255,255,.06);border:1.5px dashed rgba(255,255,255,.25);color:var(--mut);font-size:12px}
+.seat.speak .av{border-color:var(--ok);box-shadow:0 0 0 4px #2ee59d44,0 0 18px #2ee59d99;animation:sp .7s infinite alternate}
+@keyframes sp{to{box-shadow:0 0 0 7px #2ee59d22,0 0 24px #2ee59d}}
+.seat .nm{font-size:10.5px;max-width:100%;color:#ddd}.seat .mt{position:absolute;top:34px;right:calc(50% - 31px);font-size:12px;background:#000a;border-radius:50%;width:18px;height:18px;display:flex;align-items:center;justify-content:center}
+.seat.host .mt{top:48px;right:calc(50% - 40px)}
+.chat{flex:1;overflow-y:auto;padding:6px 12px;display:flex;flex-direction:column;gap:5px;mask-image:linear-gradient(transparent,#000 14px)}
+.msg{background:rgba(255,255,255,.07);padding:6px 10px;border-radius:12px;align-self:flex-start;max-width:88%;word-break:break-word;font-size:13.5px}
+.msg b{color:#c9b6ff}.msg.gift{background:linear-gradient(135deg,rgba(255,215,0,.2),rgba(255,92,122,.2));border:1px solid rgba(255,215,0,.3)}
+.bar{display:flex;gap:8px;align-items:center;padding:8px 10px calc(8px + var(--sb));border-top:1px solid var(--line);background:rgba(0,0,0,.25)}
+.bar input{border-radius:22px}.rb{width:44px;height:44px;border-radius:50%;background:var(--card);font-size:20px;flex:none;border:1px solid var(--line)}
+.rb.mic{background:linear-gradient(135deg,var(--ok),#10b981);display:none}.rb.mic.on{display:block}.rb.mic.off{background:linear-gradient(135deg,#ff5c7a,#d6336c)}
+.vs{font-size:11px;padding:3px 9px;border-radius:10px;background:#0006}
+.fly{position:fixed;left:50%;top:42%;z-index:90;font-size:90px;pointer-events:none;animation:fly 2.6s ease-out forwards;text-align:center;filter:drop-shadow(0 0 24px gold)}
+.fly small{display:block;font-size:14px;color:#fff;background:#000a;border-radius:12px;padding:3px 10px;margin-top:4px}
+@keyframes fly{0%{transform:translate(-50%,60px) scale(.3);opacity:0}20%{transform:translate(-50%,0) scale(1.15);opacity:1}75%{transform:translate(-50%,-20px) scale(1);opacity:1}100%{transform:translate(-50%,-120px) scale(.9);opacity:0}}
+.fly.big{font-size:150px;animation-duration:3.8s}
+.gg{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}.gi{text-align:center;padding:9px 2px;border-radius:12px;background:var(--card);border:1px solid var(--line);font-size:11px}.gi b{display:block;font-size:28px}.gi.on{border-color:var(--gold);background:rgba(255,215,0,.12)}
+.tier-rare{box-shadow:inset 0 0 0 1px #4cc9f0}.tier-epic{box-shadow:inset 0 0 0 1px #c77dff}.tier-luxury{box-shadow:inset 0 0 0 1px #ffd700}.tier-legendary{box-shadow:inset 0 0 0 1px #ff5c7a}.tier-mythic{box-shadow:inset 0 0 0 1px #2ee59d,0 0 10px #2ee59d55}
+.bar2{height:8px;border-radius:6px;background:rgba(255,255,255,.1);overflow:hidden}.bar2 i{display:block;height:100%;background:linear-gradient(90deg,var(--pri),var(--gold))}
+.res{text-align:center;font-size:44px;min-height:64px;margin:8px 0}.win{color:var(--ok)}.lose{color:var(--bad)}
+.splash{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;z-index:100;background:linear-gradient(160deg,var(--bg),var(--bg2))}
+.spin{width:36px;height:36px;border:4px solid #fff3;border-top-color:var(--gold);border-radius:50%;animation:rot 1s linear infinite}@keyframes rot{to{transform:rotate(360deg)}}
+.empty{text-align:center;color:var(--mut);padding:26px 0}
 </style>
 </head>
 <body>
-<div class="min-btn" id="minBtn" onclick="minimizeRoom()">⬇ Minimize</div>
-<div class="room-min" id="roomMin" onclick="restoreRoom()">🎙️ <span id="roomMinName">Room</span></div>
-<div id="loading" class="load"><div class="sp"></div><span>Loading...</span></div>
-<div id="app" style="display:none">
-<div class="app-title">🎉 Twenty One Party 🎉</div>
-<div class="hdr">
-  <div class="hdr-l"><div class="av" id="hAv" onclick="go('profile')">T</div><div><h3 id="hName">User</h3><p id="hSub">Newbie</p></div></div>
-  <div class="coin" onclick="go('wallet')"><i class="fas fa-coins"></i><span id="hCoins">0</span></div>
+<div class="splash" id="splash"><div class="logo" style="font-size:28px">🎙 Twenty One Party</div><div class="spin"></div><div class="mut" id="splash-t">በመጫን ላይ…</div></div>
+
+<div class="page" id="p-home"></div><div class="page" id="p-rooms"></div><div class="page" id="p-games"></div>
+<div class="page" id="p-wallet"></div><div class="page" id="p-community"></div><div class="page" id="p-me"></div>
+
+<div class="mini" id="mini" onclick="showRoom()"><span style="font-size:22px">🎙</span><div class="sp"><div class="ell" id="mini-n" style="font-weight:600"></div><div class="mut" style="color:#ddd">ለመመለስ ንካ · <span id="mini-o">0</span> online</div></div><button class="btn sm bad" onclick="event.stopPropagation();exitRoom()">ውጣ</button></div>
+
+<nav id="nav">
+<button data-p="home" class="on"><i>🏠</i>ቤት</button><button data-p="rooms"><i>🎧</i>ክፍሎች</button><button data-p="games"><i>🎮</i>ጨዋታ</button>
+<button data-p="wallet"><i>👛</i>ቦርሳ</button><button data-p="community"><i>💬</i>ማህበረሰብ</button><button data-p="me"><i>👤</i>እኔ</button>
+</nav>
+
+<div id="room">
+  <div class="rh"><button onclick="minimize()">⌄</button><div class="t"><div class="ell" id="r-name" style="font-weight:700"></div><div class="mut"><span class="live"></span><span id="r-on">0</span> online · <span class="vs" id="r-vs">🔇 አልተገናኘም</span></div></div><button onclick="exitRoom()">✕</button></div>
+  <div class="seats"><div class="hostrow" id="r-host"></div><div class="sg" id="r-seats"></div></div>
+  <div class="chat" id="r-chat"></div>
+  <div class="bar"><button class="rb mic" id="r-mic" onclick="toggleMic()">🎤</button><input id="r-in" placeholder="መልእክት…" maxlength="200" onkeydown="if(event.key==='Enter')sendChat()"><button class="rb" onclick="openGift()">🎁</button><button class="rb" style="background:linear-gradient(135deg,var(--pri),var(--pri2))" onclick="sendChat()">➤</button></div>
 </div>
-<div id="p-home" class="page active">
-  <div class="sec"><div class="st">🔥 Featured Rooms</div><div class="grid2" id="featRooms"></div></div>
-  <div class="sec"><button class="btn" onclick="go('rooms')">🚪 View All Rooms</button></div>
-  <div class="sec"><button class="btn gold" onclick="go('games')">🎮 Play Games</button></div>
+
+<div id="live"><div id="lv-video"></div>
+  <div class="lv-top"><div class="row sp" id="lv-host" style="background:#0007;border-radius:24px;padding:4px 12px 4px 4px;flex:0 1 auto"></div><span class="lv-tag">LIVE</span><span class="vs">👁 <span id="lv-on">0</span></span><span class="vs" id="lv-vs">⏳</span><span class="sp"></span><button class="rb" style="width:36px;height:36px;font-size:15px" onclick="exitRoom()">✕</button></div>
+  <div class="lv-bot"><div id="lv-chat"></div><div class="row"><input id="lv-in" placeholder="መልእክት…" maxlength="200" style="background:#0007" onkeydown="if(event.key==='Enter')sendChat()"><button class="rb" id="lv-flip" style="display:none" onclick="flipCam()">🔄</button><button class="rb" id="lv-mic" style="display:none" onclick="liveMic()">🎤</button><button class="rb" onclick="openGift()">🎁</button><button class="rb" style="background:linear-gradient(135deg,var(--pri),var(--pri2))" onclick="sendChat()">➤</button></div></div>
 </div>
-<div id="p-rooms" class="page"><div class="sec"><div class="st">🚪 Rooms</div><div id="allRooms"></div><button class="btn grn" onclick="openM('mRoom')">➕ New Room</button></div></div>
-<div id="p-wallet" class="page">
-  <div class="wh"><div class="lbl">Your Coins</div><div class="bal" id="wCoins">0</div><div class="lbl">🪙 Coins</div></div>
-  <div class="ref-info">🎁 <b>Referral:</b> Get 10% bonus! ID: <b id="myUid">-</b></div>
-  <div class="sec"><div class="st">🛒 Buy Coins</div><div class="grid2" id="pkgs"></div><button class="btn gold" onclick="openM('mWith')">💸 Withdraw</button></div>
-  <div class="sec"><div class="st">📜 History</div><div id="hist"></div></div>
-</div>
-<div id="p-community" class="page">
-  <div class="subtabs"><div class="subtab on" onclick="subTab('posts',this)">📝 Posts</div><div class="subtab" onclick="subTab('jobs',this)">💼 Jobs</div></div>
-  <div class="sec" id="sub-posts"><div id="posts"></div><button class="btn" onclick="openM('mPost')">✏️ Create Post</button></div>
-  <div class="sec" id="sub-jobs" style="display:none"><div id="jobs"></div><button class="btn" onclick="openM('mJob')">💼 Post Job</button></div>
-</div>
-<div id="p-games" class="page">
-  <div class="sec">
-    <div class="st">🎮 Games <span style="font-size:10px;opacity:.7">70% RTP</span></div>
-    <div class="game-card" onclick="openGame('dice')"><h4>🎲 Dice Roll</h4><p>Pick 1-6. Win 4.2x!</p><div class="stats-row"><span>Min: 10</span><span>Max: 10K</span></div></div>
-    <div class="game-card" onclick="openGame('flip')"><h4>🪙 Coin Flip</h4><p>Heads/Tails. Win 1.4x!</p><div class="stats-row"><span>Min: 10</span><span>Max: 50K</span></div></div>
-    <div class="game-card" onclick="openGame('wheel')"><h4>🎡 Lucky Wheel</h4><p>Spin! Up to 5x!</p><div class="stats-row"><span>Min: 10</span><span>Max: 100K</span></div></div>
-    <div class="game-card" onclick="openGame('race')"><h4>🏇 Horse Race</h4><p>Pick horse. Win 4.5x!</p><div class="stats-row"><span>Min: 10</span><span>Max: 50K</span></div></div>
-    <div class="game-card" onclick="openGame('box')"><h4>📦 Mystery Box</h4><p>Up to 10x!</p><div class="stats-row"><span>Min: 50</span><span>Max: 100K</span></div></div>
-    <div class="game-card" onclick="openGame('p2p')"><h4>⚔️ P2P Battle</h4><p>Win 1.9x!</p><div class="stats-row"><span>Min: 100</span><span>Max: 1M</span></div></div>
-    <div class="st" style="margin-top:16px">📜 My Games</div><div id="myGames"></div>
-  </div>
-</div>
-<div id="p-profile" class="page">
-  <div class="ph"><div class="pav" id="pAv">T</div><h2 id="pName">User</h2><p id="pId" style="opacity:.85;font-size:11px"></p><p id="pBio" style="font-size:11px;opacity:.9;margin-top:6px"></p><div id="pLevel"></div></div>
-  <div class="stats"><div class="stat"><b id="sCoins">0</b><span>Coins</span></div><div class="stat"><b id="sEarn">0</b><span>Earnings</span></div><div class="stat"><b id="sRef">0</b><span>Ref Bonus</span></div></div>
-  <div class="sec"><button class="btn" onclick="openEdit()">✏️ Edit Profile</button><button class="btn gold" onclick="openM('mWith')">💸 Withdraw</button><button class="btn red" id="admBtn" style="display:none" onclick="go('admin')">🛡️ Admin</button></div>
-</div>
-<div id="p-admin" class="page">
-  <div class="sec"><div class="st">🛡️ Admin</div><div class="stats" id="admStats"></div></div>
-  <div class="subtabs"><div class="subtab on" onclick="admTab('purch',this)">🧾 Purchases</div><div class="subtab" onclick="admTab('with',this)">💸 Withdrawals</div><div class="subtab" onclick="admTab('users',this)">👥 Users</div><div class="subtab" onclick="admTab('rooms',this)">🚪 Rooms</div></div>
-  <div class="sec"><div id="admPurch"></div><div id="admWith" style="display:none"></div><div id="admUsers" style="display:none"><input class="in" id="uSearch" placeholder="Search" oninput="admUsers()"></div><div id="admRooms" style="display:none"></div></div>
-</div>
-<div id="roomView" style="display:none">
-  <div class="rh"><h2 id="rvName">Room</h2><p id="rvHost"></p></div>
-  <div class="voice" id="voiceBar" style="display:none"><div class="dot"></div><span id="voiceTxt">On voice...</span><button class="btn sm red" style="margin-left:auto" onclick="leaveVoice()">Leave</button></div>
-  <button class="btn grn" style="margin:8px 10px;width:calc(100% - 20px)" id="voiceBtn" onclick="joinVoice()">🎙️ Start Voice</button>
-  <div class="seats" id="seatGrid"></div>
-  <div class="chat" id="chatBox"></div>
-  <div class="ci"><input id="chatIn" placeholder="Type message..." onkeydown="if(event.key==='Enter')sendChat()"><button class="send" onclick="sendChat()">📤</button></div>
-  <div style="padding:0 10px 10px"><button class="btn red" onclick="exitRoom()">🚪 Exit</button></div>
-</div>
-</div>
-<div class="nav" id="navBar" style="display:none">
-  <div class="ni on" onclick="go('home')"><i class="fas fa-home"></i><span>Home</span></div>
-  <div class="ni" onclick="go('rooms')"><i class="fas fa-door-open"></i><span>Rooms</span></div>
-  <div class="ni" onclick="go('wallet')"><i class="fas fa-wallet"></i><span>Wallet</span></div>
-  <div class="ni" onclick="go('community')"><i class="fas fa-users"></i><span>Community</span></div>
-  <div class="ni" onclick="go('games')"><i class="fas fa-gamepad"></i><span>Games</span></div>
-  <div class="ni" onclick="go('profile')"><i class="fas fa-user"></i><span>Profile</span></div>
-</div>
-<div class="modal" id="mRoom"><div class="mc"><div class="mt">New Room</div><input class="in" id="nrName" placeholder="Room name"><button class="btn" onclick="createRoom()">Create</button><button class="btn red" onclick="closeM('mRoom')">Cancel</button></div></div>
-<div class="modal" id="mBuy"><div class="mc"><div class="mt">Buy Coins</div><div class="info">Pay Telebirr: <b id="tbNum"></b> (<span id="tbName"></span>)<br>Amount: <b id="tbAmt"></b> Birr</div><input class="in" id="buyRef" placeholder="Ref No."><input type="file" id="buyShot" accept="image/*" class="photo-input" onchange="previewBuyShot(event)"><div class="photo-btn" onclick="document.getElementById('buyShot').click()">📷 Screenshot</div><div id="shotPrev"></div><button class="btn gold" onclick="submitBuy()">Send</button><button class="btn red" onclick="closeM('mBuy')">Cancel</button></div></div>
-<div class="modal" id="mWith"><div class="mc"><div class="mt">Withdraw</div><div class="info">Min: <b id="wMin"></b> coins. 1 coin = <b id="wRate"></b> Birr</div><input class="in" id="wPhone" placeholder="Telebirr (09...)"><input class="in" id="wAcc" placeholder="Name"><input class="in" id="wAmt" type="number" placeholder="Amount"><button class="btn grn" onclick="submitWith()">Request</button><button class="btn red" onclick="closeM('mWith')">Cancel</button></div></div>
-<div class="modal" id="mEdit"><div class="mc"><div class="mt">Edit Profile</div><div style="text-align:center;margin-bottom:10px"><div id="photoPreview" style="width:80px;height:80px;border-radius:50%;background:linear-gradient(135deg,#f093fb,#f5576c);margin:0 auto 8px;display:flex;align-items:center;justify-content:center;font-size:32px;overflow:hidden">T</div><input type="file" id="ePhoto" accept="image/*" class="photo-input" onchange="previewPhoto(event)"><button class="btn sm" onclick="document.getElementById('ePhoto').click()">📷 Photo</button></div><input class="in" id="eName" placeholder="Name"><textarea class="in" id="eBio" placeholder="Bio"></textarea><input class="in" id="ePhone" placeholder="Telebirr"><button class="btn" onclick="saveProfile()">Save</button><button class="btn red" onclick="closeM('mEdit')">Cancel</button></div></div>
-<div class="modal" id="mGift"><div class="mc"><div class="mt">🎁 Gift</div><div id="gRec" style="font-size:11px;opacity:.85;text-align:center;margin-bottom:8px"></div><div class="ggrid" id="gGrid" style="display:grid;grid-template-columns:repeat(4,1fr);gap:5px"></div><button class="btn gold" onclick="sendGift()">Send</button><button class="btn red" onclick="closeM('mGift')">Cancel</button></div></div>
-<div class="modal" id="mPost"><div class="mc"><div class="mt">Create Post</div><textarea class="in" id="postTx" placeholder="What's new?"></textarea><button class="btn" onclick="createPost()">Post</button><button class="btn red" onclick="closeM('mPost')">Cancel</button></div></div>
-<div class="modal" id="mJob"><div class="mc"><div class="mt">Post Job</div><input class="in" id="jTitle" placeholder="Title"><textarea class="in" id="jDesc" placeholder="Description"></textarea><input class="in" id="jContact" placeholder="Contact"><button class="btn" onclick="createJob()">Post</button><button class="btn red" onclick="closeM('mJob')">Cancel</button></div></div>
-<div class="modal" id="mShot"><div class="mc"><div class="mt">Screenshot</div><img id="shotImg" style="width:100%;border-radius:8px;margin:8px 0"><button class="btn red" onclick="closeM('mShot')">Close</button></div></div>
-<div class="modal" id="mGrant"><div class="mc"><div class="mt">Give Coins</div><input class="in" id="grUid" readonly><input class="in" id="grAmt" type="number" placeholder="Amount"><button class="btn gold" onclick="doGrant()">Confirm</button><button class="btn red" onclick="closeM('mGrant')">Cancel</button></div></div>
-<div class="modal" id="mGame"><div class="mc"><div class="mt" id="gameTitle">Game</div><div id="gameContent"></div><div style="margin-top:10px"><input class="in" id="gameBet" type="number" placeholder="Bet"><div id="gameExtra"></div><button class="btn gold" id="gamePlayBtn" onclick="playGame()">Play</button><button class="btn red" onclick="closeM('mGame')">Cancel</button></div><div id="gameResult" style="margin-top:10px;text-align:center;font-size:14px"></div></div></div>
+
 <script>
-const tg=window.Telegram?.WebApp;if(tg)tg.ready();
-let U=null,C=null,init='',CR=null,RS=null,agoraClient=null,agoraLocalTrack=null,selGift=null,giftTo=null,shotData='',photoShotData='',roomMinimized=false,currentGame=null;
-async function api(u,m='GET',b=null){const h={'Content-Type':'application/json'};if(init)h['X-Telegram-Init-Data']=init;const o={method:m,headers:h};if(b)o.body=JSON.stringify(b);return(await fetch(u,o)).json()}
-function openM(i){document.getElementById(i).classList.add('on')}
-function closeM(i){document.getElementById(i).classList.remove('on')}
-async function initApp(){init=tg?.initData||'';const d=await api('/api/register','POST',{});if(!d.success){document.getElementById('loading').innerHTML='<div style="text-align:center;padding:20px">❌ Error</div>';return}U=d.user;C=d.config;U.admin=d.admin;U.uid=d.user_id;document.getElementById('loading').style.display='none';document.getElementById('app').style.display='block';document.getElementById('navBar').style.display='flex';paint();renderPkgs();loadRooms();if(U.admin)document.getElementById('admBtn').style.display='block';document.getElementById('myUid').textContent=U.uid}
-function getLevel(c){if(c>=100000)return{name:'King',icon:'👑',color:'#ffd700'};if(c>=50000)return{name:'Diamond',icon:'💎',color:'#b9f2ff'};if(c>=10000)return{name:'Gold',icon:'🥇',color:'#ffd700'};if(c>=5000)return{name:'Silver',icon:'🥈',color:'#c0c0c0'};if(c>=1000)return{name:'Bronze',icon:'🥉',color:'#cd7f32'};return{name:'Newbie',icon:'🌱',color:'#7bed9f'}}
-function paint(){const ini=(U.username||'U')[0].toUpperCase();hAv.innerHTML=U.photo?`<img src="${U.photo}" onerror="this.parentElement.textContent='${ini}'">`:ini;pAv.innerHTML=U.photo?`<img src="${U.photo}" onerror="this.parentElement.textContent='${ini}'">`:ini;photoPreview.innerHTML=U.photo?`<img src="${U.photo}" style="width:100%;height:100%;object-fit:cover">`:ini;hName.textContent=U.username;pName.textContent=U.username;pId.textContent=U.uid;pBio.textContent=U.bio||'';hCoins.textContent=U.coins;wCoins.textContent=U.coins;sCoins.textContent=U.coins;wEarn.textContent=U.earnings;sEarn.textContent=U.earnings;const lvl=getLevel(U.coins);hSub.textContent=lvl.icon+' '+lvl.name;pLevel.innerHTML=`<span class="level-badge" style="background:${lvl.color};color:#333">${lvl.icon} ${lvl.name}</span>`;document.getElementById('tbNum').textContent=C.telebirr.number;document.getElementById('tbName').textContent=C.telebirr.name;document.getElementById('wMin').textContent=C.min_withdraw;document.getElementById('wRate').textContent=C.rate}
-function go(p){if(CR&&!roomMinimized&&p!=='home')minimizeRoom();document.querySelectorAll('.page').forEach(x=>x.classList.remove('active'));document.getElementById('p-'+p).classList.add('active');document.querySelectorAll('.ni').forEach(x=>x.classList.remove('on'));const idx={home:0,rooms:1,wallet:2,community:3,games:4,profile:5}[p];if(idx!==undefined)document.querySelectorAll('.ni')[idx]?.classList.add('on');if(p==='rooms')loadAll();if(p==='wallet')loadHist();if(p==='community'){loadPosts();loadJobs()}if(p==='admin')admOverview();if(p==='games')loadGames();window.scrollTo(0,0)}
-function minimizeRoom(){roomMinimized=true;document.getElementById('roomView').style.display='none';document.getElementById('minBtn').style.display='none';document.getElementById('roomMin').style.display='block';document.getElementById('roomMinName').textContent=RS?RS.name:'Room';document.getElementById('navBar').style.display='flex';document.querySelectorAll('.page').forEach(p=>p.style.display='');go('home')}
-function restoreRoom(){roomMinimized=false;document.getElementById('roomMin').style.display='none';document.getElementById('roomView').style.display='block';document.getElementById('navBar').style.display='none';document.querySelectorAll('.page').forEach(p=>p.style.display='none')}
-function subTab(t,el){document.querySelectorAll('.subtab').forEach(x=>x.classList.remove('on'));el.classList.add('on');document.getElementById('sub-posts').style.display=t==='posts'?'block':'none';document.getElementById('sub-jobs').style.display=t==='jobs'?'block':'none'}
-async function loadRooms(){const r=await api('/api/rooms');const c=document.getElementById('featRooms');c.innerHTML='';const ks=Object.keys(r);if(!ks.length){c.innerHTML='<div style="text-align:center;padding:16px;opacity:.6">No rooms</div>';return}ks.slice(0,6).forEach(rid=>{const rm=r[rid];c.innerHTML+=`<div class="card" onclick="joinRoom('${rid}')"><h4>${esc(rm.name)}</h4><div class="host">👤 ${esc(rm.creator_name)}</div><div class="row"><span>👥 ${rm.count}</span><span class="live">LIVE</span></div></div>`})}
-async function loadAll(){const r=await api('/api/rooms');const c=document.getElementById('allRooms');c.innerHTML='';const ks=Object.keys(r);if(!ks.length){c.innerHTML='<div style="text-align:center;padding:16px;opacity:.6">No rooms</div>';return}ks.forEach(rid=>{const d=document.createElement('div');d.className='card';d.style.marginBottom='8px';d.onclick=()=>joinRoom(rid);d.innerHTML=`<h4>${esc(r[rid].name)}</h4><div class="host">👤 ${esc(r[rid].creator_name)}</div><div class="row"><span>👥 ${r[rid].count}</span><span class="live">LIVE</span></div>`;c.appendChild(d)})}
-function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
-async function createRoom(){const nm=nrName.value.trim();if(!nm){alert('Enter name');return}const d=await api('/api/rooms/create','POST',{room_name:nm});if(d.success){closeM('mRoom');nrName.value='';joinRoom(d.room_id)}else alert(d.error)}
-async function joinRoom(rid){const d=await api(`/api/rooms/${rid}/state`);if(!d.success){alert(d.error);return}CR=rid;RS=d;roomMinimized=false;document.querySelectorAll('.page').forEach(p=>p.style.display='none');document.getElementById('navBar').style.display='none';document.getElementById('roomView').style.display='block';document.getElementById('minBtn').style.display='block';rvName.textContent=d.name;rvHost.textContent='👑 Host: '+esc(d.host||'');U.coins=d.coins;U.earnings=d.earnings;paint();renderSeats();renderMsgs(d.messages);poll=setInterval(pollRoom,3000)}
-let poll=null;
-async function pollRoom(){if(!CR||roomMinimized)return;const d=await api(`/api/rooms/${CR}/state?since=${RS?RS.lastId||0:0}`);if(d.success){RS=d;renderSeats();renderMsgs(d.messages);U.coins=d.coins;paint()}}
-function renderSeats(){const g=document.getElementById('seatGrid');g.innerHTML='';const s=RS.seats||{};for(let i=0;i<C.seats;i++){const st=s[i]||s[String(i)];const div=document.createElement('div');div.className='seat';if(i===0){div.classList.add('host');div.innerHTML=`<div class="ic">👑</div><div class="nm">${esc(st?st.name:'Host')}</div>`}else if(st){div.classList.add('occ');div.innerHTML=`<div class="ic">🎙️</div><div class="nm">${esc(st.name)}</div><div class="no">${i}</div>`}else{div.innerHTML=`<div class="ic">🛋️</div><div class="no">${i}</div>`}div.onclick=()=>seatTap(i,st);g.appendChild(div)}}
-async function seatTap(i,st){if(st&&st.uid!==U.uid){giftTo=st.uid;document.getElementById('gRec').textContent='To: '+st.name;openM('mGift');renderGifts();return}const d=await api(`/api/rooms/${CR}/seat`,'POST',{seat:i});if(d.success){const s=await api(`/api/rooms/${CR}/state`);RS=s;renderSeats()}else alert(d.error)}
-function renderGifts(){const g=document.getElementById('gGrid');g.innerHTML='';selGift=null;C.gifts.forEach(x=>{const d=document.createElement('div');d.className='gi';d.style.cssText='background:rgba(255,255,255,.08);border-radius:8px;padding:6px 3px;text-align:center;cursor:pointer';d.innerHTML=`<div style="font-size:16px">${x.icon}</div><div style="font-size:7px">${x.name}</div><div style="font-size:8px;color:#ffd700">${x.price}</div>`;d.onclick=()=>{document.querySelectorAll('.gi').forEach(y=>y.style.borderColor='transparent');d.style.borderColor='#ffd700';selGift=x.id};g.appendChild(d)})}
-async function sendGift(){if(!selGift||!giftTo){alert('Select gift');return}const d=await api(`/api/rooms/${CR}/gift`,'POST',{gift_type:selGift,recipient_id:giftTo});if(d.success){closeM('mGift');U.coins=d.remaining_coins;paint();const s=await api(`/api/rooms/${CR}/state`);RS=s;renderMsgs(s.messages)}else alert(d.error)}
-function renderMsgs(ms){const b=document.getElementById('chatBox');b.innerHTML='';let last=0;(ms||[]).forEach(m=>{last=m.id;const d=document.createElement('div');d.className='msg'+(m.sys?' sys':'');d.textContent=m.sys?m.text:m.name+': '+m.text;b.appendChild(d)});if(RS)RS.lastId=last;b.scrollTop=b.scrollHeight}
-async function sendChat(){const t2=chatIn.value.trim();if(!t2)return;await api(`/api/rooms/${CR}/chat`,'POST',{text:t2});chatIn.value='';const s=await api(`/api/rooms/${CR}/state?since=${RS.lastId||0}`);if(s.success){RS=s;renderMsgs(s.messages)}}
-async function exitRoom(){await api(`/api/rooms/${CR}/exit`,'POST');leaveVoice();clearInterval(poll);CR=null;RS=null;roomMinimized=false;document.getElementById('roomView').style.display='none';document.getElementById('roomMin').style.display='none';document.getElementById('minBtn').style.display='none';document.querySelectorAll('.page').forEach(p=>p.style.display='');document.getElementById('navBar').style.display='flex';go('rooms')}
-async function joinVoice(){const btn=document.getElementById('voiceBtn');btn.disabled=true;btn.innerHTML='⏳ Connecting...';try{const d=await api('/api/agora-token','POST',{room_id:CR});if(!d.success)throw new Error(d.error||'Token failed');if(!window.AgoraRTC)throw new Error('SDK not loaded');if(!C.agora_app_id)throw new Error('App ID not configured');agoraClient=AgoraRTC.createClient({mode:'live',codec:'vp8'});agoraClient.on('user-published',async(user,mediaType)=>{await agoraClient.subscribe(user,mediaType);if(mediaType==='audio')user.audioTrack.play()});agoraClient.on('user-unpublished',(user)=>{if(user.audioTrack)user.audioTrack.stop()});await agoraClient.join(C.agora_app_id,d.channel,d.token,d.uid);agoraLocalTrack=await AgoraRTC.createMicrophoneAudioTrack();await agoraClient.publish(agoraLocalTrack);document.getElementById('voiceBtn').style.display='none';document.getElementById('voiceBar').style.display='flex';document.getElementById('voiceTxt').textContent='🎙️ On voice...'}catch(e){console.error('Voice error:',e);alert('Voice error: '+e.message);document.getElementById('voiceBtn').style.display='block';document.getElementById('voiceBtn').disabled=false;document.getElementById('voiceBtn').innerHTML='🎙️ Start Voice'}}
-async function leaveVoice(){if(agoraLocalTrack){agoraLocalTrack.close();agoraLocalTrack=null}if(agoraClient){await agoraClient.leave();agoraClient=null}document.getElementById('voiceBar').style.display='none';document.getElementById('voiceBtn').style.display='block';document.getElementById('voiceBtn').innerHTML='🎙️ Start Voice';document.getElementById('voiceBtn').disabled=false}
-function renderPkgs(){const c=document.getElementById('pkgs');c.innerHTML='';C.packages.forEach(p=>{const d=document.createElement('div');d.className='pkg';d.innerHTML=`<div class="c">🪙 ${p.coins.toLocaleString()}</div><div class="p">${p.price} Birr</div>`;d.onclick=()=>{document.getElementById('tbAmt').textContent=p.price;openM('mBuy')};c.appendChild(d)})}
-function previewBuyShot(e){const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=ev=>{shotData=ev.target.result;document.getElementById('shotPrev').innerHTML='<img src="'+shotData+'" style="width:100%;max-height:130px;object-fit:cover;border-radius:8px;margin-bottom:8px">'};r.readAsDataURL(f)}
-async function submitBuy(){const ref=buyRef.value.trim();if(!ref){alert('Enter Ref');return}if(!shotData){alert('Select screenshot');return}const pkg=C.packages.find(p=>p.price==tbAmt.textContent);const d=await api('/api/coins/buy','POST',{package_id:pkg.id,ref,shot:shotData});if(d.success){alert('✅ Sent!');closeM('mBuy');buyRef.value='';shotData='';shotPrev.innerHTML='';loadHist()}else alert(d.error)}
-async function submitWith(){const ph=wPhone.value,ac=wAcc.value,am=parseInt(wAmt.value);if(!ph||!ac||!am){alert('Fill all');return}const d=await api('/api/withdraw','POST',{phone:ph,acc_name:ac,amount:am});if(d.success){alert('✅ Sent');U.earnings=d.earnings;paint();closeM('mWith');loadHist()}else alert(d.error)}
-async function loadHist(){const d=await api('/api/wallet');if(!d.success)return;const c=document.getElementById('hist');c.innerHTML='';d.purchases.forEach(p=>{c.innerHTML+=`<div class="arow"><div class="top"><span>🪙 ${p.coins} → ${p.price} Birr</span><b style="color:${p.status==='approved'?'#2ed573':'#ff4757'}">${p.status}</b></div></div>`});d.withdrawals.forEach(w=>{c.innerHTML+=`<div class="arow"><div class="top"><span>💸 ${w.amount} = ${w.birr} Birr</span><b style="color:${w.status==='paid'?'#2ed573':'#ff4757'}">${w.status}</b></div></div>`});if(!d.purchases.length&&!d.withdrawals.length)c.innerHTML='<div style="opacity:.6;text-align:center;padding:12px">No history</div>'}
-function openEdit(){eName.value=U.username||'';eBio.value=U.bio||'';ePhone.value=U.phone||'';openM('mEdit')}
-function previewPhoto(e){const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=ev=>{photoShotData=ev.target.result;document.getElementById('photoPreview').innerHTML='<img src="'+photoShotData+'" style="width:100%;height:100%;object-fit:cover">'};r.readAsDataURL(f)}
-async function saveProfile(){if(photoShotData){const d=await api('/api/profile/photo','POST',{photo:photoShotData});if(d.success)U.photo=d.photo}const d=await api('/api/profile','POST',{name:eName.value,bio:eBio.value,phone:ePhone.value});if(d.success){U=d.user;paint();closeM('mEdit');photoShotData='';alert('✅ Saved')}else alert(d.error)}
-async function loadPosts(){const d=await api('/api/posts');if(!d.success)return;const c=document.getElementById('posts');c.innerHTML='';if(!d.posts.length){c.innerHTML='<div style="opacity:.6;text-align:center;padding:12px">No posts</div>';return}d.posts.forEach(p=>{const el=document.createElement('div');el.className='post';el.style.cssText='background:rgba(255,255,255,.06);border-radius:10px;padding:10px;margin-bottom:8px';el.innerHTML=`<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px"><div style="width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,#f093fb,#f5576c);display:flex;align-items:center;justify-content:center;font-size:11px">${esc((p.name||'U')[0].toUpperCase())}</div><div><b>${esc(p.name)}</b><div style="font-size:9px;opacity:.6">${p.created}</div></div></div><div style="font-size:11px;line-height:1.4;margin-bottom:6px">${esc(p.text)}</div><div style="display:flex;justify-content:space-between;font-size:10px;opacity:.7"><span>❤️ ${p.likes?p.likes.length:0}</span></div>`;c.appendChild(el)})}
-async function createPost(){const t2=postTx.value.trim();if(!t2)return;const d=await api('/api/posts/create','POST',{text:t2});if(d.success){closeM('mPost');postTx.value='';loadPosts()}else alert(d.error)}
-async function loadJobs(){const d=await api('/api/jobs');if(!d.success)return;const c=document.getElementById('jobs');c.innerHTML='';if(!d.jobs.length){c.innerHTML='<div style="opacity:.6;text-align:center;padding:12px">No jobs</div>';return}d.jobs.forEach(j=>{const el=document.createElement('div');el.className='post';el.style.cssText='background:rgba(255,255,255,.06);border-radius:10px;padding:10px;margin-bottom:8px';el.innerHTML=`<h4 style="font-size:13px;margin-bottom:4px">${esc(j.title)}</h4><p style="font-size:11px;opacity:.9;margin-bottom:6px">${esc(j.desc)}</p><div style="font-size:10px;color:#7bed9f">📞 ${esc(j.contact)}</div><div style="font-size:9px;opacity:.6;margin-top:4px">👤 ${esc(j.name)} • ${j.created}</div>`;c.appendChild(el)})}
-async function createJob(){const d=await api('/api/jobs/create','POST',{title:jTitle.value,desc:jDesc.value,contact:jContact.value});if(d.success){closeM('mJob');jTitle.value=jDesc.value=jContact.value='';loadJobs()}else alert(d.error)}
-async function loadGames(){const d=await api('/api/games');if(!d.success)return;U.coins=d.user_coins;paint();const c=document.getElementById('myGames');c.innerHTML='';if(!d.my_games.length){c.innerHTML='<div style="opacity:.6;text-align:center;padding:12px">No games</div>';return}d.my_games.forEach(g=>{const el=document.createElement('div');el.className='arow';const icons={dice:'🎲',flip:'🪙',wheel:'🎡',race:'🏇',box:'📦',p2p:'⚔️'};el.innerHTML=`<div class="top"><span>${icons[g.game]||'🎮'} ${g.game} - Bet: ${g.bet}</span><b style="color:${g.won?'#2ed573':'#ff4757'}">${g.won?'Won '+g.payout:'Lost'}</b></div><div style="font-size:9px;opacity:.6">${g.created}</div>`;c.appendChild(el)})}
-function openGame(type){currentGame=type;const cfg=C.games[type];document.getElementById('gameTitle').textContent=cfg.name;document.getElementById('gameBet').value='';document.getElementById('gameResult').innerHTML='';const extra=document.getElementById('gameExtra');if(type==='dice'){extra.innerHTML='<div style="display:grid;grid-template-columns:repeat(6,1fr);gap:4px;margin:8px 0">'+[1,2,3,4,5,6].map(n=>`<button class="btn sm" onclick="selectDice(${n})" id="dice${n}">${n}</button>`).join('')+'</div>';window._diceNum=null}else if(type==='flip'){extra.innerHTML='<div style="display:flex;gap:8px;margin:8px 0"><button class="btn sm" onclick="selectFlip(\'heads\')" id="flipH">👑 Heads</button><button class="btn sm" onclick="selectFlip(\'tails\')" id="flipT">🌿 Tails</button></div>';window._flipChoice=null}else if(type==='race'){extra.innerHTML='<div style="display:grid;grid-template-columns:repeat(6,1fr);gap:4px;margin:8px 0">'+[1,2,3,4,5,6].map(n=>`<button class="btn sm" onclick="selectHorse(${n})" id="horse${n}">🐴${n}</button>`).join('')+'</div>';window._horseNum=null}else{extra.innerHTML='<div style="text-align:center;margin:8px 0;font-size:11px;opacity:.7">Play!</div>'}openM('mGame')}
-function selectDice(n){window._diceNum=n;for(let i=1;i<=6;i++){const b=document.getElementById('dice'+i);if(b){b.style.background=i===n?'#ffd700':'';b.style.color=i===n?'#333':''}}}
-function selectFlip(c){window._flipChoice=c;const h=document.getElementById('flipH'),t=document.getElementById('flipT');if(h){h.style.background=c==='heads'?'#ffd700':'';h.style.color=c==='heads'?'#333':''}if(t){t.style.background=c==='tails'?'#ffd700':'';t.style.color=c==='tails'?'#333':''}}
-function selectHorse(n){window._horseNum=n;for(let i=1;i<=6;i++){const b=document.getElementById('horse'+i);if(b){b.style.background=i===n?'#ffd700':'';b.style.color=i===n?'#333':''}}}
-async function playGame(){const bet=parseInt(gameBet.value);if(!bet||bet<10){alert('Min bet 10');return}if(bet>U.coins){alert('Not enough coins');return}const btn=document.getElementById('gamePlayBtn');btn.disabled=true;btn.textContent='Playing...';document.getElementById('gameResult').innerHTML='<div class="sp" style="margin:10px auto"></div>';try{let d;if(currentGame==='dice'){if(!window._diceNum){alert('Pick 1-6');btn.disabled=false;btn.textContent='Play';return}d=await api('/api/games/dice','POST',{bet,number:window._diceNum});if(d.success){const emojis=['','⚀','⚁','⚂','⚃','⚄','⚅'];document.getElementById('gameResult').innerHTML=`<div style="font-size:50px;margin:10px 0">${emojis[d.result]}</div><div style="font-size:16px;color:${d.won?'#2ed573':'#ff4757'}">${d.won?'🎉 Won '+d.payout+'!':'😢 Lost'}</div>`}}else if(currentGame==='flip'){if(!window._flipChoice){alert('Pick');btn.disabled=false;btn.textContent='Play';return}d=await api('/api/games/flip','POST',{bet,choice:window._flipChoice});if(d.success){document.getElementById('gameResult').innerHTML=`<div style="font-size:60px;margin:10px 0">${d.result==='heads'?'👑':'🌿'}</div><div style="font-size:16px;color:${d.won?'#2ed573':'#ff4757'}">${d.won?'🎉 Won '+d.payout+'!':'😢 Lost'}</div>`}}else if(currentGame==='race'){if(!window._horseNum){alert('Pick horse');btn.disabled=false;btn.textContent='Play';return}d=await api('/api/games/race','POST',{bet,horse:window._horseNum});if(d.success){document.getElementById('gameResult').innerHTML=`<div style="font-size:50px;margin:10px 0">🏇</div><div style="font-size:16px;color:${d.won?'#2ed573':'#ff4757'}">${d.won?'🎉 Won '+d.payout+'!':'😢 Lost'}</div>`}}else if(currentGame==='box'){d=await api('/api/games/box','POST',{bet});if(d.success){document.getElementById('gameResult').innerHTML=`<div style="font-size:50px;margin:10px 0">${d.icon}</div><div style="font-size:16px;color:${d.won?'#2ed573':'#ff4757'}">${d.won?'🎉 Won '+d.payout+'!':'😢 Lost'}</div>`}}else if(currentGame==='wheel'){d=await api('/api/games/wheel','POST',{bet});if(d.success){document.getElementById('gameResult').innerHTML=`<div style="font-size:50px;margin:10px 0">🎡</div><div style="font-size:16px;color:${d.won?'#2ed573':'#ff4757'}">${d.won?'🎉 Won '+d.payout+'!':'😢 Lost'}</div>`}}if(d&&d.success){U.coins=d.remaining_coins;paint();loadGames()}}catch(e){alert('Error: '+e.message)}btn.disabled=false;btn.textContent='Play'}
-async function admOverview(){const d=await api('/api/admin/overview');if(!d.success)return;const s=d.stats;document.getElementById('admStats').innerHTML=`<div class="stat"><b>${s.users}</b><span>Users</span></div><div class="stat"><b>${s.banned}</b><span>Banned</span></div><div class="stat"><b>${s.rooms}</b><span>Rooms</span></div><div class="stat"><b>${s.posts}</b><span>Posts</span></div><div class="stat"><b>${s.jobs}</b><span>Jobs</span></div><div class="stat"><b>${s.gifts}</b><span>🎁</span></div><div class="stat"><b>${s.revenue} Birr</b><span>Revenue</span></div><div class="stat"><b>${s.paid_out} Birr</b><span>Paid</span></div>`;const pc=document.getElementById('admPurch');pc.innerHTML='';d.purchases.forEach(p=>{const el=document.createElement('div');el.className='arow';el.innerHTML=`<div class="top"><span>${esc(p.name)} → 🪙${p.coins} (${p.price} Birr)</span></div><div class="btns"><button class="btn sm grn" onclick="purch('${p.id}','approve')">✅</button><button class="btn sm red" onclick="purch('${p.id}','reject')">❌</button></div>`;pc.appendChild(el)});if(!d.purchases.length)pc.innerHTML='<div style="opacity:.6;text-align:center;padding:10px">No pending</div>';const wc=document.getElementById('admWith');wc.innerHTML='';d.withdrawals.forEach(w=>{const el=document.createElement('div');el.className='arow';el.innerHTML=`<div class="top"><span>${esc(w.name)} → ${w.amount} = ${w.birr} Birr</span></div><div class="btns"><button class="btn sm grn" onclick="withd('${w.id}','paid')">✅</button><button class="btn sm red" onclick="withd('${w.id}','reject')">❌</button></div>`;wc.appendChild(el)});if(!d.withdrawals.length)wc.innerHTML='<div style="opacity:.6;text-align:center;padding:10px">No pending</div>';const rc=document.getElementById('admRooms');rc.innerHTML='';d.rooms.forEach(r=>{const el=document.createElement('div');el.className='arow';el.innerHTML=`<div class="top"><span>${esc(r.name)} (${r.count})</span></div><div class="btns"><button class="btn sm red" onclick="delRoom('${r.id}')">🗑️</button></div>`;rc.appendChild(el)});admUsers()}
-function admTab(t2,el){document.querySelectorAll('#p-admin .subtab').forEach(x=>x.classList.remove('on'));el.classList.add('on');['admPurch','admWith','admUsers','admRooms'].forEach(id=>document.getElementById(id).style.display='none');document.getElementById({purch:'admPurch',with:'admWith',users:'admUsers',rooms:'admRooms'}[t2]).style.display='block'}
-async function purch(id,a){await api('/api/admin/purchase','POST',{id,action:a});admOverview()}
-async function withd(id,a){await api('/api/admin/withdraw','POST',{id,action:a});admOverview()}
-async function delRoom(id){if(confirm('Delete?')){await api('/api/admin/room','POST',{id});admOverview()}}
-async function admUsers(){const q=document.getElementById('uSearch').value;const d=await api('/api/admin/users?q='+encodeURIComponent(q));if(!d.success)return;const c=document.getElementById('admUsers');c.innerHTML='<input class="in" id="uSearch" placeholder="Search" value="'+esc(q)+'" oninput="admUsers()">';d.users.forEach(u=>{const el=document.createElement('div');el.className='arow';el.innerHTML=`<div class="top"><span>${esc(u.username)}</span><b style="color:${u.banned?'#ff4757':'#2ed573'}">${u.banned?'Banned':'Active'}</b></div><div style="font-size:9px;opacity:.7">🪙${u.coins} • Earn:${u.earnings}</div><div class="btns"><button class="btn sm" onclick="grant('${u.uid}')">💰</button>${u.banned?`<button class="btn sm grn" onclick="uact('${u.uid}','unban')">Unban</button>`:`<button class="btn sm red" onclick="uact('${u.uid}','ban')">Ban</button>`}<button class="btn sm red" onclick="uact('${u.uid}','delete')">🗑️</button></div>`;c.appendChild(el)})}
-async function uact(uid,a){if(a==='delete'&&!confirm('Delete?'))return;const d=await api('/api/admin/user','POST',{uid,action:a});if(d.success)admUsers();else alert(d.error)}
-function grant(uid){grUid.value=uid;grAmt.value='';openM('mGrant')}
-async function doGrant(){const d=await api('/api/admin/user','POST',{uid:grUid.value,action:'grant',amount:parseInt(grAmt.value)});if(d.success){closeM('mGrant');admUsers()}else alert(d.error)}
-initApp();
+/* ============================== core ============================== */
+const tg=window.Telegram&&Telegram.WebApp;
+try{tg&&(tg.ready(),tg.expand(),tg.setHeaderColor&&tg.setHeaderColor('#0a0118'),tg.setBackgroundColor&&tg.setBackgroundColor('#0a0118'),tg.disableVerticalSwipes&&tg.disableVerticalSwipes())}catch(e){}
+let TOKEN=localStorage.getItem('tk')||'',S={me:null,cfg:null},R=null,PAGE='home';
+const $=(s,r=document)=>r.querySelector(s),$$=(s,r=document)=>[...r.querySelectorAll(s)];
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fmt=n=>Number(n||0).toLocaleString('en-US');
+const ago=t=>{const d=Math.floor(Date.now()/1000-t);return d<60?'አሁን':d<3600?Math.floor(d/60)+' ደ':d<86400?Math.floor(d/3600)+' ሰ':Math.floor(d/86400)+' ቀ'};
+function toast(m,t=2400){const e=document.createElement('div');e.className='toast';e.textContent=m;document.body.appendChild(e);setTimeout(()=>e.remove(),t)}
+function hap(t='light'){try{tg&&tg.HapticFeedback&&tg.HapticFeedback.impactOccurred(t)}catch(e){}}
+function av(u,cls=''){const n=(u&&u.name||'?')[0].toUpperCase();const h=((u&&u.id)||0)*47%360;const f=u&&u.fr?` fr fr-${esc(u.fr)}`:'';
+ return u&&u.photo?`<div class="av ${cls}${f}" style="background-image:url('${esc(u.photo)}')"></div>`:`<div class="av ${cls}${f}" style="background:hsl(${h},55%,42%)">${esc(n)}</div>`}
+const vipTag=u=>u&&u.vip?'<span class="vip">VIP</span>':'';
+const vipLeft=m=>Math.max(0,Math.ceil(((m.vip_until||0)-Date.now()/1000)/86400));
+async function api(path,body,retry=true){
+  const o={headers:{}};if(TOKEN)o.headers.Authorization='Bearer '+TOKEN;
+  if(body!==undefined){o.method='POST';if(body instanceof FormData)o.body=body;else{o.headers['Content-Type']='application/json';o.body=JSON.stringify(body)}}
+  let r;try{r=await fetch(path,o)}catch(e){throw new Error('ኢንተርኔት የለም')}
+  if(r.status===401&&retry){await login();return api(path,body,false)}
+  const d=await r.json().catch(()=>({}));
+  if(!r.ok){const e=new Error(d.error||'ስህተት');e.code=r.status;throw e}
+  return d}
+async function login(){
+  const q=new URLSearchParams(location.search);
+  const r=await fetch('/api/register',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({init:(tg&&tg.initData)||'',dev_id:q.get('dev')})});
+  const d=await r.json();if(!r.ok)throw new Error(d.error||'login failed');
+  TOKEN=d.token;localStorage.setItem('tk',TOKEN);S.me=d.me;S.cfg=d.cfg}
+function setMe(m){S.me=m;$$('.coins-n').forEach(e=>e.textContent=fmt(m.coins))}
+function modal(html,onclose){const o=document.createElement('div');o.className='ov';o.innerHTML=`<div class="sheet">${html}</div>`;
+  o.onclick=e=>{if(e.target===o)close()};const close=()=>{o.remove();onclose&&onclose()};o.close=close;document.body.appendChild(o);return o}
+const closeModal=()=>{const m=$$('.ov').pop();m&&m.close()};
+async function run(btn,fn){if(btn)btn.disabled=true;try{return await fn()}catch(e){toast(e.message)}finally{if(btn)btn.disabled=false}}
+function shrink(file,max=1100,q=.8){return new Promise((res,rej)=>{const i=new Image();i.onload=()=>{const k=Math.min(1,max/Math.max(i.width,i.height));const c=document.createElement('canvas');c.width=i.width*k;c.height=i.height*k;c.getContext('2d').drawImage(i,0,0,c.width,c.height);c.toBlob(b=>b?res(b):rej(new Error('image')),'image/jpeg',q)};i.onerror=()=>rej(new Error('ምስል አይደለም'));i.src=URL.createObjectURL(file)})}
+const topbar=()=>`<div class="top"><div class="logo">🎙 Twenty One</div><span class="pill" onclick="go('wallet')">🪙 <span class="coins-n">${fmt(S.me.coins)}</span></span></div>`;
+
+/* ============================== navigation ============================== */
+const LOAD={home:renderHome,rooms:renderRooms,games:renderGames,wallet:renderWallet,community:renderCommunity,me:renderMe};
+function go(p){PAGE=p;$$('.page').forEach(e=>e.classList.toggle('on',e.id==='p-'+p));$$('#nav button').forEach(b=>b.classList.toggle('on',b.dataset.p===p));hideRoom();LOAD[p]();hap()}
+$('#nav').onclick=e=>{const b=e.target.closest('button');if(b)go(b.dataset.p)};
+setInterval(()=>{if(!document.hidden&&!R?.visible&&PAGE==='rooms')loadRoomList()},8000);
+
+/* ============================== home ============================== */
+async function renderHome(){
+  const m=S.me,el=$('#p-home');
+  el.innerHTML=topbar()+`<div class="hero"><div class="row">${av(m,'l')}<div class="sp"><div style="font-size:18px;font-weight:700" class="ell">ሰላም ${esc(m.name)} 👋</div><div class="mut">${m.lvi} ${m.lvn} ${vipTag(m)} · 🪙 <span class="coins-n">${fmt(m.coins)}</span></div></div></div>
+  <div class="row" style="margin-top:12px"><button class="btn gold sp" id="daily" ${m.daily_ready?'':'disabled'}>🎁 ${m.daily_ready?'የዕለት ሽልማት ውሰድ'+(m.vip?' (VIP +50%)':''):'ዛሬ ወስደሃል ✓'}</button><button class="btn sp" onclick="go('rooms')">🎧 ክፍል ግባ</button></div></div>
+  <div id="h-ms"></div><h3>🔥 ሞቅ ያሉ ክፍሎች</h3><div id="h-rooms" class="empty">…</div><h3>🏆 ከፍተኛ ስጦታ ሰጪዎች</h3><div id="h-lb" class="empty">…</div>`;
+  $('#daily').onclick=e=>run(e.target,async()=>{const d=await api('/api/daily',{});setMe(d.me);toast(`🎉 +${d.reward} ሳንቲም (ቀን ${d.streak})`);hap('medium');renderHome()});
+  loadMsCard();
+  api('/api/rooms').then(d=>{const r=d.rooms.slice(0,3);$('#h-rooms').className='';$('#h-rooms').innerHTML=r.length?r.map(roomCard).join(''):'<div class="empty">ክፍል የለም — የመጀመሪያውን ክፈት!</div>'}).catch(()=>{});
+  api('/api/leaderboard').then(d=>{const l=d.senders.slice(0,5);$('#h-lb').className='';$('#h-lb').innerHTML=l.length?`<div class="card">${l.map((u,i)=>`<div class="row" style="padding:5px 0">${['🥇','🥈','🥉','4','5'][i]}${av(u,'s')}<div class="sp ell">${esc(u.name)} ${vipTag(u)} <span class="badge">${u.lvi}${u.lvn}</span></div><b class="gold">${fmt(u.v)}</b></div>`).join('')}</div>`:'<div class="empty">ገና ማንም አልሰጠም</div>'}).catch(()=>{})}
+
+/* ============================== rooms ============================== */
+let RT='voice';
+function roomCard(r){const lv=r.kind==='live';return `<div class="card room-card" onclick="enterRoom('${r.id}')">${av(r.host,'')}<div class="sp"><div class="ell" style="font-weight:600">${lv?'<span class="lv-tag">LIVE</span> ':''}${esc(r.name)}</div><div class="mut ell">${esc(r.topic||('Host: '+(r.host?r.host.name:'-')))}</div></div><div style="text-align:right"><div><span class="live"></span><b>${r.online}</b></div><div class="mut">${lv?'📹 ላይቭ':'🎤 '+r.seated+'/21'}</div></div></div>`}
+function renderRooms(){$('#p-rooms').innerHTML=topbar()+`<div class="chips" style="margin-bottom:10px"><div class="chip ${RT==='voice'?'on':''}" onclick="RT='voice';renderRooms()">🎧 ድምፅ</div><div class="chip ${RT==='live'?'on':''}" onclick="RT='live';renderRooms()">📹 ላይቭ</div></div><div class="row" style="margin-bottom:10px"><h2 class="sp" style="margin:0">${RT==='live'?'📹 ላይቭ ስትሪም':'🎧 የድምፅ ክፍሎች'}</h2><button class="btn sm ${RT==='live'?'bad':''}" onclick="newRoom(RT)">${RT==='live'?'📹 Go Live':'＋ ክፈት'}</button></div><div id="rl"><div class="empty">…</div></div>`;loadRoomList()}
+async function loadRoomList(){try{const d=await api('/api/rooms');const l=d.rooms.filter(r=>(r.kind||'voice')===RT);const el=$('#rl');if(el)el.innerHTML=l.length?l.map(roomCard).join(''):`<div class="empty">${RT==='live'?'📹<br>ላይቭ የለም። መጀመሪያ ሁን!':'🎙<br>ክፍል የለም። የመጀመሪያውን ክፈት!'}</div>`}catch(e){}}
+function newRoom(kind){const lv=kind==='live';const m=modal(`<h3>${lv?'📹 ላይቭ ጀምር':'🎙 አዲስ ክፍል'}</h3><div class="col"><input id="nr-n" placeholder="${lv?'የላይቭ ርዕስ':'የክፍል ስም'}" maxlength="40">${lv?'':'<input id="nr-t" placeholder="ርዕስ (አማራጭ)" maxlength="100">'}<button class="btn ${lv?'bad':''}" id="nr-b">${lv?'📹 ጀምር':'ክፈት'}</button></div>`);
+  $('#nr-b').onclick=e=>run(e.target,async()=>{const d=await api('/api/rooms/create',{name:$('#nr-n').value,topic:lv?'':$('#nr-t').value,kind:lv?'live':'voice'});m.close();enterRoom(d.id)})}
+
+/* ============================== voice engine (Agora live mode) ============================== */
+const V={client:null,track:null,rid:null,pub:false,busy:false,preparing:false,
+ set(t,c){const e=$(R&&R.kind==='live'?'#lv-vs':'#r-vs');if(e){e.textContent=t;e.style.color=c||''}},
+ async join(rid,kind,isHost){
+  await this.leave();this.rid=rid;this.set('⏳ በመገናኘት ላይ…');
+  const d=await api('/api/agora-token',{room_id:rid});
+  AgoraRTC.setLogLevel&&AgoraRTC.setLogLevel(3);
+  AgoraRTC.onAutoplayFailed=()=>toast('🔊 ድምፅ ለማብራት ማያውን ንካ');
+  const c=AgoraRTC.createClient({mode:'live',codec:'vp8'});this.client=c;
+  await c.setClientRole(kind==='live'&&isHost?'host':'audience');
+  c.on('user-published',async(u,m)=>{try{await c.subscribe(u,m);if(m==='audio')u.audioTrack.play();else if(m==='video'){try{c.setStreamFallbackOption&&c.setStreamFallbackOption(u,1)}catch(e){}u.videoTrack.play('lv-video',{fit:'cover'})}}catch(e){console.warn(e)}});
+  c.on('volume-indicator',vs=>{const on=new Set(vs.filter(v=>v.level>6).map(v=>v.uid||S.me.id));$$('.seat[data-uid]').forEach(s=>s.classList.toggle('speak',on.has(+s.dataset.uid)))});
+  c.on('token-privilege-will-expire',()=>this.renew());c.on('token-privilege-did-expire',()=>this.renew());
+  c.on('connection-state-change',s=>{if(this.client!==c)return;this.set(s==='CONNECTED'?'🔊 ተገናኝቷል':s==='RECONNECTING'?'⚠️ እንደገና…':s==='DISCONNECTED'?'🔇 ተቋርጧል':'⏳ …',s==='CONNECTED'?'#2ee59d':'')});
+  c.enableAudioVolumeIndicator();
+  await c.join(d.app_id,d.channel,d.token,d.uid);
+  if(this.client!==c){try{await c.leave()}catch(e){}return}if(kind==='live'&&isHost)await this.startHost()},
+ async startHost(){try{const[a,v]=await AgoraRTC.createMicrophoneAndCameraTracks({AEC:true,ANS:true,AGC:true},{encoderConfig:'480p_2',facingMode:'user'});this.track=a;this.vtrack=v;v.play('lv-video',{mirror:true,fit:'cover'});
+   try{await this.client.enableDualStream()}catch(e){}await this.client.publish([a,v]);this.pub=true;$('#lv-flip').style.display='';$('#lv-mic').style.display=''}
+  catch(e){toast('📷 ካሜራ/ማይክ አልተፈቀደም — በስልክ ቅንብር ፍቀድ');exitRoom(true)}},
+ async renew(){try{const d=await api('/api/agora-token',{room_id:this.rid});await this.client.renewToken(d.token)}catch(e){}},
+ async prepMic(){ // ask permission BEFORE taking a seat
+  if(this.track)return true;
+  try{this.track=await AgoraRTC.createMicrophoneAudioTrack({AEC:true,ANS:true,AGC:true,encoderConfig:'music_standard'});return true}
+  catch(e){toast('🎤 ማይክሮፎን አልተፈቀደም — በስልክ ቅንብር ፍቀድ');return false}},
+ async sync(seated,muted){
+  const c=this.client;if(!c||this.busy||c.connectionState!=='CONNECTED')return;this.busy=true;
+  try{
+   if(seated&&!this.pub){
+     if(!await this.prepMic()){await api(`/api/rooms/${this.rid}/leave-seat`,{});return}
+     const d=await api('/api/agora-token',{room_id:this.rid});
+     await c.setClientRole('host');if(d.token)await c.renewToken(d.token);
+     await c.publish(this.track);this.pub=true}
+   if(!seated&&this.pub){try{await c.unpublish(this.track)}catch(e){}this.track.close();this.track=null;await c.setClientRole('audience');this.pub=false}
+   if(this.pub&&this.track)await this.track.setEnabled(!(muted||R?.selfMute));
+   updateMicBtn(seated,muted)
+  }catch(e){console.warn('sync',e);this.pub=false}finally{this.busy=false}},
+ async leave(){const c=this.client;this.client=null;this.pub=false;this.rid=null;
+  if(this.track){try{this.track.close()}catch(e){}this.track=null}if(this.vtrack){try{this.vtrack.close()}catch(e){}this.vtrack=null}
+  if(c){try{await c.leave()}catch(e){}}}};
+
+/* ============================== room ============================== */
+async function enterRoom(rid){
+  if(R&&R.id===rid){showRoom();return}
+  if(R)await exitRoom(true);
+  try{const d=await api(`/api/rooms/${rid}/join`,{});
+   R={kind:d.room.kind||'voice',id:rid,name:d.room.name,host:d.room.host_id,v:-1,mid:0,seats:{},online:0,init:true,alive:true,selfMute:false,visible:true,t:null,n:0};
+   $('#r-name').textContent=d.room.name;$('#r-chat').innerHTML='';$('#lv-chat').innerHTML='';$('#lv-host').innerHTML='';$('#lv-mic').style.display='none';$('#lv-flip').style.display='none';$('#r-seats').innerHTML='';$('#r-host').innerHTML='';
+   showRoom();V.join(rid,R.kind,R.host===S.me.id).catch(e=>{V.set('❌ ድምፅ አልተገናኘም','#ff5c7a');toast('ድምፅ: '+e.message)});poll()
+  }catch(e){toast(e.message==='ROOM_GONE'?'ክፍሉ ተዘግቷል':e.message)}}
+function showRoom(){if(!R)return;R.visible=true;$(R.kind==='live'?'#live':'#room').classList.add('on');$('#mini').classList.remove('on');$('#nav').style.display='none'}
+function hideRoom(){if(R&&R.kind==='live')return;$('#room').classList.remove('on');$('#nav').style.display='';if(R){R.visible=false;$('#mini').classList.add('on');$('#mini-n').textContent=R.name;$('#mini-o').textContent=R.online}else $('#mini').classList.remove('on')}
+function minimize(){go(PAGE==='home'?'rooms':PAGE)}
+async function exitRoom(silent){const r=R;if(!r)return;if(!silent&&r.kind==='live'&&r.host===S.me.id&&!confirm('ላይቭ ይጠናቀቅ?'))return;r.alive=false;clearTimeout(r.t);R=null;$('#live').classList.remove('on');
+  $('#room').classList.remove('on');$('#mini').classList.remove('on');$('#nav').style.display='';
+  await V.leave();api(`/api/rooms/${r.id}/exit`,{}).catch(()=>{});if(!silent&&PAGE==='rooms')loadRoomList()}
+async function poll(){
+  const r=R;if(!r||!r.alive)return;
+  try{const d=await api(`/api/rooms/${r.id}/state?v=${r.v}&mid=${r.mid}`);if(R!==r)return;
+   r.online=d.online;$('#r-on').textContent=d.online;$('#mini-o').textContent=d.online;$('#lv-on').textContent=d.online;
+   if(d.seats){r.v=d.v;r.seats={};d.seats.forEach(s=>r.seats[s.i]=s);r.kind==='live'?renderLiveHost():renderSeats()}
+   (d.msgs||[]).forEach(m=>{r.mid=Math.max(r.mid,m.id);addMsg(m,!r.init)});r.init=false;
+   if(r.kind==='voice'){const mine=Object.values(r.seats).find(s=>s.u.id===S.me.id);V.sync(!!mine,mine&&mine.m);updateMicBtn(!!mine,mine&&mine.m)}r.n=0
+  }catch(e){if(R!==r)return;if(e.message==='ROOM_GONE'){toast('ክፍሉ ተዘግቷል');exitRoom(true);return}if(e.code===403){exitRoom(true);return}r.n++}
+  if(R===r)r.t=setTimeout(poll,document.hidden?6000:r.n>2?5000:2200)}
+function seatHTML(i,s,host){
+  if(!s)return `<div class="seat empty" onclick="seatTap(${i})"><div class="av">${i}</div><div class="nm">ባዶ</div></div>`;
+  return `<div class="seat ${host?'host':''}" data-uid="${s.u.id}" onclick="seatTap(${i})">${av(s.u)}${s.m?'<span class="mt">🔇</span>':''}<div class="nm ell${s.u.vip?' vipn':''}">${esc(s.u.name)}</div></div>`}
+function renderSeats(){const r=R;if(!r)return;
+  const hs=r.seats[0];$('#r-host').innerHTML=hs?seatHTML(0,hs,true):`<div class="seat host empty" onclick="seatTap(0)"><div class="av">👑</div><div class="nm">host</div></div>`;
+  let h='';for(let i=1;i<S.cfg.seats;i++)h+=seatHTML(i,r.seats[i]);$('#r-seats').innerHTML=h}
+function updateMicBtn(seated,muted){const b=$('#r-mic');if(!b)return;b.classList.toggle('on',!!seated);const off=muted||R?.selfMute;b.classList.toggle('off',!!off);b.textContent=off?'🔇':'🎤'}
+function toggleMic(){if(!R)return;R.selfMute=!R.selfMute;const mine=Object.values(R.seats).find(s=>s.u.id===S.me.id);V.sync(!!mine,mine&&mine.m);updateMicBtn(!!mine,mine&&mine.m);hap()}
+async function seatTap(i){const r=R;if(!r)return;const s=r.seats[i];
+  if(!s){ if(i===0&&r.host!==S.me.id)return toast('ይህ የhost ወንበር ነው'); if(i!==0&&r.host===S.me.id)return toast('host በራሱ ወንበር ላይ ነው');
+    if(!await V.prepMic())return;
+    try{await api(`/api/rooms/${r.id}/seat`,{idx:i});hap('medium');poll()}catch(e){toast(e.message);if(!V.pub&&V.track){V.track.close();V.track=null}} return}
+  const u=s.u,mine=u.id===S.me.id,amHost=r.host===S.me.id||S.me.is_admin;
+  modal(`<div class="col" style="align-items:center;text-align:center">${av(u,'l')}<b style="font-size:18px">${esc(u.name)}</b><div><span class="badge">${u.lvi} ${u.lvn}</span> ${vipTag(u)}</div><div class="mut">${esc(u.bio||'')}</div></div>
+  <div class="row" style="margin-top:14px;flex-wrap:wrap;justify-content:center">
+  ${mine?(i===0?'':`<button class="btn bad sm" onclick="seatLeave()">ወንበር ልቀቅ</button>`):`<button class="btn gold sm" onclick="closeModal();openGift(${u.id})">🎁 ስጦታ</button>`}
+  ${amHost&&!mine&&u.id!==r.host?`<button class="btn ghost sm" onclick="seatAct(${u.id},'${s.m?'unmute':'mute'}')">${s.m?'🔊 ድምፅ ፍቀድ':'🔇 አጥፋ'}</button><button class="btn bad sm" onclick="seatAct(${u.id},'kick')">⛔ አስወጣ</button>`:''}</div>`)}
+async function seatLeave(){closeModal();await run(null,async()=>{await api(`/api/rooms/${R.id}/leave-seat`,{});poll()})}
+async function seatAct(uid,a){closeModal();await run(null,async()=>{await api(`/api/rooms/${R.id}/seat-action`,{uid,action:a});poll()})}
+async function sendChat(){const i=$(R&&R.kind==='live'?'#lv-in':'#r-in'),t=i.value.trim();if(!t||!R)return;i.value='';try{await api(`/api/rooms/${R.id}/chat`,{text:t});poll()}catch(e){toast(e.message)}}
+function addMsg(m,anim){const c=$(R&&R.kind==='live'?'#lv-chat':'#r-chat'),near=c.scrollHeight-c.scrollTop-c.clientHeight<90,d=document.createElement('div');
+  if(m.k==='gift'){const g=m.meta||{};d.className='msg gift';d.innerHTML=`<b>${esc(m.n)}</b> → <b>${esc(g.to_name)}</b> ${g.emoji} ×${g.qty}`;if(anim)flyGift(g,m.n)}
+  else{d.className='msg';d.innerHTML=`${m.v?'<span class="vip">VIP</span> ':''}<b class="${m.v?'vipn':''}">${esc(m.n)}:</b> ${esc(m.t)}`}
+  c.appendChild(d);while(c.children.length>120)c.firstChild.remove();if(near||!anim)c.scrollTop=c.scrollHeight}
+function flyGift(g,from){const e=document.createElement('div');e.className='fly'+(['luxury','legendary','mythic'].includes(g.tier)?' big':'');e.innerHTML=`${g.emoji}<small>${esc(from)} → ${esc(g.to_name)} ×${g.qty}</small>`;document.body.appendChild(e);setTimeout(()=>e.remove(),4000);hap('medium')}
+
+/* ---- live helpers ---- */
+function renderLiveHost(){const h=R&&R.seats[0];$('#lv-host').innerHTML=h?`${av(h.u,'s')}<div style="line-height:1.2"><b class="ell" style="display:block;max-width:110px">${esc(h.u.name)}</b><span class="mut ell" style="color:#ddd;display:block;max-width:110px">${esc(R.name)}</span></div>`:'…'}
+async function flipCam(){try{const c=await AgoraRTC.getCameras();if(c.length<2||!V.vtrack)return;V.camI=((V.camI||0)+1)%c.length;await V.vtrack.setDevice(c[V.camI].deviceId)}catch(e){toast('ካሜራ መቀየር አልተቻለም')}}
+async function liveMic(){if(!V.track||!R)return;R.selfMute=!R.selfMute;await V.track.setEnabled(!R.selfMute);$('#lv-mic').textContent=R.selfMute?'🔇':'🎤'}
+/* ---- gifts ---- */
+let GF={to:0,gift:null,qty:1};
+function openGift(to){if(!R)return;const r=R;
+  const rec=Object.values(r.seats).filter(s=>s.u.id!==S.me.id);if(!rec.length)return toast('ስጦታ የሚቀበል ሰው የለም (ወንበር ላይ ያለ ሰው ይፈልጋል)');
+  GF={to:to||rec[0].u.id,gift:S.cfg.gifts[0].key,qty:1};
+  const m=modal('');const draw=()=>{const g=S.cfg.gifts.find(x=>x.key===GF.gift);
+   m.firstChild.innerHTML=`<div class="row"><h3 class="sp" style="margin:0">🎁 ስጦታ</h3><span class="pill">🪙 <span class="coins-n">${fmt(S.me.coins)}</span></span></div>
+   <div class="chips" style="margin:10px 0">${rec.map(s=>`<div class="chip ${GF.to===s.u.id?'on':''}" onclick="GF.to=${s.u.id};this.parentNode.querySelectorAll('.chip').forEach(c=>c.classList.remove('on'));this.classList.add('on')">${esc(s.u.name.slice(0,12))}</div>`).join('')}</div>
+   <div class="gg">${S.cfg.gifts.map(x=>`<div class="gi tier-${x.tier} ${GF.gift===x.key?'on':''}" data-k="${x.key}"><b>${x.emoji}</b>${x.name}<div class="gold">🪙${fmt(x.price)}</div></div>`).join('')}</div>
+   <div class="row" style="margin-top:12px"><div class="chips sp">${[1,5,10,20,50].map(q=>`<div class="chip ${GF.qty===q?'on':''}" data-q="${q}">×${q}</div>`).join('')}</div><button class="btn gold" id="g-send">ላክ · ${fmt(g.price*GF.qty)}</button></div>`;
+   $$('.gi',m).forEach(e=>e.onclick=()=>{GF.gift=e.dataset.k;draw()});$$('[data-q]',m).forEach(e=>e.onclick=()=>{GF.qty=+e.dataset.q;draw()});
+   $('#g-send',m).onclick=e=>run(e.target,async()=>{const d=await api(`/api/rooms/${r.id}/gift`,{to:GF.to,gift:GF.gift,qty:GF.qty});S.me.coins=d.coins;setMe(S.me);toast('✅ ተልኳል');hap('medium');poll()})};draw()}
+
+/* ============================== games ============================== */
+const GM={dice:{n:'ዳይስ',i:'🎲',x:'4.2x',pick:[1,2,3,4,5,6],hint:'ቁጥር ገምት'},flip:{n:'ሳንቲም',i:'🪙',x:'1.4x',pick:[1,2],lab:['ፊት','ጀርባ'],hint:'ምረጥ'},wheel:{n:'ዕድል ጎማ',i:'🎡',x:'5x'},race:{n:'ፈረስ ውድድር',i:'🐎',x:'4.5x',pick:[1,2,3,4,5,6],hint:'ፈረስ ምረጥ'},box:{n:'ሚስጥር ሳጥን',i:'🎁',x:'10x',pick:[1,2,3],hint:'ሳጥን ምረጥ'}};
+async function renderGames(){
+  $('#p-games').innerHTML=topbar()+`<h2>🎮 ጨዋታዎች</h2><div class="grid2">${Object.entries(GM).map(([k,g])=>`<div class="game" onclick="openGame('${k}')"><b>${g.i}</b>${g.n}<br><span>እስከ ${g.x}</span></div>`).join('')}</div>
+  <h3>⚔️ P2P ጦርነት (${S.cfg.p2p_mult}x)</h3><button class="btn gold" style="width:100%;margin-bottom:10px" onclick="p2pNew()">＋ ጦርነት ክፈት</button><div id="p2p"><div class="empty">…</div></div>`;loadP2P()}
+async function loadP2P(){try{const d=await api('/api/games');const el=$('#p2p');if(!el)return;el.innerHTML=d.p2p.length?d.p2p.map(x=>`<div class="card row"><div class="sp"><b>${esc(x.name)}</b><div class="gold">🪙 ${fmt(x.bet)}</div></div>${x.mine?`<button class="btn bad sm" onclick="p2pCancel(${x.id})">ሰርዝ</button>`:`<button class="btn sm" onclick="p2pJoin(${x.id},${x.bet})">⚔️ ግባ</button>`}</div>`).join(''):'<div class="empty">ክፍት ጦርነት የለም</div>'}catch(e){}}
+function p2pNew(){const m=modal(`<h3>⚔️ ጦርነት ክፈት</h3><input id="pb" type="number" inputmode="numeric" placeholder="ውርርድ (${S.cfg.min_bet}–${S.cfg.max_bet})"><button class="btn gold" id="pbb" style="width:100%;margin-top:10px">ክፈት</button>`);
+  $('#pbb').onclick=e=>run(e.target,async()=>{const d=await api('/api/games/p2p/create',{bet:+$('#pb').value});S.me.coins=d.coins;setMe(S.me);m.close();loadP2P()})}
+async function p2pCancel(id){await run(null,async()=>{const d=await api('/api/games/p2p/cancel',{id});S.me.coins=d.coins;setMe(S.me);loadP2P()})}
+async function p2pJoin(id,bet){if(!confirm(`🪙 ${bet} ታስይዛለህ። ትቀጥላለህ?`))return;await run(null,async()=>{const d=await api('/api/games/p2p/join',{id});S.me.coins=d.coins;setMe(S.me);
+  modal(`<div class="res ${d.win?'win':'lose'}">${d.win?'🏆 አሸነፍክ!':'😢 ተሸነፍክ'}</div><div style="text-align:center" class="mut">vs ${esc(d.vs)} · ${d.win?'+'+fmt(d.prize-d.bet):'-'+fmt(d.bet)} 🪙</div><button class="btn" style="width:100%;margin-top:12px" onclick="closeModal()">እሺ</button>`);loadP2P()})}
+function openGame(k){const g=GM[k];let bet=50,pick=g.pick?g.pick[0]:0;
+  const m=modal(`<div class="row"><h3 class="sp" style="margin:0">${g.i} ${g.n}</h3><span class="pill">🪙 <span class="coins-n">${fmt(S.me.coins)}</span></span></div>
+  <div class="res" id="gres">${g.i}</div>
+  ${g.pick?`<div class="mut">${g.hint}</div><div class="chips" id="gp" style="margin:6px 0">${g.pick.map((p,i)=>`<div class="chip ${i?'':'on'}" data-p="${p}">${g.lab?g.lab[i]:(k==='race'?'🐎'+p:k==='box'?'🎁'+p:p)}</div>`).join('')}</div>`:''}
+  <div class="mut" style="margin-top:6px">ውርርድ</div><div class="chips" id="gb" style="margin:6px 0">${[10,50,100,500,1000,5000].map(b=>`<div class="chip ${b===50?'on':''}" data-b="${b}">${b}</div>`).join('')}</div>
+  <button class="btn gold" id="gplay" style="width:100%;margin-top:8px">ተጫወት</button>`);
+  $$('#gp .chip',m).forEach(c=>c.onclick=()=>{pick=+c.dataset.p;$$('#gp .chip',m).forEach(x=>x.classList.toggle('on',x===c))});
+  $$('#gb .chip',m).forEach(c=>c.onclick=()=>{bet=+c.dataset.b;$$('#gb .chip',m).forEach(x=>x.classList.toggle('on',x===c))});
+  $('#gplay',m).onclick=async e=>{const b=e.target;b.disabled=true;const out=$('#gres',m);
+   const faces=k==='dice'?['⚀','⚁','⚂','⚃','⚄','⚅']:k==='flip'?['🪙','⚪']:k==='race'?['🐎','🏇','🐴']:k==='wheel'?['🎡','✨','💫']:['🎁','📦','🎀'];let n=0;const iv=setInterval(()=>out.textContent=faces[n++%faces.length],90);
+   try{const [d]=await Promise.all([api('/api/games/'+k,{bet,pick}),new Promise(r=>setTimeout(r,1100))]);clearInterval(iv);
+    S.me.coins=d.coins;setMe(S.me);let t;
+    if(k==='dice')t=faces[d.roll-1];else if(k==='flip')t=d.side===1?'ፊት':'ጀርባ';else if(k==='race')t='🏁 #'+d.winner;else t='×'+d.mult;
+    out.innerHTML=`${t}<div style="font-size:16px" class="${d.payout>bet?'win':d.payout?'':'lose'}">${d.payout?'+'+fmt(d.payout)+' 🪙':'ተሸነፍክ'}${d.payout>=bet*2?' 🎉':''}</div>`;hap(d.payout>bet?'heavy':'light')
+   }catch(er){clearInterval(iv);out.textContent=g.i;toast(er.message)}b.disabled=false}}
+
+/* ============================== wallet ============================== */
+async function renderWallet(){
+  const el=$('#p-wallet');el.innerHTML=topbar()+'<div class="empty">…</div>';
+  try{const w=await api('/api/wallet');setMe(w.me);const m=w.me;
+  el.innerHTML=topbar()+`<div class="grid2"><div class="card"><div class="mut">🪙 ሳንቲም</div><div style="font-size:26px;font-weight:800" class="gold coins-n">${fmt(m.coins)}</div><button class="btn gold sm" style="width:100%;margin-top:8px" onclick="buyModal()">ግዛ</button></div>
+  <div class="card"><div class="mut">💰 ገቢ</div><div style="font-size:26px;font-weight:800;color:var(--ok)">${fmt(m.earnings)}</div><div class="mut">≈ ${fmt(Math.floor(m.earnings*S.cfg.rate))} ብር</div><button class="btn sm" style="width:100%;margin-top:4px" onclick="withModal()">አውጣ</button></div></div>
+  <h3>የግዢ ታሪክ</h3>${w.purchases.map(p=>`<div class="card row"><div class="sp"><b>${fmt(p.coins)} 🪙</b> <span class="mut">${p.birr} ብር</span></div><span class="badge">${{pending:'⏳ በመጠባበቅ',approved:'✅ ጸድቋል',rejected:'❌ ውድቅ'}[p.status]}</span></div>`).join('')||'<div class="empty">—</div>'}
+  <h3>የማውጣት ታሪክ</h3>${w.withdraws.map(p=>`<div class="card row"><div class="sp"><b>${fmt(p.coins)}</b> <span class="mut">${p.birr} ብር</span></div><span class="badge">${{pending:'⏳',paid:'✅ ተከፍሏል',rejected:'❌'}[p.status]}</span></div>`).join('')||'<div class="empty">—</div>'}
+  <h3>እንቅስቃሴ</h3>${w.txs.map(t=>`<div class="row mut" style="padding:4px 0"><span class="sp ell">${esc(t.kind)} ${esc(t.note)}</span><b class="${t.amount>=0?'win':'lose'}">${t.amount>=0?'+':''}${fmt(t.amount)}</b><span>${ago(t.ts)}</span></div>`).join('')}`}catch(e){toast(e.message)}}
+function buyModal(){let pk=S.cfg.packages[0];
+  const m=modal(`<h3>🪙 ሳንቲም ግዛ</h3><div class="grid2" id="pk">${S.cfg.packages.map((p,i)=>`<div class="card ${i?'':'gold'}" data-c="${p.coins}" style="text-align:center;margin:0;${i?'':'border-color:var(--gold)'}"><b>${fmt(p.coins)} 🪙</b><div class="mut">${fmt(p.birr)} ብር</div></div>`).join('')}</div>
+  <div class="card" style="margin-top:10px">1️⃣ በTelebirr ወደ <b class="gold">${esc(S.cfg.pay_number||'(አልተቀመጠም)')}</b> ይላኩ<br>2️⃣ የግብይት ቁጥር + ስክሪንሾት ያስገቡ</div>
+  <div class="col"><input id="b-ref" placeholder="Telebirr ግብይት ቁጥር"><input id="b-f" type="file" accept="image/*"><button class="btn gold" id="b-go">ላክ</button></div>`);
+  $$('#pk .card',m).forEach(c=>c.onclick=()=>{pk=S.cfg.packages.find(p=>p.coins==c.dataset.c);$$('#pk .card',m).forEach(x=>x.style.borderColor=x===c?'var(--gold)':'')});
+  $('#b-go',m).onclick=e=>run(e.target,async()=>{const f=$('#b-f',m).files[0];if(!f)throw new Error('ስክሪንሾት ያያይዙ');const fd=new FormData();fd.append('coins',pk.coins);fd.append('ref',$('#b-ref',m).value);fd.append('file',await shrink(f),'s.jpg');
+   await api('/api/coins/buy',fd);m.close();toast('✅ ተልኳል — admin ሲያጸድቅ ይታከላል');renderWallet()})}
+function withModal(){const m=modal(`<h3>💰 ገቢ አውጣ</h3><div class="mut" style="margin-bottom:8px">1 coin = ${S.cfg.rate} ብር · ዝቅተኛ ${S.cfg.min_withdraw}</div><div class="col"><input id="w-c" type="number" inputmode="numeric" placeholder="ብዛት" value="${S.me.earnings}"><input id="w-p" placeholder="Telebirr 09xxxxxxxx" value="${esc(S.me.phone)}" maxlength="10"><button class="btn" id="w-go">ጠይቅ</button></div>`);
+  $('#w-go',m).onclick=e=>run(e.target,async()=>{await api('/api/withdraw',{coins:+$('#w-c',m).value,phone:$('#w-p',m).value});m.close();toast('✅ ጥያቄ ተልኳል');renderWallet()})}
+
+/* ============================== community ============================== */
+let CT='posts';
+async function renderCommunity(){
+  $('#p-community').innerHTML=topbar()+`<div class="chips" style="margin-bottom:10px"><div class="chip ${CT==='posts'?'on':''}" onclick="CT='posts';renderCommunity()">📝 ፖስቶች</div><div class="chip ${CT==='jobs'?'on':''}" onclick="CT='jobs';renderCommunity()">💼 ስራዎች</div></div><button class="btn" style="width:100%;margin-bottom:10px" onclick="${CT==='posts'?'postNew()':'jobNew()'}">＋ ${CT==='posts'?'ፖስት ጻፍ':'ስራ ለጥፍ'}</button><div id="cl"><div class="empty">…</div></div>`;
+  try{if(CT==='posts'){const d=await api('/api/posts');$('#cl').innerHTML=d.posts.map(p=>`<div class="card"><div class="row">${av({id:p.uid,name:p.name,photo:p.photo,fr:p.fr},'s')}<div class="sp"><b>${esc(p.name)}</b> ${vipTag(p)} <span class="mut">${ago(p.ts)}</span></div>${p.mine||S.me.is_admin?`<span onclick="del('posts',${p.id})">🗑</span>`:''}</div><div style="margin:8px 0;white-space:pre-wrap;word-break:break-word">${esc(p.text)}</div><span class="chip" onclick="like(${p.id})">${p.liked?'❤️':'🤍'} ${p.likes}</span></div>`).join('')||'<div class="empty">ፖስት የለም</div>'}
+   else{const d=await api('/api/jobs');$('#cl').innerHTML=d.jobs.map(j=>`<div class="card"><div class="row"><b class="sp">${esc(j.title)}</b>${j.mine||S.me.is_admin?`<span onclick="del('jobs',${j.id})">🗑</span>`:''}</div><div style="margin:6px 0;white-space:pre-wrap">${esc(j.desc)}</div><div class="mut">👤 ${esc(j.name)} · 📞 ${esc(j.contact)} · ${ago(j.ts)}</div></div>`).join('')||'<div class="empty">ስራ የለም</div>'}}catch(e){toast(e.message)}}
+const like=id=>run(null,async()=>{await api(`/api/posts/${id}/like`,{});renderCommunity()});
+const del=(k,id)=>confirm('ይሰረዝ?')&&run(null,async()=>{await api(`/api/${k}/${id}/delete`,{});renderCommunity()});
+function postNew(){const m=modal(`<h3>📝 አዲስ ፖስት</h3><textarea id="po" rows="5" maxlength="500" placeholder="ምን እያሰብክ ነው?"></textarea><button class="btn" id="po-b" style="width:100%;margin-top:10px">ለጥፍ</button>`);$('#po-b').onclick=e=>run(e.target,async()=>{await api('/api/posts/create',{text:$('#po').value});m.close();renderCommunity()})}
+function jobNew(){const m=modal(`<h3>💼 ስራ ለጥፍ</h3><div class="col"><input id="j-t" placeholder="ርዕስ" maxlength="80"><textarea id="j-d" rows="4" placeholder="መግለጫ" maxlength="400"></textarea><input id="j-c" placeholder="ስልክ / @telegram" maxlength="80"><button class="btn" id="j-b">ለጥፍ</button></div>`);$('#j-b').onclick=e=>run(e.target,async()=>{await api('/api/jobs/create',{title:$('#j-t').value,desc:$('#j-d').value,contact:$('#j-c').value});m.close();renderCommunity()})}
+
+/* ============================== daily missions ============================== */
+async function loadMsCard(){try{const d=await api('/api/missions');const el=$('#h-ms');if(!el)return;
+  const t=d.items.length,done=d.items.filter(i=>i.count>=i.goal).length,rdy=d.items.filter(i=>!i.claimed&&i.count>=i.goal).length+(d.bonus.ready?1:0);
+  el.innerHTML=`<div class="card" onclick="openMissions()"><div class="row"><b class="sp">🎯 ዕለታዊ ተልእኮ</b>${rdy?`<span class="pill">🎁 ${rdy} ውሰድ</span>`:`<span class="mut">${done}/${t}</span>`}</div><div class="bar2" style="margin-top:8px"><i style="width:${Math.round(done/t*100)}%"></i></div></div>`}catch(e){}}
+async function openMissions(){
+  const m=modal('<div class="empty">…</div>',()=>{if(PAGE==='home')loadMsCard()});
+  const draw=d=>{const b=d.bonus;
+   m.firstChild.innerHTML=`<div class="row"><h3 class="sp" style="margin:0">🎯 ዕለታዊ ተልእኮ</h3><span class="pill">🪙 <span class="coins-n">${fmt(S.me.coins)}</span></span></div>
+   <div class="mut" style="margin:6px 0 4px">በየቀኑ እኩለ ሌሊት ይታደሳል${S.me.vip?' · VIP ሽልማት +50%':''}</div>
+   ${d.items.map(i=>{const ok=i.count>=i.goal;return `<div class="ms"><span style="font-size:26px">${i.emoji}</span><div class="sp"><div>${esc(i.name)}</div><div class="bar2" style="margin-top:5px"><i style="width:${Math.round(i.count/i.goal*100)}%"></i></div></div>${i.claimed?'<span class="win">✓</span>':ok?`<button class="btn gold sm" data-k="${i.key}">+${i.reward} 🪙</button>`:`<span class="mut">${i.count}/${i.goal} · 🪙${i.reward}</span>`}</div>`}).join('')}
+   <div class="ms"><span style="font-size:26px">🏆</span><div class="sp"><b>ሁሉንም ጨርስ</b><div class="mut">ተጨማሪ ሽልማት</div></div>${b.claimed?'<span class="win">✓</span>':b.ready?`<button class="btn gold sm" data-k="all">+${b.reward} 🪙</button>`:`<span class="mut">🪙${b.reward}</span>`}</div>`;
+   $$('button[data-k]',m).forEach(btn=>btn.onclick=()=>run(btn,async()=>{const r=await api('/api/missions/claim',{key:btn.dataset.k});S.me.coins=r.coins;setMe(S.me);toast(`🎉 +${r.got} ሳንቲም`);hap('medium');draw(r)}))};
+  try{draw(await api('/api/missions'))}catch(e){m.close();toast(e.message)}}
+
+/* ============================== VIP & frames ============================== */
+async function openShop(){
+  const m=modal('<div class="empty">…</div>',()=>{LOAD[PAGE]&&LOAD[PAGE]()});
+  const draw=d=>{setMe(d.me);const me=d.me,cv=S.cfg.vip,days=vipLeft(me),own=new Set(d.owned);
+   m.firstChild.innerHTML=`<div class="row"><h3 class="sp" style="margin:0">✨ VIP እና ፍሬም</h3><span class="pill">🪙 <span class="coins-n">${fmt(me.coins)}</span></span></div>
+   <div class="card vipc" style="margin-top:12px"><div class="row"><span class="vip" style="font-size:12px;padding:2px 8px">VIP</span><b class="sp">${me.vip?`ንቁ ነው · ${days} ቀን ቀርቷል`:'ልዩ ጥቅሞች'}</b></div>
+    <div class="mut" style="margin:8px 0 10px;line-height:1.8">✨ ወርቃማ VIP ምልክት በስምህ ጎን<br>🎁 ዕለታዊ ሽልማት +${Math.round((cv.bonus-1)*100)}%<br>🖼 2 ልዩ የVIP ፍሬሞች (ያለ ክፍያ)<br>🎙 እስከ ${cv.rooms} የድምፅ ክፍል መክፈት</div>
+    <button class="btn gold" id="vip-go" style="width:100%">${me.vip?'አራዝም':'VIP ሁን'} · +${cv.days} ቀን · 🪙${fmt(cv.price)}</button></div>
+   <h3 style="margin:16px 0 10px;color:#fff">🖼 ፍሬሞች</h3>
+   <div class="fg">${S.cfg.frames.map(f=>{const have=own.has(f.key)||(f.vip&&me.vip),on=me.fr===f.key;
+     return `<div class="fi ${on?'on':''}" data-k="${f.key}">${av({id:me.id,name:me.name,photo:me.photo,fr:f.key})}<div>${esc(f.name)}</div><div class="fp">${on?'✓ ለብሰሃል':have?'ልበስ':f.vip?'🔒 VIP':'🪙'+fmt(f.price)}</div></div>`}).join('')}</div>
+   <div class="mut" style="margin-top:10px;text-align:center">ፍሬሙን ለማውለቅ የለበስከውን በድጋሚ ንካ</div>`;
+   $('#vip-go',m).onclick=e=>run(e.target,async()=>{if(!confirm(`🪙${fmt(cv.price)} ለ${cv.days} ቀን VIP ይገዛ?`))return;draw(await api('/api/vip/buy',{}));toast('👑 VIP ንቁ ሆኗል!');hap('heavy')});
+   $$('.fi',m).forEach(e=>e.onclick=()=>{const f=S.cfg.frames.find(x=>x.key===e.dataset.k),have=own.has(f.key)||(f.vip&&me.vip);
+     const act=(path,b,msg)=>run(null,async()=>{draw(await api(path,b));if(msg)toast(msg);hap()});
+     if(me.fr===f.key)return act('/api/frame/equip',{key:''});
+     if(have)return act('/api/frame/equip',{key:f.key},'✅ ፍሬሙ ተለብሷል');
+     if(f.vip)return toast('🔒 ይህ ፍሬም ለVIP ብቻ ነው');
+     if(confirm(`${f.name} ፍሬም 🪙${fmt(f.price)} ይገዛ?`))act('/api/frame/buy',{key:f.key},'✅ ተገዝቷል')})};
+  try{draw(await api('/api/shop'))}catch(e){m.close();toast(e.message)}}
+
+/* ============================== profile ============================== */
+async function renderMe(){
+  try{const d=await api('/api/me');setMe(d.me)}catch(e){}
+  const m=S.me,pct=m.next?Math.min(100,Math.round((m.spent-m.base)/(m.next-m.base)*100)):100,link=S.cfg.bot?`https://t.me/${S.cfg.bot}?startapp=ref_${m.tg_id}`:'';
+  $('#p-me').innerHTML=topbar()+`<div class="card" style="text-align:center"><div style="display:flex;justify-content:center">${av(m,'l')}</div><h2 style="margin:8px 0 2px">${esc(m.name)}</h2><span class="badge">${m.lvi} ${m.lvn}</span> ${vipTag(m)}<div class="mut" style="margin:6px 0">${esc(m.bio||'—')}</div>
+  <div class="bar2"><i style="width:${pct}%"></i></div><div class="mut" style="margin-top:4px">${m.next?`ወደ ቀጣዩ ደረጃ ${fmt(m.next-m.spent)} 🪙 ቀርቷል`:'👑 ከፍተኛ ደረጃ'}</div></div>
+  <div class="grid2"><div class="card" style="text-align:center"><div class="mut">የላክሁት ስጦታ</div><b class="gold">${fmt(m.sent)}</b></div><div class="card" style="text-align:center"><div class="mut">የተቀበልኩት</div><b class="gold">${fmt(m.recv)}</b></div></div>
+  <div class="col"><button class="btn gold" onclick="openShop()">✨ VIP እና ፍሬም${m.vip?` · ${vipLeft(m)} ቀን`:''}</button><button class="btn" onclick="editProfile()">✏️ ፕሮፋይል አስተካክል</button>${link?`<button class="btn ghost" onclick="navigator.clipboard&&navigator.clipboard.writeText('${link}');toast('📋 የመጋበዣ ሊንክ ተቀድቷል — 10% ቦነስ ታገኛለህ')">🔗 ጓደኛ ጋብዝ (10% ቦነስ)</button>`:''}${m.is_admin?`<button class="btn gold" onclick="openAdmin()">🛡 Admin</button>`:''}</div>`}
+function editProfile(){const m=S.me;const o=modal(`<h3>✏️ ፕሮፋይል</h3><div class="col"><input id="e-p" type="file" accept="image/*"><input id="e-n" value="${esc(m.name)}" maxlength="30" placeholder="ስም"><input id="e-b" value="${esc(m.bio)}" maxlength="160" placeholder="ስለ እኔ"><input id="e-t" value="${esc(m.phone)}" maxlength="10" placeholder="ስልክ 09xxxxxxxx"><button class="btn" id="e-go">አስቀምጥ</button></div>`);
+  $('#e-go',o).onclick=e=>run(e.target,async()=>{const f=$('#e-p',o).files[0];if(f){const fd=new FormData();fd.append('file',await shrink(f,320,.85),'p.jpg');setMe((await api('/api/profile/photo',fd)).me)}
+   setMe((await api('/api/profile',{name:$('#e-n',o).value,bio:$('#e-b',o).value,phone:$('#e-t',o).value})).me);o.close();renderMe()})}
+
+/* ============================== admin ============================== */
+function openAdmin(){const o=modal(`<div class="chips" id="at">${['overview','purchases','withdraws','users'].map((t,i)=>`<div class="chip ${i?'':'on'}" data-t="${t}">${t}</div>`).join('')}</div><div id="ab" style="margin-top:10px"></div>`);
+  const load=async t=>{$$('#at .chip',o).forEach(c=>c.classList.toggle('on',c.dataset.t===t));const b=$('#ab',o);b.innerHTML='…';
+   try{if(t==='overview'){const d=await api('/api/admin/overview');b.innerHTML=`<div class="grid2">${Object.entries(d).map(([k,v])=>`<div class="card" style="margin:0"><div class="mut">${k}</div><b>${fmt(v)}</b></div>`).join('')}</div>`}
+   else if(t==='purchases'||t==='withdraws'){const d=await api('/api/admin/'+t);b.innerHTML=d.items.map(x=>`<div class="card"><b>${esc(x.name)}</b> · ${fmt(x.coins)} 🪙 · ${fmt(x.birr)} ብር<div class="mut">${esc(x.ref||x.phone)} · ${ago(x.ts)}</div><div class="row" style="margin-top:8px">${t==='purchases'?`<button class="btn ghost sm" onclick="viewShot(${x.id})">🖼</button><button class="btn sm" onclick="admAct('purchase',${x.id},'approve')">✅</button><button class="btn bad sm" onclick="admAct('purchase',${x.id},'reject')">❌</button>`:`<button class="btn sm" onclick="admAct('withdraw',${x.id},'paid')">💰 Paid</button><button class="btn bad sm" onclick="admAct('withdraw',${x.id},'reject')">❌</button>`}</div></div>`).join('')||'<div class="empty">ባዶ</div>'}
+   else{b.innerHTML=`<input id="uq" placeholder="ፈልግ (ስም / telegram id)"><div id="ul" style="margin-top:8px"></div>`;const ld=async()=>{const d=await api('/api/admin/users?q='+encodeURIComponent($('#uq',o).value));$('#ul',o).innerHTML=d.items.map(u=>`<div class="card"><b>${esc(u.name)}</b> ${u.banned?'🚫':''} ${u.vip?'<span class="vip">VIP</span>':''}<div class="mut">tg:${u.tg} · 🪙${fmt(u.coins)} · 💰${fmt(u.earn)}</div><div class="row" style="margin-top:6px;flex-wrap:wrap"><button class="btn sm ghost" onclick="admUser(${u.id},'${u.banned?'unban':'ban'}')">${u.banned?'Unban':'Ban'}</button><button class="btn sm gold" onclick="admGrant(${u.id})">+Coins</button><button class="btn sm ghost" onclick="admVip(${u.id})">+VIP</button><button class="btn sm bad" onclick="confirm('Delete?')&&admUser(${u.id},'delete')">🗑</button></div></div>`).join('')};$('#uq',o).oninput=()=>{clearTimeout(window._uq);window._uq=setTimeout(ld,350)};ld()}}catch(e){b.innerHTML=esc(e.message)}};
+  $$('#at .chip',o).forEach(c=>c.onclick=()=>load(c.dataset.t));window._admLoad=load;window._admTab=()=>$('#at .chip.on',o).dataset.t;load('overview')}
+const admAct=(k,id,a)=>run(null,async()=>{await api('/api/admin/'+k,{id,action:a});window._admLoad(window._admTab())});
+const admUser=(id,a,amount)=>run(null,async()=>{await api('/api/admin/user',{id,action:a,amount});window._admLoad(window._admTab())});
+function admVip(id){const n=prompt('VIP ቀናት (1–365)','30');if(n)admUser(id,'vip',+n)}
+function admGrant(id){const n=prompt('Coins (አሉታዊም ይቻላል)');if(n)admUser(id,'grant',+n)}
+async function viewShot(id){try{const r=await fetch('/api/admin/shot/'+id,{headers:{Authorization:'Bearer '+TOKEN}});const u=URL.createObjectURL(await r.blob());modal(`<img src="${u}" style="width:100%;border-radius:12px">`)}catch(e){toast('አልተገኘም')}}
+
+/* ============================== boot ============================== */
+document.addEventListener('visibilitychange',()=>{if(!document.hidden&&R&&R.alive){clearTimeout(R.t);poll()}});
+addEventListener('pagehide',()=>{if(R&&TOKEN)try{fetch(`/api/rooms/${R.id}/exit`,{method:'POST',keepalive:true,headers:{Authorization:'Bearer '+TOKEN,'Content-Type':'application/json'},body:'{}'})}catch(e){}});
+(async()=>{try{await login();$('#splash').remove();go('home')}catch(e){$('#splash-t').textContent='❌ '+e.message+' — Telegram ውስጥ ክፈት'}})();
 </script>
 </body>
 </html>
-{% endraw %}
