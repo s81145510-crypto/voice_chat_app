@@ -925,10 +925,12 @@ def room_gift(rid):
     if limited('gift', 0.4):
         return err('ቀስ በል', 429)
     total = gift['price'] * qty
+    free_before = max(0, (g.user.coins or 0) - (g.user.real_coins or 0))
     if not spend(g.user.id, total):
         db.session.rollback()
         return err('ሳንቲም አይበቃም', 402)
-    earn = int(total * SHARE.get(gift['tier'], DEFAULT_SHARE))
+    real_used = max(0, total - free_before)
+    earn = int(real_used * SHARE.get(gift['tier'], DEFAULT_SHARE))
     db.session.execute(update(User).where(User.id == to).values(earnings=User.earnings + earn, gifts_recv=User.gifts_recv + total),
                        execution_options={'synchronize_session': False})
     db.session.execute(update(User).where(User.id == g.user.id).values(spent=User.spent + total, gifts_sent=User.gifts_sent + total),
