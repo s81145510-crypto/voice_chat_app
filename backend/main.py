@@ -144,7 +144,7 @@ class User(db.Model):
     streak = db.Column(db.Integer, default=0)
     vip_until = db.Column(db.Integer, default=0)  # unix time, 0 = not VIP
     frame = db.Column(db.String(20), default='')  # equipped avatar frame
-
+    real_coins = db.Column(db.Integer, default=0, nullable=False)  # coins bought with real money
 
 class Photo(db.Model):
     user_id = db.Column(db.Integer, primary_key=True)
@@ -276,7 +276,7 @@ class P2P(db.Model):
 def ensure_columns():
     """db.create_all() creates missing tables but never adds columns to old ones - add them here."""
     from sqlalchemy import inspect
-    want = {User: [('vip_until', 'INTEGER DEFAULT 0'), ('frame', "VARCHAR(20) DEFAULT ''")],
+    want = {User: [('vip_until', 'INTEGER DEFAULT 0'), ('frame', "VARCHAR(20) DEFAULT ''"), ('real_coins', 'INTEGER DEFAULT 0 NOT NULL')],
             Room: [('kind', "VARCHAR(8) DEFAULT 'voice'")]}
     insp = inspect(db.engine)
     for M, cols in want.items():
