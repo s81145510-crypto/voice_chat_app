@@ -108,7 +108,6 @@ nav button i{font-style:normal;font-size:21px;filter:grayscale(.7)}nav button.on
 .empty{text-align:center;color:var(--mut);padding:26px 0}
 .foot{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px;padding-top:12px;border-top:1px solid var(--line)}
 .foot a{color:var(--mut);text-decoration:none;font-size:12px;padding:6px 10px;border-radius:12px;background:var(--card);border:1px solid var(--line)}
-/* ---- TikTok-style PK split screen ---- */
 #pk{position:fixed;inset:0;z-index:40;background:#000;display:none;flex-direction:column}
 #pk.on{display:flex}
 .pk-top{position:absolute;top:calc(var(--st) + 8px);left:8px;right:8px;z-index:3;display:flex;align-items:center;gap:6px}
@@ -286,7 +285,7 @@ function seatHTML(i,s,host){
 function renderSeats(){const r=R;if(!r)return;
   const hs=r.seats[0];$('#r-host').innerHTML=hs?seatHTML(0,hs,true):`<div class="seat host empty" onclick="seatTap(0)"><div class="av">👑</div><div class="nm">host</div></div>`;
   let h='';for(let i=1;i<S.cfg.seats;i++)h+=seatHTML(i,r.seats[i]);$('#r-seats').innerHTML=h}
-function updateMicBtn(seated,muted){const b=$('#r-mic');if(!b)return;b.classList.toggle('on',!!seated);const off=muted||R?.selfMute;b.classList.toggle('off',!!off);b.textContent=off?'🔇':'🎤'}
+function updateMicBtn(seated,muted){const b=$('#r-mic');if(!b)return;b.classList.toggle('on',!!seated);const off=muted||R?.selfMute;b.classList.toggle('off',!!off);b.textContent=off?'🔇':''}
 function toggleMic(){if(!R)return;R.selfMute=!R.selfMute;const mine=Object.values(R.seats).find(s=>s.u.id===S.me.id);V.sync(!!mine,mine&&mine.m);updateMicBtn(!!mine,mine&&mine.m);hap()}
 async function seatTap(i){const r=R;if(!r)return;const s=r.seats[i];
   if(!s){if(i===0&&r.host!==S.me.id)return toast("Host's seat");if(i!==0&&r.host===S.me.id)return toast('Host on own seat');
@@ -345,7 +344,7 @@ function openGame(k){const g=GM[k];let bet=50,pick=g.pick?g.pick[0]:0;
   $$('#gp .chip',m).forEach(c=>c.onclick=()=>{pick=+c.dataset.p;$$('#gp .chip',m).forEach(x=>x.classList.toggle('on',x===c))});
   $$('#gb .chip',m).forEach(c=>c.onclick=()=>{bet=+c.dataset.b;$$('#gb .chip',m).forEach(x=>x.classList.toggle('on',x===c))});
   $('#gplay',m).onclick=async e=>{const b=e.target;b.disabled=true;const out=$('#gres',m);
-   const faces=k==='dice'?['⚀','','⚂','','⚄','⚅']:k==='flip'?['🪙','']:k==='race'?['🐎','🏇','🐴']:k==='wheel'?['🎡','✨','💫']:['🎁','📦','🎀'];let n=0;const iv=setInterval(()=>out.textContent=faces[n++%faces.length],90);
+   const faces=k==='dice'?['⚀','','⚂','','⚄','⚅']:k==='flip'?['🪙','']:k==='race'?['🐎','','🐴']:k==='wheel'?['🎡','✨','💫']:['🎁','📦','🎀'];let n=0;const iv=setInterval(()=>out.textContent=faces[n++%faces.length],90);
    try{const [d]=await Promise.all([api('/api/games/'+k,{bet,pick}),new Promise(r=>setTimeout(r,1100))]);clearInterval(iv);
     S.me.coins=d.coins;setMe(S.me);let t;
     if(k==='dice')t=faces[d.roll-1];else if(k==='flip')t=d.side===1?g.lab[0]:g.lab[1];else if(k==='race')t='🏁 #'+d.winner;else t='×'+d.mult;
@@ -359,7 +358,6 @@ async function openLucky(){const m=modal('<div class="empty">…</div>');
   <div class="mut" style="margin:8px 0">Send a Lucky gift in any room for a chance to win a multiplier back. Odds:</div>
   <div class="grid2">${d.table.map(([m,p])=>`<div class="card" style="margin:0;text-align:center"><b class="${m>0?'win':'mut'}">×${m}</b><div class="mut">${(p*100).toFixed(1)}%</div></div>`).join('')}</div>
   <div class="mut" style="margin-top:10px">70% of lucky volume returns to players · 30% platform. 18+ only.</div>`}catch(e){m.close();toast(e.message)}}
-/* ---- TikTok-style PK ---- */
 async function openPKArena(){const m=modal('<div class="empty">…</div>');
  try{const d=await api('/api/pk/active');const myHost=S.me.host==='host';
   m.firstChild.innerHTML=`<h3>⚔️ PK Arena</h3>${myHost?`<button class="btn bad" style="width:100%;margin-bottom:12px" onclick="pkCreate()">＋ Create PK Match</button>`:'<div class="mut" style="margin-bottom:10px;text-align:center">Become a host to create PK matches</div>'}
@@ -383,7 +381,6 @@ async function enterPK(pid){
   c.on('user-published',async(u,m)=>{try{await c.subscribe(u,m);
     if(m==='video'){const pane=(u.uid===P.h2)?'pk-v2':'pk-v1';u.videoTrack.play(pane,{fit:'cover'})}
     else if(m==='audio')u.audioTrack.play()}catch(e){}});
-  c.on('user-unpublished',u=>{});
   await c.join(d.app_id,d.channel,d.token,d.uid);
   if(P.client!==c){try{await c.leave()}catch(e){}return}
   if(d.publisher){try{const[a,v]=await AgoraRTC.createMicrophoneAndCameraTracks({AEC:true,ANS:true,AGC:true},{encoderConfig:'480p_2',facingMode:'user'});P.track=a;P.vtrack=v;
@@ -432,10 +429,10 @@ async function renderWallet(){
   <h3>Withdrawal history</h3>${w.withdraws.map(p=>`<div class="card row"><div class="sp"><b>${fmt(p.coins)}</b> <span class="mut">${p.birr} Birr</span></div><span class="badge">${{pending:'⏳',paid:'✅',rejected:'❌'}[p.status]}</span></div>`).join('')||'<div class="empty">—</div>'}
   <h3>Activity</h3>${w.txs.map(x=>`<div class="row mut" style="padding:4px 0"><span class="sp ell">${esc(x.kind)} ${esc(x.note)}</span><b class="${x.amount>=0?'win':'lose'}">${x.amount>=0?'+':''}${fmt(x.amount)}</b><span>${ago(x.ts)}</span></div>`).join('')}${footbar()}`}catch(e){toast(e.message)}}
 function buyModal(){let pk=S.cfg.packages[0];
-  const m=modal(`<h3>🪙 Buy Coins</h3><div class="grid2" id="pk">${S.cfg.packages.map((p,i)=>`<div class="card" data-c="${p.coins}" style="text-align:center;margin:0;${i?'':'border-color:var(--gold)'}"><b>${fmt(p.coins)} 🪙</b><div class="mut">${fmt(p.birr)} Birr</div></div>`).join('')}</div>
+  const m=modal(`<h3>🪙 Buy Coins</h3><div class="grid2" id="pkgs">${S.cfg.packages.map((p,i)=>`<div class="card" data-c="${p.coins}" style="text-align:center;margin:0;${i?'':'border-color:var(--gold)'}"><b>${fmt(p.coins)} 🪙</b><div class="mut">${fmt(p.birr)} Birr</div></div>`).join('')}</div>
   <div class="card" style="margin-top:10px">1️⃣ Send to Telebirr <b class="gold">${esc(S.cfg.pay_number||'—')}</b><br>2️⃣ Enter transaction ID + screenshot</div>
   <div class="col"><input id="b-ref" placeholder="Telebirr ID"><input id="b-f" type="file" accept="image/*"><button class="btn gold" id="b-go">Send</button></div>`);
-  $$('#pk .card',m).forEach(c=>c.onclick=()=>{pk=S.cfg.packages.find(p=>p.coins==c.dataset.c);$$('#pk .card',m).forEach(x=>x.style.borderColor=x===c?'var(--gold)':'')});
+  $$('#pkgs .card',m).forEach(c=>c.onclick=()=>{pk=S.cfg.packages.find(p=>p.coins==c.dataset.c);$$('#pkgs .card',m).forEach(x=>x.style.borderColor=x===c?'var(--gold)':'')});
   $('#b-go',m).onclick=e=>run(e.target,async()=>{const f=$('#b-f',m).files[0];if(!f)throw new Error('Attach screenshot');const fd=new FormData();fd.append('coins',pk.coins);fd.append('ref',$('#b-ref',m).value);fd.append('file',await shrink(f),'s.jpg');
    await api('/api/coins/buy',fd);m.close();toast('✅ Sent — credited after approval');renderWallet()})}
 function withModal(){const m=modal(`<h3>💰 Withdraw</h3><div class="mut" style="margin-bottom:8px">1 coin = ${S.cfg.rate} Birr · min ${S.cfg.min_withdraw}</div><div class="col"><input id="w-c" type="number" inputmode="numeric" value="${(S.me.earnings||0)+(S.me.comm||0)}"><input id="w-p" placeholder="Telebirr 09xxxxxxxx" value="${esc(S.me.phone)}" maxlength="10"><button class="btn" id="w-go">Request</button></div>`);
