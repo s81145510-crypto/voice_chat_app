@@ -61,7 +61,7 @@ SEATS = 21
 MIN_WITHDRAW = 500
 COIN_BIRR = 0.4
 USDT_ADDRESS = os.environ.get('USDT_ADDRESS', 'TUTGyjoRFaqviTtejUnXe92BcU8z3BaTUE')
-USDT_BIRR = float(os.environ.get('USDT_BIRR', '100'))
+USDT_BIRR = float(os.environ.get('USDT_BIRR', '161'))
 COIN_USDT = round(COIN_BIRR / USDT_BIRR, 6)
 WELCOME = 100
 MIN_BET, MAX_BET = 10, 5000
@@ -798,7 +798,7 @@ def coins_buy():
         db.session.flush(); db.session.add(Shot(purchase_id=p.id, data=data, mime=mime)); db.session.commit()
     except IntegrityError:
         db.session.rollback(); return err('Transaction ID already used')
-    notify_admins(f'🛒 {method.upper()} Purchase: {g.user.username} — {pkg} coins / {price} Birr\nRef: {txhash or ref}'); return jsonify(ok=1)
+    notify_admins(f'🛒 {method.upper()} Purchase: {g.user.username} — {pkg} coins / {price} Birr / {round(price/USDT_BIRR,2)} USDT\nRef: {txhash or ref}'); return jsonify(ok=1)
 @app.post('/api/withdraw')
 @auth
 def withdraw():
@@ -1078,7 +1078,7 @@ POLICY = {
     'commission': "HOST & AGENT COMMISSION\n1. Hosts receive 50% of real gift value.\n2. Agents earn ONLY from the platform share: L1 30%, L2 15%, L3 5%.\n3. No payment for mere registration.\n4. Max 3 levels (non-pyramid).",
     'lucky': "LUCKY GIFT POLICY\n1. Lucky gifts are chance games: sending one may return a multiplier to the sender.\n2. 70% of lucky volume returns to players; 30% retained by platform.\n3. Lucky gifts add hype/PK score but do not pay host earnings.\n4. 18+ only. Play responsibly.",
     'pk': "PK BATTLE POLICY\n1. Two hosts battle 5 minutes; viewers gift each side.\n2. Winner 70%, loser 20%, platform 10%. Tie 45/45/10.",
-    'withdraw': "WITHDRAWAL & PAYMENTS\n1. Telebirr: 1 coin = 0.4 ETB, min 500 coins.\n2. USDT (TRC20): 1 coin = 0.004 USDT, min 500 coins. Provide a valid T… address (34 chars).\n3. Purchases via Telebirr or USDT to the shown address; TX id/hash + screenshot required.\n4. 24–72h processing after approval.",
+    'withdraw': f"WITHDRAWAL & PAYMENTS\n1. Telebirr: 1 coin = {COIN_BIRR} ETB, min {MIN_WITHDRAW} coins.\n2. USDT (TRC20): 1 coin = {COIN_USDT} USDT, min {MIN_WITHDRAW} coins (≈ {round(MIN_WITHDRAW*COIN_USDT,2)} USDT). Provide a valid T… address (34 chars).\n3. Exchange rate used: 1 USDT = {USDT_BIRR} ETB. Both methods pay the same value.\n4. Purchases via Telebirr or USDT to the shown address; TX id/hash + screenshot required.\n5. 24–72h processing after approval.",
     'conduct': "COMMUNITY RULES\n1. No hate, harassment, threats.\n2. No minor sexual content — permanent ban + reporting.\n3. No nudity/explicit live content.\n4. No scams, bots, cheating.\n5. Report to @TwentyOneOwner.",
     'privacy': "PRIVACY\n1. We collect Telegram ID, name, optional phone/wallet address, usage data.\n2. Photos stored only for display.\n3. We never sell data.\n4. Account deletion via support."
 }
@@ -1098,12 +1098,12 @@ def adm_overview():
                    paid=db.session.query(func.coalesce(func.sum(Withdraw.birr), 0)).filter(Withdraw.status == 'paid').scalar(),
                    agents=User.query.filter_by(is_agent=True).count(), pending_host=User.query.filter_by(host_status='pending').count(),
                    commission_total=db.session.query(func.coalesce(func.sum(User.commission), 0)).scalar(),
-                   lucky_volume=st.volume if st else 0, lucky_house=st.house if st else 0)
+                   lucky_volume=st.volume if st else 0, lucky_house=st.house if st else 0, usdt_rate=USDT_BIRR)
 @app.get('/api/admin/purchases')
 @admin_only
 def adm_purchases():
     ps = Purchase.query.filter_by(status=request.args.get('status', 'pending')).order_by(Purchase.id.desc()).limit(50).all()
-    return jsonify(items=[dict(id=p.id, user_id=p.user_id, name=p.username, coins=p.coins, birr=p.birr, ref=(p.txhash or p.ref), ts=p.ts, method=p.method) for p in ps])
+    return jsonify(items=[dict(id=p.id, user_id=p.user_id, name=p.username, coins=p.coins, birr=p.birr, ref=(p.txhash or p.ref), ts=p.ts, method=p.method, usdt=round(p.birr/USDT_BIRR, 2)) for p in ps])
 @app.get('/api/admin/withdraws')
 @admin_only
 def adm_withdraws():
@@ -1155,9 +1155,10 @@ def adm_withdraw():
         db.session.rollback(); return err('Already processed')
     u = db.session.get(User, w.user_id)
     if act != 'paid':
+        refund_comm = 0
         db.session.execute(update(User).where(User.id == w.user_id).values(earnings=User.earnings + w.coins), execution_options={'synchronize_session': False}); tx(w.user_id, 'refund', w.coins, f'withdraw #{w.id} rejected')
     db.session.commit()
-    if u: notify(u.tg_id, f'💰 Payment sent!' if act == 'paid' else f'❌ Rejected; {w.coins} refunded.')
+    if u: notify(u.tg_id, '💰 Payment sent!' if act == 'paid' else f'❌ Rejected; {w.coins} refunded.')
     return jsonify(ok=1)
 @app.post('/api/admin/user')
 @admin_only
