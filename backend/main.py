@@ -1,9 +1,6 @@
 # -*- coding: utf-8 -*-
 """Twenty One Party - PRO backend.
-Flask + SQLAlchemy (SQLite dev / PostgreSQL prod), Agora RTC.
-Features: Poppo host/agent commission, PK Battle, Gift Gambling (30% guaranteed profit),
-          Policy, English-only UI, Channel + Support.
-Run:  gunicorn -k gthread -w 2 --threads 16 --timeout 60 main:app
+Flask + SQLAlchemy, Agora RTC, Poppo host/agent, PK Battle, Gift Gambling.
 """
 import os, json, hmac, hashlib, time, random, secrets, threading, urllib.request, urllib.parse
 from datetime import datetime, timedelta
@@ -94,21 +91,18 @@ GIFTS = [
 ]
 GIFT_MAP = {k: dict(key=k, name=n, emoji=e, price=p, tier=t) for k, n, e, p, t in GIFTS}
 
-# ---- POPPO FINANCIAL ----
 HOST_SHARE = 0.50
 AGENT_RATES = (0.30, 0.15, 0.05)
 MAX_AGENT_DEPTH = 3
 INVITE_REWARD = 50
-# ---- GAMBLING (100% guaranteed 30% profit) ----
-GAMBLING_PLATFORM_SHARE = 0.30   # 30% taken immediately on every bet
-GAMBLING_PLAYER_SHARE = 0.70     # 70% goes to player pool
+GAMBLING_PLATFORM_SHARE = 0.30
+GAMBLING_PLAYER_SHARE = 0.70
 GAMBLING_MIN_BET = 10
 GAMBLING_MAX_BET = 10000
-# ---- PK BATTLE ----
 PK_WINNER_SHARE = 0.70
 PK_LOSER_SHARE = 0.20
 PK_PLATFORM_SHARE = 0.10
-PK_DURATION = 300  # 5 minutes
+PK_DURATION = 300
 
 SHARE = {'luxury': 0.70, 'legendary': 0.04, 'mythic': 0.04}
 DEFAULT_SHARE = 0.02
@@ -319,7 +313,7 @@ class PKBattle(db.Model):
     host2_id = db.Column(db.Integer, index=True, nullable=True)
     host1_gifts = db.Column(db.Integer, default=0)
     host2_gifts = db.Column(db.Integer, default=0)
-    status = db.Column(db.String(10), default='active')  # active|ended
+    status = db.Column(db.String(10), default='active')
     started_at = db.Column(db.Integer, default=now)
     ended_at = db.Column(db.Integer, nullable=True)
     duration = db.Column(db.Integer, default=PK_DURATION)
@@ -1395,7 +1389,7 @@ def withdraw():
     return jsonify(ok=1)
 
 
-# ----------------------------------------------------------------------------- community (with photo)
+# ----------------------------------------------------------------------------- community
 @app.get('/api/posts')
 @auth
 def posts_list():
@@ -1662,7 +1656,7 @@ def p2p_join():
     return jsonify(win=win_me, prize=prize, bet=gm.bet, coins=coins_of(g.user.id), vs=gm.creator_name)
 
 
-# ----------------------------------------------------------------------------- PK BATTLE (Pro)
+# ----------------------------------------------------------------------------- PK Battle
 @app.post('/api/pk/create')
 @auth
 def pk_create():
@@ -1795,27 +1789,7 @@ def pk_active():
     return jsonify(pks=out)
 
 
-@app.get('/api/pk/<int:pk_id>')
-@auth
-def pk_detail(pk_id):
-    pk = db.session.get(PKBattle, pk_id)
-    if not pk:
-        return err('PK battle not found', 404)
-    h1 = db.session.get(User, pk.host1_id) if pk.host1_id else None
-    h2 = db.session.get(User, pk.host2_id) if pk.host2_id else None
-    return jsonify(
-        id=pk.id, status=pk.status,
-        host1=pub(h1) if h1 else None,
-        host2=pub(h2) if h2 else None,
-        host1_gifts=pk.host1_gifts or 0,
-        host2_gifts=pk.host2_gifts or 0,
-        started=pk.started_at,
-        duration=pk.duration,
-        time_left=max(0, (pk.started_at + pk.duration) - now())
-    )
-
-
-# ----------------------------------------------------------------------------- GIFT GAMBLING (100% guaranteed 30% profit)
+# ----------------------------------------------------------------------------- Gift Gambling
 def get_today_pool():
     today_str = today()
     pool = GiftGamblingPool.query.filter_by(day=today_str).first()
@@ -1861,7 +1835,6 @@ def gambling_bet():
         return err(f'Maximum bet {GAMBLING_MAX_BET}')
     if not spend(u.id, amount):
         return err('Not enough coins', 402)
-    # 100% GUARANTEED: 30% taken immediately, 70% to player pool
     platform_cut = int(amount * GAMBLING_PLATFORM_SHARE)
     player_cut = amount - platform_cut
     pool.total_pool = (pool.total_pool or 0) + amount
@@ -1889,7 +1862,6 @@ def gambling_draw():
         return err('Pool not found')
     if (pool.total_pool or 0) < 100:
         return err('Need at least 100 coins')
-    # Random winner gift
     winning_gift = rnd.choice([g['key'] for g in GIFTS_PUB])
     winning_bets = GiftGamblingBet.query.filter_by(pool_id=pool.id, gift_key=winning_gift).all()
     total_winning_bets = sum(b.amount for b in winning_bets)
@@ -1923,7 +1895,7 @@ def gambling_history():
     return jsonify(bets=[dict(id=b.id, amount=b.amount, gift=b.gift_key, won=b.won, payout=b.payout, ts=b.ts) for b in bets])
 
 
-# ----------------------------------------------------------------------------- POLICY
+# ----------------------------------------------------------------------------- Policy
 POLICY = {
     'terms': """TERMS OF SERVICE
 1. Twenty One Party is a voice and live-streaming entertainment platform. Users must be 18 years or older.
@@ -1995,9 +1967,7 @@ def adm_overview():
                    paid=db.session.query(func.coalesce(func.sum(Withdraw.birr), 0)).filter(Withdraw.status == 'paid').scalar(),
                    agents=User.query.filter_by(is_agent=True).count(),
                    pending_host=User.query.filter_by(host_status='pending').count(),
-                   commission_total=db.session.query(func.coalesce(func.sum(User.commission), 0)).scalar(),
-                   gambling_pool=(GiftGamblingPool.query.filter_by(day=today()).first().total_pool or 0),
-                   gambling_profit=(GiftGamblingPool.query.filter_by(day=today()).first().platform_profit or 0))
+                   commission_total=db.session.query(func.coalesce(func.sum(User.commission), 0)).scalar())
 
 
 @app.get('/api/admin/purchases')
