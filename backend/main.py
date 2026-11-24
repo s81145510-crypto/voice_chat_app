@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Twenty One Party - PRO backend. TikTok-style Live PK + Poppo Lucky Gift (30/70)."""
+"""Twenty One Party - PRO backend. Live PK + Lucky Gift (30/70) + USDT + Host/Agent."""
 import os, json, hmac, hashlib, time, random, secrets, threading, urllib.request, urllib.parse
 from datetime import datetime, timedelta
 from functools import wraps
@@ -45,8 +45,7 @@ if DB_URL.startswith('postgres://'): DB_URL = DB_URL.replace('postgres://', 'pos
 IS_SQLITE = DB_URL.startswith('sqlite')
 SECRET = hashlib.sha256(('sess:' + (os.environ.get('SECRET_KEY') or BOT_TOKEN or 'dev-secret')).encode()).digest()
 app = Flask(__name__)
-app.config.update(SQLALCHEMY_DATABASE_URI=DB_URL, SQLALCHEMY_TRACK_MODIFICATIONS=False, MAX_CONTENT_LENGTH=5 * 1024 * 1024,
-                  JSON_AS_ASCII=False,
+app.config.update(SQLALCHEMY_DATABASE_URI=DB_URL, SQLALCHEMY_TRACK_MODIFICATIONS=False, MAX_CONTENT_LENGTH=5 * 1024 * 1024, JSON_AS_ASCII=False,
                   SQLALCHEMY_ENGINE_OPTIONS={'pool_pre_ping': True, 'pool_recycle': 300, 'pool_size': 10, 'max_overflow': 20} if not IS_SQLITE else {'pool_pre_ping': True})
 app.json.ensure_ascii = False
 db = SQLAlchemy(app)
@@ -61,6 +60,9 @@ def _sqlite_pragmas(con, rec):
 SEATS = 21
 MIN_WITHDRAW = 500
 COIN_BIRR = 0.4
+USDT_ADDRESS = os.environ.get('USDT_ADDRESS', 'TUTGyjoRFaqviTtejUnXe92BcU8z3BaTUE')
+USDT_BIRR = float(os.environ.get('USDT_BIRR', '100'))
+COIN_USDT = round(COIN_BIRR / USDT_BIRR, 6)
 WELCOME = 100
 MIN_BET, MAX_BET = 10, 5000
 LEVELS = [(0, 'Newbie', '🌱'), (500, 'Star', '⭐'), (2000, 'Pro', '💎'), (6000, 'Elite', '🔥'), (20000, 'Legend', '👑'), (60000, 'King', '🦁')]
@@ -72,15 +74,13 @@ GIFTS = [
     ('car', 'Car', '🏎️', 1200, 'luxury'), ('jet', 'Jet', '✈️', 2000, 'luxury'), ('yacht', 'Yacht', '🛥️', 3000, 'luxury'), ('castle', 'Castle', '🏰', 5000, 'luxury'),
     ('rocket', 'Rocket', '🚀', 8000, 'legendary'), ('dragon', 'Dragon', '🐉', 12000, 'legendary'), ('phoenix', 'Phoenix', '🔥', 20000, 'legendary'),
     ('galaxy', 'Galaxy', '🌌', 30000, 'mythic'), ('unicorn', 'Unicorn', '🦄', 40000, 'mythic'), ('universe', 'Universe', '🪐', 50000, 'mythic'),
-    ('lucky1', 'Lucky Clover', '🍀', 10, 'lucky'), ('lucky2', 'Lucky Star', '⭐', 50, 'lucky'),
-    ('lucky3', 'Lucky Gem', '💎', 200, 'lucky'), ('lucky4', 'Lucky Crown', '👑', 1000, 'lucky'),
+    ('lucky1', 'Lucky Clover', '🍀', 10, 'lucky'), ('lucky2', 'Lucky Star', '⭐', 50, 'lucky'), ('lucky3', 'Lucky Gem', '💎', 200, 'lucky'), ('lucky4', 'Lucky Crown', '👑', 1000, 'lucky'),
 ]
 GIFT_MAP = {k: dict(key=k, name=n, emoji=e, price=p, tier=t) for k, n, e, p, t in GIFTS}
 HOST_SHARE = 0.50
 AGENT_RATES = (0.30, 0.15, 0.05)
 MAX_AGENT_DEPTH = 3
 INVITE_REWARD = 50
-# Lucky gift: EV of multiplier = 0.70 -> 70% returns to players, 30% house edge.
 LUCKY_TABLE = [(0, .74), (1, .12), (2, .08), (5, .04), (10, .015), (14, .005)]
 PK_WINNER_SHARE, PK_LOSER_SHARE, PK_PLATFORM_SHARE = 0.70, 0.20, 0.10
 PK_DURATION = 300
@@ -105,32 +105,15 @@ def now(): return int(time.time())
 
 
 class User(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    tg_id = db.Column(db.String(32), unique=True, index=True)
-    username = db.Column(db.String(60), default='User')
-    coins = db.Column(db.Integer, default=0, nullable=False)
-    earnings = db.Column(db.Integer, default=0, nullable=False)
-    spent = db.Column(db.Integer, default=0, nullable=False)
-    gifts_sent = db.Column(db.Integer, default=0, nullable=False)
-    gifts_recv = db.Column(db.Integer, default=0, nullable=False)
-    bio = db.Column(db.String(160), default='')
-    phone = db.Column(db.String(20), default='')
-    tg_photo = db.Column(db.String(300), default='')
-    has_photo = db.Column(db.Boolean, default=False)
-    photo_v = db.Column(db.Integer, default=0)
-    banned = db.Column(db.Boolean, default=False)
-    referrer_id = db.Column(db.Integer, nullable=True)
-    joined = db.Column(db.Integer, default=now)
-    last_daily = db.Column(db.String(10), default='')
-    streak = db.Column(db.Integer, default=0)
-    vip_until = db.Column(db.Integer, default=0)
-    frame = db.Column(db.String(20), default='')
-    real_coins = db.Column(db.Integer, default=0, nullable=False)
-    host_status = db.Column(db.String(8), default='none')
-    is_agent = db.Column(db.Boolean, default=False)
-    agent_id = db.Column(db.Integer, nullable=True)
-    parent_agent_id = db.Column(db.Integer, nullable=True)
-    commission = db.Column(db.Integer, default=0, nullable=False)
+    id = db.Column(db.Integer, primary_key=True); tg_id = db.Column(db.String(32), unique=True, index=True); username = db.Column(db.String(60), default='User')
+    coins = db.Column(db.Integer, default=0, nullable=False); earnings = db.Column(db.Integer, default=0, nullable=False); spent = db.Column(db.Integer, default=0, nullable=False)
+    gifts_sent = db.Column(db.Integer, default=0, nullable=False); gifts_recv = db.Column(db.Integer, default=0, nullable=False)
+    bio = db.Column(db.String(160), default=''); phone = db.Column(db.String(20), default=''); tg_photo = db.Column(db.String(300), default='')
+    has_photo = db.Column(db.Boolean, default=False); photo_v = db.Column(db.Integer, default=0); banned = db.Column(db.Boolean, default=False)
+    referrer_id = db.Column(db.Integer, nullable=True); joined = db.Column(db.Integer, default=now); last_daily = db.Column(db.String(10), default=''); streak = db.Column(db.Integer, default=0)
+    vip_until = db.Column(db.Integer, default=0); frame = db.Column(db.String(20), default=''); real_coins = db.Column(db.Integer, default=0, nullable=False)
+    host_status = db.Column(db.String(8), default='none'); is_agent = db.Column(db.Boolean, default=False); agent_id = db.Column(db.Integer, nullable=True)
+    parent_agent_id = db.Column(db.Integer, nullable=True); commission = db.Column(db.Integer, default=0, nullable=False)
 
 
 class Photo(db.Model):
@@ -148,8 +131,8 @@ class MissionProgress(db.Model):
 
 class Room(db.Model):
     id = db.Column(db.String(16), primary_key=True); name = db.Column(db.String(60)); topic = db.Column(db.String(100), default='')
-    host_id = db.Column(db.Integer, index=True); kind = db.Column(db.String(8), default='voice')
-    created = db.Column(db.Integer, default=now); last_active = db.Column(db.Integer, default=now, index=True); version = db.Column(db.Integer, default=0, nullable=False)
+    host_id = db.Column(db.Integer, index=True); kind = db.Column(db.String(8), default='voice'); created = db.Column(db.Integer, default=now)
+    last_active = db.Column(db.Integer, default=now, index=True); version = db.Column(db.Integer, default=0, nullable=False)
 
 
 class Seat(db.Model):
@@ -173,6 +156,7 @@ class Tx(db.Model):
 class Purchase(db.Model):
     id = db.Column(db.Integer, primary_key=True); user_id = db.Column(db.Integer, index=True); username = db.Column(db.String(60)); coins = db.Column(db.Integer); birr = db.Column(db.Integer)
     ref = db.Column(db.String(40), unique=True); status = db.Column(db.String(10), default='pending', index=True); ts = db.Column(db.Integer, default=now)
+    method = db.Column(db.String(10), default='telebirr'); txhash = db.Column(db.String(80), default='')
 
 
 class Shot(db.Model):
@@ -182,6 +166,7 @@ class Shot(db.Model):
 class Withdraw(db.Model):
     id = db.Column(db.Integer, primary_key=True); user_id = db.Column(db.Integer, index=True); username = db.Column(db.String(60)); coins = db.Column(db.Integer); birr = db.Column(db.Integer)
     phone = db.Column(db.String(20)); status = db.Column(db.String(10), default='pending', index=True); ts = db.Column(db.Integer, default=now)
+    method = db.Column(db.String(10), default='telebirr'); usdt_address = db.Column(db.String(64), default='')
 
 
 class Post(db.Model):
@@ -213,14 +198,12 @@ class P2P(db.Model):
 
 class PKBattle(db.Model):
     id = db.Column(db.Integer, primary_key=True); host1_id = db.Column(db.Integer, index=True); host2_id = db.Column(db.Integer, index=True, nullable=True)
-    host1_gifts = db.Column(db.Integer, default=0); host2_gifts = db.Column(db.Integer, default=0)
-    status = db.Column(db.String(10), default='active'); started_at = db.Column(db.Integer, default=now); ended_at = db.Column(db.Integer, nullable=True)
-    duration = db.Column(db.Integer, default=PK_DURATION); winner_id = db.Column(db.Integer, nullable=True)
+    host1_gifts = db.Column(db.Integer, default=0); host2_gifts = db.Column(db.Integer, default=0); status = db.Column(db.String(10), default='active')
+    started_at = db.Column(db.Integer, default=now); ended_at = db.Column(db.Integer, nullable=True); duration = db.Column(db.Integer, default=PK_DURATION); winner_id = db.Column(db.Integer, nullable=True)
 
 
 class LuckyStats(db.Model):
-    day = db.Column(db.String(10), primary_key=True)
-    volume = db.Column(db.Integer, default=0); returned = db.Column(db.Integer, default=0); house = db.Column(db.Integer, default=0)
+    day = db.Column(db.String(10), primary_key=True); volume = db.Column(db.Integer, default=0); returned = db.Column(db.Integer, default=0); house = db.Column(db.Integer, default=0)
 
 
 def ensure_columns():
@@ -228,7 +211,9 @@ def ensure_columns():
     want = {User: [('vip_until', 'INTEGER DEFAULT 0'), ('frame', "VARCHAR(20) DEFAULT ''"), ('real_coins', 'INTEGER DEFAULT 0 NOT NULL'),
                    ('host_status', "VARCHAR(8) DEFAULT 'none'"), ('is_agent', 'BOOLEAN DEFAULT FALSE'), ('agent_id', 'INTEGER'), ('parent_agent_id', 'INTEGER'), ('commission', 'INTEGER DEFAULT 0 NOT NULL')],
             Room: [('kind', "VARCHAR(8) DEFAULT 'voice'")], Post: [('has_image', 'BOOLEAN DEFAULT FALSE')], Job: [('has_image', 'BOOLEAN DEFAULT FALSE')],
-            PKBattle: [('winner_id', 'INTEGER')]}
+            PKBattle: [('winner_id', 'INTEGER')],
+            Purchase: [('method', "VARCHAR(10) DEFAULT 'telebirr'"), ('txhash', "VARCHAR(80) DEFAULT ''")],
+            Withdraw: [('method', "VARCHAR(10) DEFAULT 'telebirr'"), ('usdt_address', "VARCHAR(64) DEFAULT ''")]}
     insp = inspect(db.engine)
     for M, cols in want.items():
         tbl = M.__tablename__; have = {c['name'] for c in insp.get_columns(tbl)}
@@ -357,7 +342,8 @@ def cfg():
                 host=dict(share=HOST_SHARE), agent=dict(rates=list(AGENT_RATES), depth=MAX_AGENT_DEPTH), invite=dict(reward=INVITE_REWARD),
                 vip=dict(price=VIP_PRICE, days=VIP_DAYS, bonus=VIP_DAILY_BONUS, rooms=VIP_ROOMS),
                 lucky=dict(table=[[m, p] for m, p in LUCKY_TABLE], rtp=0.70, house=0.30),
-                pk=dict(winner_share=PK_WINNER_SHARE, loser_share=PK_LOSER_SHARE, platform_share=PK_PLATFORM_SHARE, duration=PK_DURATION))
+                pk=dict(winner_share=PK_WINNER_SHARE, loser_share=PK_LOSER_SHARE, platform_share=PK_PLATFORM_SHARE, duration=PK_DURATION),
+                usdt=dict(address=USDT_ADDRESS, network='TRC20', birr_per_usdt=USDT_BIRR, coin_usdt=COIN_USDT))
 
 
 @app.post('/api/register')
@@ -787,37 +773,53 @@ def wallet():
     P = Purchase.query.filter_by(user_id=u.id).order_by(Purchase.id.desc()).limit(15).all()
     W = Withdraw.query.filter_by(user_id=u.id).order_by(Withdraw.id.desc()).limit(15).all()
     T = Tx.query.filter_by(user_id=u.id).order_by(Tx.id.desc()).limit(30).all()
-    return jsonify(me=me_dict(u), purchases=[dict(id=p.id, coins=p.coins, birr=p.birr, status=p.status, ts=p.ts) for p in P],
-                   withdraws=[dict(id=w.id, coins=w.coins, birr=w.birr, status=w.status, ts=w.ts) for w in W],
+    return jsonify(me=me_dict(u), purchases=[dict(id=p.id, coins=p.coins, birr=p.birr, status=p.status, ts=p.ts, method=p.method) for p in P],
+                   withdraws=[dict(id=w.id, coins=w.coins, birr=w.birr, status=w.status, ts=w.ts, method=w.method) for w in W],
                    txs=[dict(kind=t.kind, amount=t.amount, note=t.note, ts=t.ts) for t in T])
 @app.post('/api/coins/buy')
 @auth
 def coins_buy():
-    pkg = num(request.form.get('coins')); ref = (request.form.get('ref') or '').strip().upper()[:40]; price = dict(PACKAGES).get(pkg)
+    pkg = num(request.form.get('coins')); ref_in = (request.form.get('ref') or '').strip()
+    method = (request.form.get('method') or 'telebirr').strip()
+    if method not in ('telebirr', 'usdt'): method = 'telebirr'
+    price = dict(PACKAGES).get(pkg)
     if not price: return err('Choose a package')
-    if len(ref) < 6: return err('Enter Telebirr transaction ID')
+    if method == 'usdt':
+        if len(ref_in) < 10: return err('Enter USDT TX hash')
+        ref = 'U' + secrets.token_hex(12); txhash = ref_in[:80]
+    else:
+        if len(ref_in) < 6: return err('Enter Telebirr transaction ID')
+        ref = ref_in.upper()[:40]; txhash = ''
     f = request.files.get('file'); data = f.read() if f else b''; mime = sniff_image(data)
     if not mime: return err('Attach payment screenshot')
     if Purchase.query.filter_by(user_id=g.user.id, status='pending').count() >= 3: return err('3 pending requests')
-    p = Purchase(user_id=g.user.id, username=g.user.username, coins=pkg, birr=price, ref=ref); db.session.add(p)
+    p = Purchase(user_id=g.user.id, username=g.user.username, coins=pkg, birr=price, ref=ref, method=method, txhash=txhash); db.session.add(p)
     try:
         db.session.flush(); db.session.add(Shot(purchase_id=p.id, data=data, mime=mime)); db.session.commit()
     except IntegrityError:
         db.session.rollback(); return err('Transaction ID already used')
-    notify_admins(f'🛒 Purchase: {g.user.username} — {pkg} coins / {price} Birr\nRef: {ref}'); return jsonify(ok=1)
+    notify_admins(f'🛒 {method.upper()} Purchase: {g.user.username} — {pkg} coins / {price} Birr\nRef: {txhash or ref}'); return jsonify(ok=1)
 @app.post('/api/withdraw')
 @auth
 def withdraw():
-    b = body(); coins = num(b.get('coins')); phone = str(b.get('phone') or g.user.phone or '').strip()
+    b = body(); coins = num(b.get('coins')); method = (b.get('method') or 'telebirr').strip()
+    if method not in ('telebirr', 'usdt'): method = 'telebirr'
     if coins < MIN_WITHDRAW: return err(f'Minimum withdrawal {MIN_WITHDRAW} coins')
-    if not (phone.isdigit() and len(phone) == 10): return err('Enter valid phone number')
+    phone = ''; address = ''
+    if method == 'usdt':
+        address = str(b.get('address') or '').strip()
+        if not (address.startswith('T') and len(address) == 34): return err('Enter a valid TRC20 address (T…, 34 chars)')
+    else:
+        phone = str(b.get('phone') or g.user.phone or '').strip()
+        if not (phone.isdigit() and len(phone) == 10): return err('Enter valid phone number')
     min_c = case((User.commission <= coins, User.commission), else_=coins)
     r = db.session.execute(update(User).where(User.id == g.user.id, User.earnings + User.commission >= coins).values(commission=User.commission - min_c, earnings=User.earnings - (coins - min_c)), execution_options={'synchronize_session': False})
     if r.rowcount != 1:
         db.session.rollback(); return err('Not enough income')
-    w = Withdraw(user_id=g.user.id, username=g.user.username, coins=coins, birr=int(coins * COIN_BIRR), phone=phone); db.session.add(w)
-    tx(g.user.id, 'withdraw', -coins, 'withdraw request'); db.session.commit()
-    notify_admins(f'💸 Withdraw: {g.user.username} — {coins} coins = {w.birr} Birr → {phone}'); return jsonify(ok=1)
+    w = Withdraw(user_id=g.user.id, username=g.user.username, coins=coins, birr=int(coins * COIN_BIRR), phone=phone, method=method, usdt_address=address); db.session.add(w)
+    tx(g.user.id, 'withdraw', -coins, f'{method} withdraw'); db.session.commit()
+    dest = address if method == 'usdt' else phone
+    notify_admins(f'💸 {method.upper()} Withdraw: {g.user.username} — {coins} coins = {w.birr} Birr / {round(coins*COIN_USDT,4)} USDT → {dest}'); return jsonify(ok=1)
 
 
 @app.get('/api/posts')
@@ -1068,18 +1070,17 @@ def pk_token():
 def lucky_info():
     st = db.session.get(LuckyStats, today())
     return jsonify(volume=st.volume if st else 0, returned=st.returned if st else 0, house=st.house if st else 0,
-                   table=[[m, p] for m, p in LUCKY_TABLE], rtp=0.70, house_edge=0.30,
-                   gifts=[g for g in GIFTS_PUB if g['tier'] == 'lucky'])
+                   table=[[m, p] for m, p in LUCKY_TABLE], rtp=0.70, house_edge=0.30, gifts=[g for g in GIFTS_PUB if g['tier'] == 'lucky'])
 
 
 POLICY = {
     'terms': "TERMS OF SERVICE\n1. Twenty One Party is a voice/live entertainment platform. Users must be 18+.\n2. One account per person.\n3. Coins are virtual currency; only earned income/commission is withdrawable.\n4. Purchases are final except where required by law.\n5. Violations lead to suspension or ban.",
     'commission': "HOST & AGENT COMMISSION\n1. Hosts receive 50% of real gift value.\n2. Agents earn ONLY from the platform share: L1 30%, L2 15%, L3 5%.\n3. No payment for mere registration.\n4. Max 3 levels (non-pyramid).",
-    'lucky': "LUCKY GIFT POLICY\n1. Lucky gifts (🍀⭐💎) are chance games: sending one may return a multiplier of its value to the sender.\n2. Multiplier odds are set so 70% of lucky volume returns to players and 30% is retained by the platform.\n3. Lucky gifts add hype/PK score to the receiver but do not pay host earnings.\n4. 18+ only. Play responsibly.",
-    'pk': "PK BATTLE POLICY\n1. Two hosts battle for 5 minutes; viewers gift each side.\n2. Winner receives 70% of total PK gifts, loser 20%, platform 10%.\n3. Tie splits 45/45, platform 10%.",
-    'withdraw': "WITHDRAWAL & PAYMENTS\n1. 1 coin = 0.4 ETB. Minimum 500 coins.\n2. Paid via Telebirr to registered phone.\n3. 24–72h processing after approval.\n4. Valid transaction ID + screenshot required for purchases.",
+    'lucky': "LUCKY GIFT POLICY\n1. Lucky gifts are chance games: sending one may return a multiplier to the sender.\n2. 70% of lucky volume returns to players; 30% retained by platform.\n3. Lucky gifts add hype/PK score but do not pay host earnings.\n4. 18+ only. Play responsibly.",
+    'pk': "PK BATTLE POLICY\n1. Two hosts battle 5 minutes; viewers gift each side.\n2. Winner 70%, loser 20%, platform 10%. Tie 45/45/10.",
+    'withdraw': "WITHDRAWAL & PAYMENTS\n1. Telebirr: 1 coin = 0.4 ETB, min 500 coins.\n2. USDT (TRC20): 1 coin = 0.004 USDT, min 500 coins. Provide a valid T… address (34 chars).\n3. Purchases via Telebirr or USDT to the shown address; TX id/hash + screenshot required.\n4. 24–72h processing after approval.",
     'conduct': "COMMUNITY RULES\n1. No hate, harassment, threats.\n2. No minor sexual content — permanent ban + reporting.\n3. No nudity/explicit live content.\n4. No scams, bots, cheating.\n5. Report to @TwentyOneOwner.",
-    'privacy': "PRIVACY\n1. We collect Telegram ID, name, optional phone, usage data.\n2. Photos stored only for display.\n3. We never sell data.\n4. Account deletion via support."
+    'privacy': "PRIVACY\n1. We collect Telegram ID, name, optional phone/wallet address, usage data.\n2. Photos stored only for display.\n3. We never sell data.\n4. Account deletion via support."
 }
 @app.get('/api/policy')
 def policy_get(): return jsonify(sections=POLICY)
@@ -1102,12 +1103,12 @@ def adm_overview():
 @admin_only
 def adm_purchases():
     ps = Purchase.query.filter_by(status=request.args.get('status', 'pending')).order_by(Purchase.id.desc()).limit(50).all()
-    return jsonify(items=[dict(id=p.id, user_id=p.user_id, name=p.username, coins=p.coins, birr=p.birr, ref=p.ref, ts=p.ts) for p in ps])
+    return jsonify(items=[dict(id=p.id, user_id=p.user_id, name=p.username, coins=p.coins, birr=p.birr, ref=(p.txhash or p.ref), ts=p.ts, method=p.method) for p in ps])
 @app.get('/api/admin/withdraws')
 @admin_only
 def adm_withdraws():
     ws = Withdraw.query.filter_by(status=request.args.get('status', 'pending')).order_by(Withdraw.id.desc()).limit(50).all()
-    return jsonify(items=[dict(id=w.id, user_id=w.user_id, name=w.username, coins=w.coins, birr=w.birr, phone=w.phone, ts=w.ts) for w in ws])
+    return jsonify(items=[dict(id=w.id, user_id=w.user_id, name=w.username, coins=w.coins, birr=w.birr, phone=w.phone, ts=w.ts, method=w.method, address=(w.usdt_address or w.phone), usdt=round(w.coins*COIN_USDT, 4)) for w in ws])
 @app.get('/api/admin/users')
 @admin_only
 def adm_users():
@@ -1156,7 +1157,7 @@ def adm_withdraw():
     if act != 'paid':
         db.session.execute(update(User).where(User.id == w.user_id).values(earnings=User.earnings + w.coins), execution_options={'synchronize_session': False}); tx(w.user_id, 'refund', w.coins, f'withdraw #{w.id} rejected')
     db.session.commit()
-    if u: notify(u.tg_id, f'💰 {w.birr} Birr sent!' if act == 'paid' else f'❌ Rejected; {w.coins} refunded.')
+    if u: notify(u.tg_id, f'💰 Payment sent!' if act == 'paid' else f'❌ Rejected; {w.coins} refunded.')
     return jsonify(ok=1)
 @app.post('/api/admin/user')
 @admin_only
