@@ -438,7 +438,7 @@ def coins_of(uid):
 
 
 def spend(uid, n):
-    r = db.session.execute(update(User).where(User.id == uid, User.coins >= n).values(coins=User.coins - n),
+    r = db.session.execute(update(User).where(User.id == uid, User.coins >= n).values(coins=User.coins - n, real_coins=case((User.real_coins > User.coins - n, User.coins - n), else_=User.real_coins)),
                            execution_options={'synchronize_session': False})
     return r.rowcount == 1
 
