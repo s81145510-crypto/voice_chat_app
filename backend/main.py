@@ -1495,6 +1495,7 @@ def adm_purchase():
     u = db.session.get(User, p.user_id)
     if act == 'approve':
         add_coins(p.user_id, p.coins)
+        db.session.execute(update(User).where(User.id == p.user_id).values(real_coins=User.real_coins + p.coins), execution_options={'synchronize_session': False})
         tx(p.user_id, 'buy', p.coins, f'purchase #{p.id}')
         if u and u.referrer_id:
             bonus = p.coins // 10
