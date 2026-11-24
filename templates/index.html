@@ -459,7 +459,7 @@ async function openShop(){
      if(me.fr===f.key)return act('/api/frame/equip',{key:''});
      if(have)return act('/api/frame/equip',{key:f.key},'✅');
      if(f.vip)return toast('🔒 VIP only');
-     if(confirm(`${f.name} 🪙${fmt(f.price)}?`))act('/api/frame/buy',{key:f.key},'✅')}
+     if(confirm(`${f.name} 🪙${fmt(f.price)}?`))act('/api/frame/buy',{key:f.key},'✅')})
   };
   try{draw(await api('/api/shop'))}catch(e){m.close();toast(e.message)}}
 
