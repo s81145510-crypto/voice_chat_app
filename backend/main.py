@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Twenty One Party - PRO backend + PWA Support + Guest Login."""
+"""Twenty One Party - PRO backend + PWA + Guest Login + Finance Engine."""
 import os, json, hmac, hashlib, time, random, secrets, threading, urllib.request, urllib.parse
 from datetime import datetime, timedelta
 from functools import wraps
@@ -31,6 +31,7 @@ class RtcTokenBuilder:
 BASE = os.path.dirname(os.path.abspath(__file__))
 DATA_DIR = os.environ.get('DATA_DIR', os.path.join(BASE, 'data'))
 os.makedirs(DATA_DIR, exist_ok=True)
+TEMPLATES_DIR = next((d for d in (os.path.join(BASE, 'templates'), os.path.join(BASE, '..', 'templates')) if os.path.isdir(d)), os.path.join(BASE, 'templates'))
 BOT_TOKEN = os.environ.get('BOT_TOKEN', '')
 BOT_USERNAME = os.environ.get('BOT_USERNAME', '')
 ADMIN_IDS = {x.strip() for x in os.environ.get('ADMIN_IDS', '6746329545').split(',') if x.strip()}
@@ -335,7 +336,7 @@ def headers(r):
 def too_big(e): return err('File too large', 413)
 
 
-_TPL = next((p for p in (os.path.join(BASE, 'templates', 'index.html'), os.path.join(BASE, '..', 'templates', 'index.html')) if os.path.exists(p)), os.path.join(BASE, 'templates', 'index.html'))
+_TPL = next((p for p in (os.path.join(TEMPLATES_DIR, 'index.html'), os.path.join(BASE, '..', 'templates', 'index.html')) if os.path.exists(p)), os.path.join(TEMPLATES_DIR, 'index.html'))
 _HTML = open(_TPL, encoding='utf-8').read()
 @app.get('/')
 def index(): return Response(_HTML, mimetype='text/html', headers={'Cache-Control': 'no-cache'})
@@ -347,14 +348,14 @@ def healthz():
 @app.get('/manifest.json')
 def manifest():
     try:
-        return Response(open(os.path.join(BASE, 'templates', 'manifest.json'), encoding='utf-8').read(), mimetype='application/manifest+json', headers={'Cache-Control': 'no-cache'})
+        return Response(open(os.path.join(TEMPLATES_DIR, 'manifest.json'), encoding='utf-8').read(), mimetype='application/manifest+json', headers={'Cache-Control': 'no-cache'})
     except Exception as e:
         return jsonify(error=str(e)), 500
 
 @app.get('/sw.js')
 def sw():
     try:
-        return Response(open(os.path.join(BASE, 'templates', 'sw.js'), encoding='utf-8').read(), mimetype='application/javascript', headers={'Cache-Control': 'no-cache', 'Service-Worker-Allowed': '/'})
+        return Response(open(os.path.join(TEMPLATES_DIR, 'sw.js'), encoding='utf-8').read(), mimetype='application/javascript', headers={'Cache-Control': 'no-cache', 'Service-Worker-Allowed': '/'})
     except Exception as e:
         return jsonify(error=str(e)), 500
 
