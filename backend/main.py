@@ -442,7 +442,7 @@ def daily():
     r = db.session.execute(update(User).where(User.id == u.id, User.last_daily != t).values(last_daily=t, streak=streak, coins=User.coins + reward), execution_options={'synchronize_session': False})
     if r.rowcount != 1: return err('Already claimed')
     tx(u.id, 'daily', reward, f'Day {streak}'); db.session.commit()
-    FIN['reward_spend'](t, 'daily', reward); FIN['ledger'](u.id, 'daily', reward)
+    FIN['reward_spend'](t, 'daily', reward); FIN['ledger'](u.id, 'daily', reward); db.session.commit()
     db.session.refresh(u)
     return jsonify(reward=reward, streak=streak, me=me_dict(u))
 _lb = {'t': 0, 'd': None}
@@ -720,7 +720,7 @@ def room_gift(rid):
         tx(g.user.id, 'gift', -total, f'{gift["key"]}x{qty} -> {to}')
     db.session.execute(update(User).where(User.id == g.user.id).values(spent=User.spent + total, gifts_sent=User.gifts_sent + total), execution_options={'synchronize_session': False})
     gid, pool = FIN['record_gift'](g.user.id, to, gift['key'], qty, total, real_used, earn, rid, gift['tier'],
-                                   f"{rid}:{g.user.id}:{to}:{gift['key']}:{qty}:{now()}")
+                                   f"{rid}:{g.user.id}:{to}:{gift['key']}:{qty}:{time.time()}:{secrets.token_hex(4)}")
     if gift['tier'] != 'lucky' and target.agent_id and gid:
         pay_agent_commission(target.agent_id, pool, g.user.id, gid)
     meta = dict(gift=gift['key'], emoji=gift['emoji'], qty=qty, tier=gift['tier'], to=to, to_name=target.username, price=total, lucky=lucky_m, refund=refund)
