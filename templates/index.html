@@ -463,7 +463,7 @@ function openGift(to){if(!R)return;const r=R;
   else rec=Object.values(r.seats);
   rec=rec.filter(s=>s.u.id!==S.me.id);
   if(!rec.length)return toast('No one on stage to gift');
-  GF={to:to||rec[0].u.id,gift:S.cfg.gifts[0].key,qty=1};
+  GF={to:to||rec[0].u.id,gift:S.cfg.gifts[0].key,qty:1};
   const m=modal('');const draw=()=>{const g=S.cfg.gifts.find(x=>x.key===GF.gift);
    m.firstChild.innerHTML=`<div class="row"><h3 class="sp" style="margin:0">🎁 Gift</h3><span class="pill">🪙 <span class="coins-n">${fmt(S.me.coins)}</span></span></div>
    <div class="chips" style="margin:10px 0">${rec.map(s=>`<div class="chip ${GF.to===s.u.id?'on':''}" onclick="GF.to=${s.u.id};this.parentNode.querySelectorAll('.chip').forEach(c=>c.classList.remove('on'));this.classList.add('on')">${esc(s.u.name.slice(0,12))}</div>`).join('')}</div>
