@@ -1,6 +1,4 @@
-
 const CACHE = '21party-v1';
-const URLS = ['/'];
 
 self.addEventListener('install', e => {
   self.skipWaiting();
