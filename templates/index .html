@@ -1,0 +1,727 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="theme-color" content="#0a0118">
+<title>Twenty One Party</title>
+<link rel="manifest" href="/manifest.json">
+<link rel="icon" type="image/png" sizes="192x192" href="/static/launchericon-192x192.png">
+<link rel="apple-touch-icon" href="/static/launchericon-192x192.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="21Party">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<script src="https://cdn.agora.io/sdk/release/AgoraRTC_N-4.20.0.js"></script>
+<style>
+:root{--bg:#0a0118;--bg2:#1a0a2e;--card:rgba(255,255,255,.065);--line:rgba(255,255,255,.1);--gold:#ffd700;--pri:#667eea;--pri2:#9b5cff;--ok:#2ee59d;--bad:#ff5c7a;--mut:#a99bc4;--usdt:#26a17b;--sb:env(safe-area-inset-bottom,0px);--st:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%;overflow:hidden;background:linear-gradient(160deg,var(--bg),var(--bg2)) fixed;color:#fff;font:15px/1.4 -apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;overscroll-behavior:none}
+button,input,textarea,select{font:inherit;color:inherit}button{cursor:pointer;border:0}
+.page{position:fixed;inset:0;padding:calc(var(--st) + 12px) 14px calc(76px + var(--sb));overflow-y:auto;display:none}
+.page.on{display:block;animation:fade .25s}
+.page::-webkit-scrollbar,.sheet::-webkit-scrollbar,.chat::-webkit-scrollbar,#lv-chat::-webkit-scrollbar,.pk-chat::-webkit-scrollbar{width:6px}
+.page::-webkit-scrollbar-track,.sheet::-webkit-scrollbar-track,.chat::-webkit-scrollbar-track,#lv-chat::-webkit-scrollbar-track,.pk-chat::-webkit-scrollbar-track{background:rgba(155,92,255,.08);border-radius:6px}
+.page::-webkit-scrollbar-thumb,.sheet::-webkit-scrollbar-thumb,.chat::-webkit-scrollbar-thumb,#lv-chat::-webkit-scrollbar-thumb,.pk-chat::-webkit-scrollbar-thumb{background:linear-gradient(180deg,var(--pri),var(--pri2));border-radius:6px}
+.page::-webkit-scrollbar-thumb:hover,.sheet::-webkit-scrollbar-thumb:hover{background:var(--gold)}
+@keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+h2{margin:6px 0 12px;font-size:20px}h3{margin:14px 0 8px;font-size:15px;color:var(--mut);font-weight:600}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:12px;margin-bottom:10px;backdrop-filter:blur(8px)}
+.row{display:flex;align-items:center;gap:10px}.sp{flex:1;min-width:0}.col{display:flex;flex-direction:column;gap:8px}
+.mut{color:var(--mut);font-size:12px}.gold{color:var(--gold)}.usdt{color:var(--usdt)}.ell{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.btn{padding:11px 16px;border-radius:12px;background:linear-gradient(135deg,var(--pri),var(--pri2));font-weight:600;transition:.15s}
+.btn:active{transform:scale(.96)}.btn.gold{background:linear-gradient(135deg,#ffd700,#ff9f1c);color:#2a1a00}.btn.ghost{background:var(--card);border:1px solid var(--line)}
+.btn.bad{background:linear-gradient(135deg,#ff5c7a,#d6336c)}.btn.sm{padding:7px 12px;font-size:13px;border-radius:10px}.btn[disabled]{opacity:.5}
+.chip{padding:7px 13px;border-radius:20px;background:var(--card);border:1px solid var(--line);font-size:13px;white-space:nowrap}
+.chip.on{background:linear-gradient(135deg,var(--pri),var(--pri2));border-color:transparent}
+.chip.onu{background:linear-gradient(135deg,#26a17b,#3ddc97);border-color:transparent;color:#04231a;font-weight:700}
+.chips{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px}.chips::-webkit-scrollbar{display:none}
+input,textarea,select{width:100%;padding:11px 12px;border-radius:12px;background:rgba(255,255,255,.08);border:1px solid var(--line);outline:0}
+input:focus,textarea:focus{border-color:var(--pri2)}
+.av{width:44px;height:44px;border-radius:50%;background:#444 center/cover;display:flex;align-items:center;justify-content:center;font-weight:700;flex:none;position:relative}
+.av.s{width:34px;height:34px;font-size:13px}.av.l{width:72px;height:72px;font-size:28px}
+.pill{display:inline-flex;gap:5px;align-items:center;padding:5px 11px;border-radius:20px;background:rgba(255,215,0,.12);border:1px solid rgba(255,215,0,.35);color:var(--gold);font-weight:700;font-size:13px}
+.badge{font-size:11px;padding:2px 7px;border-radius:8px;background:rgba(155,92,255,.25)}
+.hbadge{font-size:10px;padding:2px 6px;border-radius:7px;background:rgba(46,229,157,.18);color:var(--ok);font-weight:700}
+.abadge{font-size:10px;padding:2px 6px;border-radius:7px;background:rgba(102,126,234,.2);color:#9db4ff;font-weight:700}
+.top{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+.logo{font-weight:800;font-size:18px;background:linear-gradient(90deg,#ffd700,#ff9f1c,#9b5cff);-webkit-background-clip:text;color:transparent}
+nav{position:fixed;left:0;right:0;bottom:0;display:flex;padding:6px 6px calc(6px + var(--sb));background:rgba(10,1,24,.92);backdrop-filter:blur(14px);border-top:1px solid var(--line);z-index:20}
+nav button{flex:1;background:none;color:var(--mut);font-size:10px;padding:4px 0;display:flex;flex-direction:column;align-items:center;gap:2px}
+nav button i{font-style:normal;font-size:21px;filter:grayscale(.7)}nav button.on{color:#fff}nav button.on i{filter:none;transform:translateY(-2px)}
+.mini{position:fixed;left:10px;right:10px;bottom:calc(66px + var(--sb));z-index:19;display:none;align-items:center;gap:10px;padding:9px 12px;border-radius:16px;background:linear-gradient(135deg,#3b2a8f,#7a3fd1);box-shadow:0 6px 24px #0008}
+.mini.on{display:flex}
+.hero{background:linear-gradient(135deg,rgba(102,126,234,.35),rgba(155,92,255,.25));border-radius:18px;padding:14px;margin-bottom:12px;border:1px solid var(--line)}
+.room-card{display:flex;gap:12px;align-items:center}.live{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--ok);margin-right:5px;animation:pulse 1.4s infinite}
+@keyframes pulse{50%{opacity:.3}}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.game{text-align:center;padding:18px 8px;border-radius:16px;background:var(--card);border:1px solid var(--line)}.game b{display:block;font-size:34px}.game span{font-size:12px;color:var(--gold)}
+.ov{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:50;display:flex;align-items:flex-end;justify-content:center;animation:fade .2s}
+.sheet{width:100%;max-width:480px;max-height:88vh;overflow-y:auto;background:linear-gradient(180deg,#1d0f38,#12072a);border-radius:22px 22px 0 0;padding:16px 16px calc(16px + var(--sb));border:1px solid var(--line)}
+.sheet h3{color:#fff;font-size:17px;margin:0 0 12px}
+.toast{position:fixed;left:50%;top:calc(var(--st) + 14px);transform:translateX(-50%);background:#000d;padding:10px 16px;border-radius:14px;z-index:99;max-width:90%;text-align:center;animation:fade .2s;border:1px solid var(--line)}
+.vip{display:inline-block;font-size:9px;font-weight:800;padding:1px 5px;border-radius:6px;background:linear-gradient(135deg,#ffd700,#ff9f1c);color:#2a1a00;vertical-align:1px}
+.vipn{color:var(--gold)}
+.vipc{border-color:rgba(255,215,0,.45);background:linear-gradient(135deg,rgba(255,215,0,.13),rgba(255,159,28,.06))}
+.fr{--rw:3px}.av.l.fr{--rw:4px}.av.s.fr{--rw:2.5px}
+.fr::before{content:'';position:absolute;inset:-4px;border-radius:50%;pointer-events:none;box-shadow:0 0 10px var(--gl,transparent)}
+.fr::after{content:'';position:absolute;inset:-4px;border-radius:50%;pointer-events:none;background:var(--fr);-webkit-mask:radial-gradient(farthest-side,transparent calc(100% - var(--rw)),#000 calc(100% - var(--rw) + .6px));mask:radial-gradient(farthest-side,transparent calc(100% - var(--rw)),#000 calc(100% - var(--rw) + .6px))}
+.fr-neon{--fr:linear-gradient(135deg,#c4a1ff,#667eea);--gl:#9b5cff99}
+.fr-ice{--fr:conic-gradient(#e6fbff,#4cc9f0,#e6fbff,#4cc9f0,#e6fbff);--gl:#4cc9f066}
+.fr-fire{--fr:conic-gradient(#ff3d00,#ffb300,#ff3d00,#ffb300,#ff3d00);--gl:#ff6a0088}
+.fr-rose{--fr:conic-gradient(#ff5c7a,#ffd1dc,#ff5c7a,#d6336c,#ff5c7a);--gl:#ff5c7a66}
+.fr-rainbow{--fr:conic-gradient(#ff3b3b,#ffb300,#f5ff3b,#2ee59d,#4cc9f0,#667eea,#c77dff,#ff3b3b);--gl:#c77dff66}
+.fr-vgold{--fr:conic-gradient(#fff3b0,#ffd700,#b8860b,#ffd700,#fff3b0);--gl:#ffd70099}
+.fr-vaurora{--fr:conic-gradient(#2ee59d,#667eea,#c77dff,#4cc9f0,#2ee59d);--gl:#2ee59d66}
+.fr-fire::after,.fr-rainbow::after,.fr-vgold::after,.fr-vaurora::after{animation:frspin 3.2s linear infinite}
+@keyframes frspin{to{transform:rotate(360deg)}}
+.fg{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.fi{display:flex;flex-direction:column;align-items:center;gap:6px;padding:14px 4px 9px;border-radius:14px;background:var(--card);border:1px solid var(--line);font-size:12px;text-align:center}
+.fi.on{border-color:var(--gold);background:rgba(255,215,0,.12)}.fi .fp{color:var(--gold);font-size:11px}
+.ms{display:flex;align-items:center;gap:12px;padding:11px 0;border-bottom:1px solid var(--line)}.ms:last-of-type{border-bottom:0}
+#live{position:fixed;inset:0;z-index:30;background:#000;display:none}#live.on{display:block}
+#lv-video{position:absolute;inset:0;background:radial-gradient(#2a0f4a,#000)}#lv-video video{object-fit:cover!important}
+.lv-top{position:absolute;top:calc(var(--st) + 10px);left:10px;right:10px;display:flex;align-items:center;gap:8px;z-index:2}
+.lv-bot{position:absolute;left:0;right:0;bottom:0;padding:30px 10px calc(10px + var(--sb));background:linear-gradient(transparent,#000c);z-index:2}
+#lv-chat{max-height:30vh;overflow-y:auto;display:flex;flex-direction:column;gap:4px;margin-bottom:8px;width:82%}#lv-chat .msg{background:#0006}
+.lv-tag{background:#ff2d55;border-radius:6px;padding:2px 7px;font-size:11px;font-weight:800}
+#room{position:fixed;inset:0;z-index:30;background:linear-gradient(160deg,#0a0118,#1b0b33 60%,#2a0f4a);display:none;flex-direction:column;padding-top:var(--st)}
+#room.on{display:flex}
+.rh{display:flex;align-items:center;gap:10px;padding:10px 12px}.rh .t{flex:1;min-width:0}.rh button{background:var(--card);border-radius:12px;width:38px;height:38px;font-size:17px;color:#fff}
+.seats{padding:4px 10px 6px}.hostrow{display:flex;justify-content:center;margin-bottom:8px}
+.sg{display:grid;grid-template-columns:repeat(5,1fr);gap:7px 4px}
+.seat{display:flex;flex-direction:column;align-items:center;gap:3px;min-width:0;position:relative}
+.seat .av{width:50px;height:50px;border:2px solid transparent}.seat.host .av{width:66px;height:66px;border-color:var(--gold);box-shadow:0 0 18px #ffd70066}
+.seat.empty .av{background:rgba(255,255,255,.06);border:1.5px dashed rgba(255,255,255,.25);color:var(--mut);font-size:12px}
+.seat.speak .av{border-color:var(--ok);box-shadow:0 0 0 4px #2ee59d44;animation:sp .7s infinite alternate}
+@keyframes sp{to{box-shadow:0 0 0 7px #2ee59d22}}
+.seat .nm{font-size:10.5px;max-width:100%;color:#ddd}.seat .mt{position:absolute;top:34px;right:calc(50% - 31px);font-size:12px;background:#000a;border-radius:50%;width:18px;height:18px;display:flex;align-items:center;justify-content:center}
+.chat{flex:1;overflow-y:auto;padding:6px 12px;display:flex;flex-direction:column;gap:5px}
+.msg{background:rgba(255,255,255,.07);padding:6px 10px;border-radius:12px;align-self:flex-start;max-width:88%;word-break:break-word;font-size:13.5px}
+.msg b{color:#c9b6ff}.msg.gift{background:linear-gradient(135deg,rgba(255,215,0,.2),rgba(255,92,122,.2));border:1px solid rgba(255,215,0,.3)}
+.msg.lucky{background:linear-gradient(135deg,rgba(46,229,157,.25),rgba(255,215,0,.2));border:1px solid rgba(46,229,157,.4)}
+.bar{display:flex;gap:8px;align-items:center;padding:8px 10px calc(8px + var(--sb));border-top:1px solid var(--line);background:rgba(0,0,0,.25)}
+.bar input{border-radius:22px}.rb{width:44px;height:44px;border-radius:50%;background:var(--card);font-size:20px;flex:none;border:1px solid var(--line)}
+.rb.mic{background:linear-gradient(135deg,var(--ok),#10b981);display:none}.rb.mic.on{display:block}.rb.mic.off{background:linear-gradient(135deg,#ff5c7a,#d6336c)}
+.vs{font-size:11px;padding:3px 9px;border-radius:10px;background:#0006}
+.fly{position:fixed;left:50%;top:42%;z-index:90;font-size:90px;pointer-events:none;animation:fly 2.6s ease-out forwards;text-align:center;filter:drop-shadow(0 0 24px gold)}
+.fly small{display:block;font-size:14px;color:#fff;background:#000a;border-radius:12px;padding:3px 10px;margin-top:4px}
+@keyframes fly{0%{transform:translate(-50%,60px) scale(.3);opacity:0}20%{transform:translate(-50%,0) scale(1.15);opacity:1}75%{transform:translate(-50%,-20px) scale(1);opacity:1}100%{transform:translate(-50%,-120px) scale(.9);opacity:0}}
+.fly.big{font-size:150px;animation-duration:3.8s}
+.fly.luckyfly{filter:drop-shadow(0 0 30px #2ee59d)}
+.gg{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}.gi{text-align:center;padding:9px 2px;border-radius:12px;background:var(--card);border:1px solid var(--line);font-size:11px}.gi b{display:block;font-size:28px}.gi.on{border-color:var(--gold);background:rgba(255,215,0,.12)}
+.tier-rare{box-shadow:inset 0 0 0 1px #4cc9f0}.tier-epic{box-shadow:inset 0 0 0 1px #c77dff}.tier-luxury{box-shadow:inset 0 0 0 1px #ffd700}.tier-legendary{box-shadow:inset 0 0 0 1px #ff5c7a}.tier-mythic{box-shadow:inset 0 0 0 1px #2ee59d,0 0 10px #2ee59d55}
+.tier-lucky{box-shadow:inset 0 0 0 1px #2ee59d,0 0 12px #2ee59d66;background:linear-gradient(135deg,rgba(46,229,157,.12),rgba(255,215,0,.08))}
+.bar2{height:8px;border-radius:6px;background:rgba(255,255,255,.1);overflow:hidden}.bar2 i{display:block;height:100%;background:linear-gradient(90deg,var(--pri),var(--gold))}
+.res{text-align:center;font-size:44px;min-height:64px;margin:8px 0}.win{color:var(--ok)}.lose{color:var(--bad)}
+.splash{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;z-index:100;background:linear-gradient(160deg,var(--bg),var(--bg2))}
+.spin{width:36px;height:36px;border:4px solid #fff3;border-top-color:var(--gold);border-radius:50%;animation:rot 1s linear infinite}@keyframes rot{to{transform:rotate(360deg)}}
+.empty{text-align:center;color:var(--mut);padding:26px 0}
+.foot{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px;padding-top:12px;border-top:1px solid var(--line)}
+.foot a{color:var(--mut);text-decoration:none;font-size:12px;padding:6px 10px;border-radius:12px;background:var(--card);border:1px solid var(--line)}
+.ratebar{display:flex;align-items:center;gap:8px;font-size:11px;color:var(--mut);background:rgba(38,161,123,.1);border:1px solid rgba(38,161,123,.3);border-radius:12px;padding:7px 10px;margin-bottom:10px}
+.addr{display:flex;gap:8px;align-items:center;background:rgba(38,161,123,.12);border:1px solid rgba(38,161,123,.35);border-radius:12px;padding:8px 10px;margin-top:6px}
+.addr b{flex:1;min-width:0;word-break:break-all;font-size:12px;color:#3ddc97}
+#pk{position:fixed;inset:0;z-index:40;background:#000;display:none;flex-direction:column}
+#pk.on{display:flex}
+.pk-top{position:absolute;top:calc(var(--st) + 8px);left:8px;right:8px;z-index:3;display:flex;align-items:center;gap:6px}
+.pk-vids{position:absolute;inset:0;display:flex}
+.pk-pane{flex:1;position:relative;overflow:hidden;background:radial-gradient(#1b0b33,#000)}
+.pk-pane video{width:100%;height:100%;object-fit:cover!important}
+.pk-pane .tag{position:absolute;top:calc(var(--st) + 44px);left:8px;display:flex;align-items:center;gap:6px;background:#0008;border-radius:20px;padding:3px 10px 3px 3px;z-index:2}
+.pk-pane.right .tag{left:auto;right:8px}
+.pk-pane .score{position:absolute;bottom:120px;left:0;right:0;text-align:center;font-size:26px;font-weight:800;z-index:2;text-shadow:0 2px 8px #000}
+.pk-pane.left .score{color:#7db4ff}.pk-pane.right .score{color:#ff8a8a}
+.pk-mid{position:absolute;left:50%;top:calc(var(--st) + 44px);transform:translateX(-50%);z-index:3;background:linear-gradient(135deg,#ffd700,#ff9f1c);color:#2a1a00;font-weight:900;border-radius:12px;padding:4px 12px;font-size:14px;box-shadow:0 0 20px #ffd70088}
+.pk-bar{position:absolute;top:calc(var(--st) + 76px);left:10px;right:10px;height:10px;border-radius:6px;overflow:hidden;display:flex;z-index:3;background:#222}
+.pk-bar .l{background:linear-gradient(90deg,#2563eb,#60a5fa);height:100%;transition:width .4s}
+.pk-bar .r{background:linear-gradient(90deg,#f87171,#dc2626);height:100%;flex:1}
+.pk-timer{position:absolute;top:calc(var(--st) + 92px);left:50%;transform:translateX(-50%);z-index:3;background:#000a;border-radius:12px;padding:2px 12px;font-weight:800;font-size:15px;color:var(--gold)}
+.pk-bot{position:absolute;left:0;right:0;bottom:0;padding:20px 10px calc(10px + var(--sb));background:linear-gradient(transparent,#000d);z-index:3}
+.pk-chat{max-height:22vh;overflow-y:auto;display:flex;flex-direction:column;gap:4px;margin-bottom:8px}
+.pk-win{position:absolute;inset:0;z-index:5;display:none;align-items:center;justify-content:center;flex-direction:column;gap:12px;background:#000c}
+.pk-win.on{display:flex}
+.pk-win b{font-size:30px;color:var(--gold)}
+#auth{position:fixed;inset:0;z-index:60;display:none;overflow-y:auto;padding:calc(var(--st) + 28px) 22px calc(24px + var(--sb));background:radial-gradient(120% 70% at 50% 0%,#5b2a9e 0%,#2a0f55 38%,#0a0118 75%)}
+#auth.on{display:block;animation:fade .3s}
+.au-box{max-width:380px;margin:0 auto;text-align:center}
+.au-logo{width:96px;height:96px;border-radius:26px;box-shadow:0 12px 40px #9b5cff66}
+.au-box h1{margin:14px 0 2px;font-size:25px}
+.au-tabs{display:flex;gap:6px;background:#0006;border-radius:30px;padding:5px;margin:22px 0 16px}
+.au-tab{flex:1;padding:10px;border-radius:24px;background:none;color:var(--mut);font-weight:700}
+.au-tab.on{background:linear-gradient(135deg,#ff4d8d,#9b5cff);color:#fff}
+.au-field{display:flex;align-items:center;gap:8px;background:#ffffff12;border:1px solid var(--line);border-radius:28px;padding:0 16px;margin-bottom:11px}
+.au-field:focus-within{border-color:#c084fc}
+#auth .au-field input{flex:1;min-width:0;background:none;border:0;outline:0;padding:15px 0;border-radius:0;font-size:16px}
+.au-field button{background:none;padding:6px;font-size:18px}
+#au-go{width:100%;padding:15px;border-radius:30px;font-weight:800;font-size:16px;color:#fff;background:linear-gradient(135deg,#ff4d8d,#9b5cff);box-shadow:0 8px 26px #ff4d8d55;margin-top:4px}
+#au-go:disabled{opacity:.6}
+#au-err{color:#ff8fa3;min-height:20px;margin:8px 0;font-size:14px}
+.au-link{background:none;color:#d8c8ff;text-decoration:underline;padding:10px;font-size:14px}
+.hm-top{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+.hm-tabs{display:flex;gap:16px;overflow-x:auto;flex:1;min-width:0;scrollbar-width:none}.hm-tabs::-webkit-scrollbar{display:none}
+.hm-tabs button{background:none;padding:6px 0;color:var(--mut);font-weight:700;font-size:15px;white-space:nowrap;border-bottom:3px solid transparent}
+.hm-tabs button.on{color:#fff;font-size:18px;border-bottom-color:#ff4d8d}
+.hm-ic{background:var(--card);border:1px solid var(--line);border-radius:50%;width:38px;height:38px;flex:none;font-size:17px}
+.hm-quick{display:flex;gap:8px;margin-bottom:10px}.hm-quick button{flex:1;padding:10px 4px;border-radius:14px;font-weight:700;font-size:12px;background:var(--card);border:1px solid var(--line)}
+.hm-quick button:disabled{opacity:.5}
+.fgrid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}
+.fcard{position:relative;aspect-ratio:3/4;border-radius:16px;overflow:hidden;background:#2a0f4a center/cover;cursor:pointer}
+.fcard .ini{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:56px;font-weight:800;color:#ffffff55}
+.fcard .tg{position:absolute;top:8px;left:8px;z-index:1}.fcard .vw{position:absolute;top:8px;right:8px;z-index:1;background:#0008;border-radius:10px;padding:1px 8px;font-size:12px}
+.fcard .inf{position:absolute;left:0;right:0;bottom:0;padding:28px 9px 8px;background:linear-gradient(transparent,#000d);z-index:1}
+.lv-tag.voice{background:#7a3fd1}
+.golive{position:fixed;right:14px;bottom:calc(78px + var(--sb));z-index:15;padding:13px 20px;border-radius:30px;font-weight:800;color:#fff;background:linear-gradient(135deg,#ff4d8d,#9b5cff);box-shadow:0 8px 26px #ff4d8d66}
+body:has(.mini.on) .golive{bottom:calc(136px + var(--sb))}
+.pf-stats{display:flex;justify-content:space-around;margin:12px 0}.pf-stats button{background:none;flex:1}.pf-stats b{display:block;font-size:18px}
+.pod{display:flex;align-items:flex-end;gap:8px;margin:14px 0}.pod>div{flex:1;min-width:0;text-align:center;border-radius:16px;padding:12px 4px;background:var(--card);border:1px solid var(--line);display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer}
+.pod>div.p1{padding:22px 4px;border-color:#ffd700;background:linear-gradient(180deg,#ffd70033,transparent)}.pod .ell{max-width:100%}
+#lv-follow{background:linear-gradient(135deg,#ff4d8d,#9b5cff);border-radius:16px;padding:4px 11px;font-size:12px;font-weight:800;flex:none}
+#lv-hint{position:absolute;top:42%;left:50%;transform:translateX(-50%);z-index:3;background:#0009;border-radius:20px;padding:8px 16px;font-size:13px;pointer-events:none;display:none;white-space:nowrap}
+</style>
+</head>
+<body>
+<div id="auth"><div class="au-box">
+  <img class="au-logo" src="/static/launchericon-192x192.png" alt="21Party logo">
+  <h1>Twenty One Party</h1><div class="mut">Live · PK · Voice Party</div>
+  <div class="au-tabs"><button type="button" class="au-tab on" data-m="login" onclick="authMode('login')">Log in</button><button type="button" class="au-tab" data-m="signup" onclick="authMode('signup')">Sign up</button></div>
+  <form id="au-form" onsubmit="authSubmit(event)" novalidate>
+    <div class="au-field au-su" style="display:none"><span>👤</span><input id="au-name" placeholder="Your name · ስምህ" maxlength="30" autocomplete="nickname"></div>
+    <div class="au-field"><span>📱</span><input id="au-phone" type="tel" inputmode="tel" placeholder="09xxxxxxxx" maxlength="16" autocomplete="username"></div>
+    <div class="au-field"><span>🔒</span><input id="au-pass" type="password" placeholder="Password · የይለፍ ቃል" maxlength="72" autocomplete="current-password"><button type="button" onclick="authEye()" aria-label="Show password">👁</button></div>
+    <div class="au-field au-su" style="display:none"><span>🔒</span><input id="au-pass2" type="password" placeholder="Repeat password" maxlength="72" autocomplete="new-password"></div>
+    <div id="au-err" role="alert"></div>
+    <button id="au-go" type="submit">Log in · ግባ</button>
+  </form>
+  <button type="button" class="au-link" id="au-forgot" onclick="toast('Forgot password? Contact support: '+SUPPORT_NAME,5000)">Forgot password?</button><br>
+  <button type="button" class="au-link" onclick="authGuest()">Continue as Guest</button>
+</div></div>
+<div class="splash" id="splash"><div class="logo" style="font-size:28px">🎙 Twenty One Party</div><div class="spin"></div><div class="mut" id="splash-t">Loading…</div></div>
+<div class="page" id="p-home"></div><div class="page" id="p-rooms"></div><div class="page" id="p-games"></div>
+<div class="page" id="p-wallet"></div><div class="page" id="p-community"></div><div class="page" id="p-me"></div><div class="page" id="p-rank"></div>
+<div class="mini" id="mini" onclick="showRoom()"><span style="font-size:22px">🎙</span><div class="sp"><div class="ell" id="mini-n" style="font-weight:600"></div><div class="mut" style="color:#ddd"><span id="mini-o">0</span> online</div></div><button class="btn sm bad" onclick="event.stopPropagation();exitRoom()">Exit</button></div>
+<nav id="nav">
+<button data-p="home" class="on"><i>🏠</i>Home</button><button data-p="rooms"><i>🎧</i>Rooms</button><button data-p="games"><i>🎮</i>Games</button>
+<button data-p="wallet"><i>👛</i>Wallet</button><button data-p="community"><i>💬</i>Community</button><button data-p="me"><i>👤</i>Me</button>
+</nav>
+<div id="room">
+  <div class="rh"><button onclick="minimize()">⌄</button><div class="t"><div class="ell" id="r-name" style="font-weight:700"></div><div class="mut"><span class="live"></span><span id="r-on">0</span> online · <span class="vs" id="r-vs">🔇</span></div></div><button onclick="exitRoom()">✕</button></div>
+  <div class="seats"><div class="hostrow" id="r-host"></div><div class="sg" id="r-seats"></div></div>
+  <div class="chat" id="r-chat"></div>
+  <div class="bar"><button class="rb mic" id="r-mic" onclick="toggleMic()">🎤</button><input id="r-in" placeholder="Message…" maxlength="200" onkeydown="if(event.key==='Enter')sendChat()"><button class="rb" onclick="openGift()">🎁</button><button class="rb" style="background:linear-gradient(135deg,var(--pri),var(--pri2))" onclick="sendChat()">➤</button></div>
+</div>
+<div id="live"><div id="lv-video"></div><div id="lv-hint">⬆️ Swipe up for the next live</div>
+  <div class="lv-top"><div class="row sp" id="lv-host" style="background:#0007;border-radius:24px;padding:4px 12px 4px 4px;flex:0 1 auto"></div><button id="lv-follow" style="display:none" onclick="lvFollow()">＋ Follow</button><span class="lv-tag">LIVE</span><span class="vs">👁 <span id="lv-on">0</span></span><span class="vs" id="lv-vs">⏳</span><span class="sp"></span><button class="rb" id="lv-pk" style="width:36px;height:36px;font-size:15px;display:none" onclick="startPKFromLive()">⚔️</button><button class="rb" style="width:36px;height:36px;font-size:15px" onclick="exitRoom()">✕</button></div>
+  <div class="lv-bot"><div id="lv-chat"></div><div class="row"><input id="lv-in" placeholder="Message…" maxlength="200" style="background:#0007" onkeydown="if(event.key==='Enter')sendChat()"><button class="rb" id="lv-flip" style="display:none" onclick="flipCam()">🔄</button><button class="rb" id="lv-mic" style="display:none" onclick="liveMic()">🎤</button><button class="rb" onclick="openGift()">🎁</button><button class="rb" style="background:linear-gradient(135deg,var(--pri),var(--pri2))" onclick="sendChat()">➤</button></div></div>
+</div>
+<div id="pk">
+  <div class="pk-vids"><div class="pk-pane left" id="pk-v1"><div class="tag" id="pk-tag1"></div><div class="score" id="pk-s1">0</div></div><div class="pk-pane right" id="pk-v2"><div class="tag" id="pk-tag2"></div><div class="score" id="pk-s2">0</div></div></div>
+  <div class="pk-mid">VS</div>
+  <div class="pk-bar"><div class="l" id="pk-bl" style="width:50%"></div><div class="r"></div></div>
+  <div class="pk-timer" id="pk-timer">5:00</div>
+  <div class="pk-top"><span class="lv-tag">PK MATCH</span><span class="sp"></span><button class="rb" style="width:36px;height:36px;font-size:15px" onclick="exitPK()">✕</button></div>
+  <div class="pk-bot"><div class="pk-chat" id="pk-chat"></div>
+    <div class="row"><button class="btn sm sp" style="background:linear-gradient(135deg,#2563eb,#60a5fa)" onclick="openPKGift(1)">🎁 Left</button><button class="btn sm sp" style="background:linear-gradient(135deg,#dc2626,#f87171)" onclick="openPKGift(2)">🎁 Right</button><button class="rb" id="pk-mic" style="display:none" onclick="pkMic()">🎤</button></div>
+  </div>
+  <div class="pk-win" id="pk-win"><b id="pk-win-t">🏆</b><div class="mut" id="pk-win-s"></div><button class="btn gold" onclick="exitPK()">Close</button></div>
+</div>
+<script>
+const tg=window.Telegram&&Telegram.WebApp;
+try{tg&&(tg.ready(),tg.expand(),tg.setHeaderColor&&tg.setHeaderColor('#0a0118'),tg.setBackgroundColor&&tg.setBackgroundColor('#0a0118'),tg.disableVerticalSwipes&&tg.disableVerticalSwipes())}catch(e){}
+const SUPPORT_NAME='@TwentyOneOwner';
+let TOKEN=(()=>{try{return localStorage.getItem('tk')||''}catch(e){return''}})(),S={me:null,cfg:null},R=null,PAGE='home';
+const $=(s,r=document)=>r.querySelector(s),$$=(s,r=document)=>[...r.querySelectorAll(s)];
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fmt=n=>Number(n||0).toLocaleString('en-US');
+const u2=n=>Number(n||0).toFixed(2);
+const ago=t=>{const d=Math.floor(Date.now()/1000-t);return d<60?'now':d<3600?Math.floor(d/60)+'m':d<86400?Math.floor(d/3600)+'h':Math.floor(d/86400)+'d'};
+function toast(m,t=2400){const e=document.createElement('div');e.className='toast';e.textContent=m;document.body.appendChild(e);setTimeout(()=>e.remove(),t)}
+function hap(t='light'){try{tg&&tg.HapticFeedback&&tg.HapticFeedback.impactOccurred(t)}catch(e){}}
+function copyTxt(s){try{navigator.clipboard.writeText(s);toast('📋 Copied')}catch(e){toast(s)}}
+function av(u,cls=''){const n=(u&&u.name||'?')[0].toUpperCase();const h=((u&&u.id)||0)*47%360;const f=u&&u.fr?` fr fr-${esc(u.fr)}`:'';
+ return u&&u.photo?`<div class="av ${cls}${f}" style="background-image:url('${esc(u.photo)}')"></div>`:`<div class="av ${cls}${f}" style="background:hsl(${h},55%,42%)">${esc(n)}</div>`}
+const vipTag=u=>u&&u.vip?'<span class="vip">VIP</span>':'';
+const hostTag=u=>u&&u.host==='host'?'<span class="hbadge">🎤 HOST</span>':'';
+const agentTag=u=>u&&u.ag?'<span class="abadge">🤝 AGENT</span>':'';
+const vipLeft=m=>Math.max(0,Math.ceil(((m.vip_until||0)-Date.now()/1000)/86400));
+const U=()=>(S.cfg&&S.cfg.usdt)||{address:'',birr_per_usdt:161,coin_usdt:0.002484};
+async function api(path,body,retry=true){
+  const o={headers:{}};if(TOKEN)o.headers.Authorization='Bearer '+TOKEN;
+  if(body!==undefined){o.method='POST';if(body instanceof FormData)o.body=body;else{o.headers['Content-Type']='application/json';o.body=JSON.stringify(body)}}
+  let r;try{r=await fetch(path,o)}catch(e){throw new Error('No internet')}
+  if(r.status===401&&retry){if(tgInit()){await login();return api(path,body,false)}if(!path.startsWith('/api/auth/')){logout();throw new Error('Please log in again')}}
+  const d=await r.json().catch(()=>({}));
+  if(!r.ok){const e=new Error(d.error||'Error');e.code=r.status;throw e}
+  return d}
+const tgInit=()=>(tg&&tg.initData)||'';
+const store={get:k=>{try{return localStorage.getItem(k)}catch(e){return null}},set:(k,v)=>{try{localStorage.setItem(k,v)}catch(e){}},del:k=>{try{localStorage.removeItem(k)}catch(e){}}};
+function useSession(d){TOKEN=d.token;store.set('tk',TOKEN);S.me=d.me;S.cfg=d.cfg}
+async function post(path,body){let r;try{r=await fetch(path,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)})}catch(e){throw new Error('No internet')}
+  const d=await r.json().catch(()=>({}));if(!r.ok){const e=new Error(d.error||'Server error. Try again');e.code=r.status;throw e}return d}
+async function login(){useSession(await post('/api/register',{init:tgInit(),dev_id:new URLSearchParams(location.search).get('dev')}))}
+function logout(){store.del('tk');TOKEN='';location.reload()}
+async function resume(){
+  if(tgInit()||new URLSearchParams(location.search).get('dev')){await login();return true}
+  if(!TOKEN)return false;
+  let r;try{r=await fetch('/api/me',{headers:{Authorization:'Bearer '+TOKEN}})}catch(e){throw new Error('No internet')}
+  if(r.status===401||r.status===403){store.del('tk');TOKEN='';return false}
+  if(!r.ok)throw new Error('Server error. Try again');
+  const d=await r.json();S.me=d.me;S.cfg=d.cfg;return true}
+function startApp(){$('#auth').classList.remove('on');$('#splash')&&$('#splash').remove();$('#nav').style.display='';go('home')}
+let AUTH_MODE='login';
+function showAuth(){$('#splash')&&$('#splash').remove();$('#nav').style.display='none';
+  if(new URLSearchParams(location.search).get('ref'))AUTH_MODE='signup';
+  $('#auth').classList.add('on');authMode(AUTH_MODE)}
+function authMode(m){AUTH_MODE=m;const su=m==='signup';
+  $$('.au-tab').forEach(b=>b.classList.toggle('on',b.dataset.m===m));
+  $$('.au-su').forEach(e=>e.style.display=su?'':'none');
+  $('#au-pass').autocomplete=su?'new-password':'current-password';
+  $('#au-go').textContent=su?'Create account · ተመዝገብ':'Log in · ግባ';
+  $('#au-forgot').style.display=su?'none':'';$('#au-err').textContent=''}
+function authEye(){const i=$('#au-pass');i.type=i.type==='password'?'text':'password'}
+async function authSubmit(ev){ev.preventDefault();const b=$('#au-go'),er=$('#au-err');er.textContent='';
+  const body={phone:$('#au-phone').value,password:$('#au-pass').value};
+  if(AUTH_MODE==='signup'){body.name=$('#au-name').value;body.ref=new URLSearchParams(location.search).get('ref')||'';
+    if(body.password!==$('#au-pass2').value){er.textContent='The two passwords are not the same';return}}
+  b.disabled=true;try{useSession(await post('/api/auth/'+AUTH_MODE,body));$('#au-form').reset();startApp()}catch(e){er.textContent=e.message}finally{b.disabled=false}}
+async function authGuest(){const er=$('#au-err');er.textContent='';
+  let id=store.get('guest_id');if(!id){id=Array.from(crypto.getRandomValues(new Uint8Array(16)),x=>x.toString(16).padStart(2,'0')).join('');store.set('guest_id',id)}
+  try{useSession(await post('/api/register',{guest:id}));startApp()}catch(e){er.textContent=e.message}}
+function changePassword(){const o=modal(`<h3>🔑 Change password</h3><div class="col"><input id="cp-o" type="password" placeholder="Old password" maxlength="72"><input id="cp-n" type="password" placeholder="New password (min 6)" maxlength="72"><button class="btn" id="cp-go">Save</button></div>`);
+  $('#cp-go',o).onclick=e=>run(e.target,async()=>{await api('/api/auth/password',{old:$('#cp-o',o).value,new:$('#cp-n',o).value});o.close();toast('✅ Password changed')})}
+async function admReset(id){if(!confirm('Make a new temporary password for this user?'))return;await run(null,async()=>{const d=await api('/api/admin/reset-password',{id});modal(`<h3>🔑 Temporary password</h3><p>Phone: <b>${esc(d.phone)}</b></p><p>Password: <b class="gold">${esc(d.password)}</b></p><div class="mut">Send it only to the owner of this number.</div>`)})}
+function setMe(m){S.me=m;$$('.coins-n').forEach(e=>e.textContent=fmt(m.coins))}
+function modal(html,onclose){const o=document.createElement('div');o.className='ov';o.innerHTML=`<div class="sheet">${html}</div>`;
+  o.onclick=e=>{if(e.target===o)close()};const close=()=>{o.remove();onclose&&onclose()};o.close=close;document.body.appendChild(o);return o}
+const closeModal=()=>{const m=$$('.ov').pop();m&&m.close()};
+async function run(btn,fn){if(btn)btn.disabled=true;try{return await fn()}catch(e){toast(e.message)}finally{if(btn)btn.disabled=false}}
+function shrink(file,max=1100,q=.8){return new Promise((res,rej)=>{const i=new Image();i.onload=()=>{const k=Math.min(1,max/Math.max(i.width,i.height));const c=document.createElement('canvas');c.width=i.width*k;c.height=i.height*k;c.getContext('2d').drawImage(i,0,0,c.width,c.height);c.toBlob(b=>b?res(b):rej(new Error('image')),'image/jpeg',q)};i.onerror=()=>rej(new Error('Not an image'));i.src=URL.createObjectURL(file)})}
+const topbar=()=>`<div class="top"><div class="logo">🎙 Twenty One</div><span class="pill" onclick="go('wallet')">🪙 <span class="coins-n">${fmt(S.me.coins)}</span></span></div>`;
+const footbar=()=>`<div class="foot"><a href="${esc(S.cfg.channel)}" target="_blank">📢 Join Channel</a><a href="https://t.me/${esc((S.cfg.support||'').replace('@',''))}" target="_blank">🎧 Support</a></div>`;
+const LOAD={home:renderHome,rooms:renderRooms,games:renderGames,wallet:renderWallet,community:renderCommunity,me:renderMe,rank:renderRank};
+function go(p){PAGE=p;$$('.page').forEach(e=>e.classList.toggle('on',e.id==='p-'+p));$$('#nav button').forEach(b=>b.classList.toggle('on',b.dataset.p===p));hideRoom();LOAD[p]();hap()}
+$('#nav').onclick=e=>{const b=e.target.closest('button');if(b)go(b.dataset.p)};
+setInterval(()=>{if(!document.hidden&&!R?.visible&&PAGE==='rooms')loadRoomList()},8000);
+let HT='popular',HOME_SEQ=0;
+const HOME_TABS=[['follow','Following'],['popular','Popular'],['new','New'],['live','Live'],['voice','Party']];
+function renderHome(){
+  const m=S.me,el=$('#p-home');
+  el.innerHTML=`<div class="hm-top"><div class="hm-tabs">${HOME_TABS.map(t=>`<button class="${HT===t[0]?'on':''}" onclick="homeTab('${t[0]}')">${t[1]}</button>`).join('')}</div><button class="hm-ic" onclick="go('rank')" aria-label="Ranking">🏆</button><span class="pill" onclick="go('wallet')">🪙 <span class="coins-n">${fmt(m.coins)}</span></span></div>
+  <div class="hm-quick"><button id="daily" ${m.daily_ready?'':'disabled'}>${m.daily_ready?'🎁 Daily gift':'🎁 Claimed ✓'}</button><button onclick="openPKArena()">⚔️ PK Arena</button><button onclick="go('rank')">👑 Ranking</button></div>
+  <div id="h-feed"><div class="empty">…</div></div><div id="h-ms"></div>${footbar()}<div style="height:60px"></div><button class="golive" onclick="goMenu()">📹 Go Live</button>`;
+  $('#daily').onclick=e=>run(e.target,async()=>{const d=await api('/api/daily',{});setMe(d.me);toast(`🎉 +${d.reward} coins (Day ${d.streak})`);hap('medium');renderHome()});
+  const tabs=$('.hm-tabs',el),on=$('.hm-tabs button.on',el);if(tabs&&on)tabs.scrollLeft=on.offsetLeft-tabs.offsetLeft-60;
+  loadMsCard();loadFeed()}
+function homeTab(t){HT=t;renderHome()}
+function goMenu(){const m=modal(`<h3>Start</h3><div class="col"><button class="btn bad" id="gm-l">📹 Video Live</button><button class="btn" id="gm-v">🎙 Voice Party room</button></div>`);
+  $('#gm-l',m).onclick=()=>{m.close();newRoom('live')};$('#gm-v',m).onclick=()=>{m.close();newRoom('voice')}}
+function feedCard(r){const h=r.host,lv=r.kind==='live',hue=(h.id*47)%360;
+  const bg=h.photo?`background-image:url('${esc(h.photo)}')`:`background:linear-gradient(160deg,hsl(${hue},55%,45%),#1a0a2e)`;
+  return `<div class="fcard" style="${bg}" onclick="watch('${esc(r.id)}')">${h.photo?'':`<div class="ini">${esc((h.name||'?')[0].toUpperCase())}</div>`}<span class="tg lv-tag ${lv?'':'voice'}">${lv?'LIVE':'PARTY'}</span><span class="vw">👁 ${r.online}</span><div class="inf"><div class="ell" style="font-weight:700">${esc(r.name)}</div><div class="mut ell" style="color:#ddd">${r.following?'💗 ':''}${esc(h.name)} ${h.lvi} ${vipTag(h)}</div></div></div>`}
+async function loadFeed(){const seq=++HOME_SEQ,tab=HT;
+  try{const d=await api('/api/feed?tab='+tab);const el=$('#h-feed');if(!el||seq!==HOME_SEQ)return;
+    el.innerHTML=d.rooms.length?`<div class="fgrid">${d.rooms.map(feedCard).join('')}</div>`:`<div class="empty">${tab==='follow'?'People you follow are not live now.<br>Open a profile and tap Follow.':'Nobody is live yet. Be the first! 📹'}</div>`}
+  catch(e){const el=$('#h-feed');if(el&&seq===HOME_SEQ&&!el.querySelector('.fgrid'))el.innerHTML=`<div class="empty">${esc(e.message)}<br><br><button class="btn sm" onclick="loadFeed()">Retry</button></div>`}}
+setInterval(()=>{if(S.me&&TOKEN&&!document.hidden&&!R?.visible&&PAGE==='home'&&!$('.ov'))loadFeed()},10000);
+function watch(rid){if(R&&R.id!==rid&&R.kind==='live'&&R.host===S.me.id&&!confirm('This will end your live. Continue?'))return;$$('.ov').forEach(o=>o.close());enterRoom(rid)}
+// ---- profile and follow ----
+async function openProfile(uid){const o=modal('<div class="empty">…</div>');
+  const draw=async()=>{try{const d=await api('/api/users/'+uid),u=d.user,box=o.firstChild;
+    const onStage=R&&Object.values(R.seats).some(x=>x.u.id===uid);
+    box.innerHTML=`<div class="col" style="align-items:center;text-align:center">${av(u,'l')}<b style="font-size:20px">${esc(u.name)}</b><div><span class="badge">${u.lvi} Lv.${u.lv+1} ${esc(u.lvn)}</span> ${vipTag(u)} ${hostTag(u)} ${agentTag(u)}</div><div class="mut">${esc(u.bio||'')}</div></div>
+    <div class="pf-stats"><button data-f="followers"><b>${fmt(d.followers)}</b><span class="mut">Followers</span></button><button data-f="following"><b>${fmt(d.following)}</b><span class="mut">Following</span></button><button><b class="gold">${fmt(d.recv)}</b><span class="mut">Received</span></button><button><b class="gold">${fmt(d.sent)}</b><span class="mut">Sent</span></button></div>
+    <div class="col">${d.me?'':`<button class="btn ${d.is_following?'ghost':''}" id="pf-f">${d.is_following?'✓ Following':'＋ Follow'}</button>`}${d.room&&!(R&&R.id===d.room.id)?`<button class="btn bad" id="pf-w">${d.room.kind==='live'?'📹 Watch live':'🎙 Join party'}</button>`:''}${!d.me&&onStage?'<button class="btn gold" id="pf-g">🎁 Send gift</button>':''}</div>`;
+    $$('[data-f]',box).forEach(b=>b.onclick=()=>openFollows(uid,b.dataset.f));
+    const f=$('#pf-f',box);if(f)f.onclick=()=>run(f,async()=>{const r=await api('/api/follow/'+uid,{follow:!d.is_following});hap('medium');lvSetFollow(uid,r.following);await draw()});
+    const w=$('#pf-w',box);if(w)w.onclick=()=>watch(d.room.id);
+    const gb=$('#pf-g',box);if(gb)gb.onclick=()=>{o.close();openGift(uid)}
+  }catch(e){o.firstChild.innerHTML=`<div class="empty">${esc(e.message)}</div>`}};
+  draw()}
+function userRow(u,extra=''){return `<div class="row" style="padding:8px 0;cursor:pointer" onclick="openProfile(${u.id})">${av(u,'s')}<div class="sp ell">${esc(u.name)} ${vipTag(u)} <span class="badge">${u.lvi} ${esc(u.lvn)}</span></div>${extra}</div>`}
+async function openFollows(uid,type){const o=modal(`<h3>${type==='followers'?'Followers':'Following'}</h3><div class="empty">…</div>`);
+  try{const d=await api('/api/users/'+uid+'/follows?type='+type);o.firstChild.innerHTML=`<h3>${type==='followers'?'Followers':'Following'}</h3>`+(d.users.length?d.users.map(u=>userRow(u)).join(''):'<div class="empty">Nobody yet</div>')}catch(e){toast(e.message)}}
+async function loadMyStats(){try{const d=await api('/api/users/'+S.me.id),el=$('#me-stats');if(!el)return;
+  el.innerHTML=`<button onclick="openFollows(${S.me.id},'followers')"><b>${fmt(d.followers)}</b><span class="mut">Followers</span></button><button onclick="openFollows(${S.me.id},'following')"><b>${fmt(d.following)}</b><span class="mut">Following</span></button><button onclick="go('rank')"><b>🏆</b><span class="mut">Ranking</span></button>`}catch(e){}}
+// ---- ranking ----
+let RK={kind:'receivers',period:'day'},RK_SEQ=0;
+async function renderRank(){const el=$('#p-rank'),seq=++RK_SEQ;
+  const chips=(key,list)=>`<div class="chips" style="margin-bottom:8px">${list.map(x=>`<div class="chip ${RK[key]===x[0]?'on':''}" onclick="RK.${key}='${x[0]}';renderRank()">${x[1]}</div>`).join('')}</div>`;
+  el.innerHTML=`<div class="row" style="margin-bottom:10px"><button class="hm-ic" onclick="go('home')" aria-label="Back">←</button><h2 style="margin:0">🏆 Ranking</h2></div>${chips('kind',[['receivers','🎤 Top Hosts'],['senders','💎 Top Gifters']])}${chips('period',[['day','Today'],['week','This week'],['all','All time']])}<div id="rk-l"><div class="empty">…</div></div>`;
+  try{const d=await api(`/api/ranking?kind=${RK.kind}&period=${RK.period}`);if(seq!==RK_SEQ)return;const l=d.items;
+    const pod=(i,medal)=>l[i]?`<div class="p${i+1}" onclick="openProfile(${l[i].id})"><span style="font-size:24px">${medal}</span>${av(l[i],i?'':'l')}<b class="ell">${esc(l[i].name)}</b><span class="gold">🪙 ${fmt(l[i].v)}</span></div>`:'<div style="visibility:hidden"></div>';
+    $('#rk-l').innerHTML=l.length?`<div class="pod">${pod(1,'🥈')}${pod(0,'🥇')}${pod(2,'🥉')}</div>${l.length>3?`<div class="card">${l.slice(3).map((u,i)=>userRow(u,`<b class="gold">${fmt(u.v)}</b>`).replace('>',`><b style="width:22px">${i+4}</b>`)).join('')}</div>`:''}`:'<div class="empty">No gifts in this period yet</div>'}
+  catch(e){if(seq===RK_SEQ)$('#rk-l').innerHTML=`<div class="empty">${esc(e.message)}</div>`}}
+// ---- live: follow button and swipe to the next live ----
+let LVF={host:0,on:false},SWIPING=false;
+function lvSetFollow(uid,on){if(LVF.host!==uid)return;LVF.on=on;$('#lv-follow').style.display=on?'none':''}
+async function lvLoadFollow(uid){if(LVF.host===uid)return;LVF={host:uid,on:true};$('#lv-follow').style.display='none';if(uid===S.me.id)return;
+  try{const d=await api('/api/users/'+uid);lvSetFollow(uid,d.is_following)}catch(e){LVF.host=0}}
+function lvFollow(){const uid=LVF.host;run($('#lv-follow'),async()=>{const r=await api('/api/follow/'+uid,{follow:true});lvSetFollow(uid,r.following);toast('💗 Followed');hap('medium')})}
+async function swipeLive(step){const cur=R;if(SWIPING||!cur||cur.kind!=='live'||cur.host===S.me.id)return;SWIPING=true;
+  try{const d=await api('/api/feed?tab=live');if(R!==cur)return;
+    const ids=d.rooms.map(r=>r.id).sort(),i=ids.indexOf(cur.id),others=ids.filter(x=>x!==cur.id);
+    if(!others.length){toast('No other live right now');return}
+    const next=i<0?others[0]:ids[(i+step+ids.length)%ids.length];
+    hap('medium');await enterRoom(next);await V.joining}
+  catch(e){toast(e.message)}finally{SWIPING=false}}
+let SWY=null;
+$('#live').addEventListener('touchstart',e=>{SWY=e.touches.length===1&&!e.target.closest('input,button,#lv-chat,#lv-host')?[e.touches[0].clientX,e.touches[0].clientY]:null},{passive:true});
+$('#live').addEventListener('touchend',e=>{if(!SWY)return;const dx=e.changedTouches[0].clientX-SWY[0],dy=e.changedTouches[0].clientY-SWY[1];SWY=null;if(Math.abs(dy)>80&&Math.abs(dy)>Math.abs(dx)*1.5)swipeLive(dy<0?1:-1)},{passive:true});
+$('#lv-host').onclick=()=>{const h=R&&R.seats[0];if(h)openProfile(h.u.id)};
+let RT='voice';
+function roomCard(r){const lv=r.kind==='live';return `<div class="card room-card" onclick="enterRoom('${r.id}')">${av(r.host,'')}<div class="sp"><div class="ell" style="font-weight:600">${lv?'<span class="lv-tag">LIVE</span> ':''}${esc(r.name)}</div><div class="mut ell">${esc(r.topic||('Host: '+(r.host?r.host.name:'-')))}</div></div><div style="text-align:right"><div><span class="live"></span><b>${r.online}</b></div><div class="mut">${lv?'📹':' '+r.seated+'/21'}</div></div></div>`}
+function renderRooms(){$('#p-rooms').innerHTML=topbar()+`<div class="chips" style="margin-bottom:10px"><div class="chip ${RT==='voice'?'on':''}" onclick="RT='voice';renderRooms()">🎧 Voice</div><div class="chip ${RT==='live'?'on':''}" onclick="RT='live';renderRooms()">📹 Live</div></div><div class="row" style="margin-bottom:10px"><h2 class="sp" style="margin:0">${RT==='live'?'📹 Live streams':'🎧 Voice rooms'}</h2><button class="btn sm ${RT==='live'?'bad':''}" onclick="newRoom(RT)">${RT==='live'?'📹 Go Live':'＋ Open room'}</button></div><div id="rl"><div class="empty">…</div></div>${footbar()}`;loadRoomList()}
+async function loadRoomList(){try{const d=await api('/api/rooms');const l=d.rooms.filter(r=>(r.kind||'voice')===RT);const el=$('#rl');if(el)el.innerHTML=l.length?l.map(roomCard).join(''):`<div class="empty">${RT==='live'?'No live streams. Be the first!':'No rooms — open the first one!'}</div>`}catch(e){}}
+function newRoom(kind){const lv=kind==='live';const m=modal(`<h3>${lv?'📹 Go Live':'🎙 New room'}</h3><div class="col"><input id="nr-n" placeholder="${lv?'Live title':'Room name'}" maxlength="40">${lv?'':'<input id="nr-t" placeholder="Topic (optional)" maxlength="100">'}<button class="btn ${lv?'bad':''}" id="nr-b">${lv?'📹 Start':'Open'}</button></div>`);
+  $('#nr-b').onclick=e=>run(e.target,async()=>{const d=await api('/api/rooms/create',{name:$('#nr-n').value,topic:lv?'':$('#nr-t').value,kind:lv?'live':'voice'});m.close();enterRoom(d.id)})}
+const V={seq:0,joining:null,client:null,track:null,vtrack:null,rid:null,pub:false,busy:false,
+ set(t,c){const e=$(R&&R.kind==='live'?'#lv-vs':'#r-vs');if(e){e.textContent=t;e.style.color=c||''}},
+ async join(rid,kind,isHost){
+  const left=this.leave(),seq=this.seq;await left;if(seq!==this.seq)return;this.rid=rid;this.set('⏳');
+  const d=await api('/api/agora-token',{room_id:rid});if(seq!==this.seq)return;
+  AgoraRTC.setLogLevel&&AgoraRTC.setLogLevel(3);
+  AgoraRTC.onAutoplayFailed=()=>toast('🔊 Tap to enable sound');
+  const c=AgoraRTC.createClient({mode:'live',codec:'vp8'});this.client=c;
+  await c.setClientRole(kind==='live'&&isHost?'host':'audience');
+  c.on('user-published',async(u,m)=>{try{await c.subscribe(u,m);if(this.client!==c)return;if(m==='audio')u.audioTrack.play();else if(m==='video'){try{c.setStreamFallbackOption&&c.setStreamFallbackOption(u,1)}catch(e){}u.videoTrack.play('lv-video',{fit:'cover'})}}catch(e){}});
+  c.on('volume-indicator',vs=>{const on=new Set(vs.filter(v=>v.level>6).map(v=>v.uid||S.me.id));$$('.seat[data-uid]').forEach(s=>s.classList.toggle('speak',on.has(+s.dataset.uid)))});
+  c.on('token-privilege-will-expire',()=>this.renew());c.on('token-privilege-did-expire',()=>this.renew());
+  c.on('connection-state-change',s=>{if(this.client!==c)return;this.set(s==='CONNECTED'?'🔊':s==='RECONNECTING'?'⏳':s==='DISCONNECTED'?'🔇':'',s==='CONNECTED'?'#2ee59d':'')});
+  c.enableAudioVolumeIndicator();
+  await c.join(d.app_id,d.channel,d.token,d.uid);
+  if(this.client!==c){try{await c.leave()}catch(e){}return}
+  if(kind==='live'&&isHost)await this.startHost()},
+ async startHost(){try{const[a,v]=await AgoraRTC.createMicrophoneAndCameraTracks({AEC:true,ANS:true,AGC:true},{encoderConfig:'480p_2',facingMode:'user'});this.track=a;this.vtrack=v;v.play('lv-video',{mirror:true,fit:'cover'});
+   try{await this.client.enableDualStream()}catch(e){}await this.client.publish([a,v]);this.pub=true;$('#lv-flip').style.display='';$('#lv-mic').style.display='';$('#lv-pk').style.display=''}
+  catch(e){toast('📷 Camera/mic not allowed');exitRoom(true)}},
+ async renew(){try{const d=await api('/api/agora-token',{room_id:this.rid});await this.client.renewToken(d.token)}catch(e){}},
+ async prepMic(){if(this.track)return true;
+  try{this.track=await AgoraRTC.createMicrophoneAudioTrack({AEC:true,ANS:true,AGC:true});return true}
+  catch(e){toast('🎤 Mic not allowed');return false}},
+ async sync(seated,muted){
+  const c=this.client;if(!c||this.busy||c.connectionState!=='CONNECTED')return;this.busy=true;
+  try{
+   if(seated&&!this.pub){
+     if(!await this.prepMic()){await api('/api/rooms/'+this.rid+'/leave-seat',{});return}
+     const d=await api('/api/agora-token',{room_id:this.rid});
+     await c.setClientRole('host');if(d.token)await c.renewToken(d.token);
+     await c.publish(this.track);this.pub=true}
+   if(!seated&&this.pub){try{await c.unpublish(this.track)}catch(e){}this.track.close();this.track=null;await c.setClientRole('audience');this.pub=false}
+   if(this.pub&&this.track)await this.track.setEnabled(!(muted||R?.selfMute));
+   updateMicBtn(seated,muted)
+  }catch(e){this.pub=false}finally{this.busy=false}},
+ async leave(){this.seq++;const c=this.client;this.client=null;this.pub=false;this.rid=null;
+  if(this.track){try{this.track.close()}catch(e){}this.track=null}
+  if(this.vtrack){try{this.vtrack.close()}catch(e){}this.vtrack=null}
+  if(c){try{await c.leave()}catch(e){}}}};
+async function enterRoom(rid){
+  if(R&&R.id===rid){showRoom();return}
+  if(R)await exitRoom(true);
+  try{const d=await api('/api/rooms/'+rid+'/join',{});
+   R={kind:d.room.kind||'voice',id:rid,name:d.room.name,host:d.room.host_id,v:-1,mid:0,seats:{},online:0,init:true,alive:true,selfMute:false,visible:true,t:null,n:0};
+   $('#r-name').textContent=d.room.name;$('#r-chat').innerHTML='';$('#lv-chat').innerHTML='';$('#lv-host').innerHTML='';$('#lv-mic').style.display='none';$('#lv-flip').style.display='none';$('#lv-pk').style.display='none';$('#r-seats').innerHTML='';$('#r-host').innerHTML='';
+   showRoom();$('#lv-video').innerHTML='';LVF={host:0,on:false};$('#lv-follow').style.display='none';
+   $('#lv-hint').style.display=R.kind==='live'&&R.host!==S.me.id?'block':'none';setTimeout(()=>$('#lv-hint').style.display='none',3500);
+   V.joining=V.join(rid,R.kind,R.host===S.me.id).catch(e=>{V.set('❌','#ff5c7a');toast('Audio: '+e.message)});poll()
+  }catch(e){toast(e.message==='ROOM_GONE'?'Room closed':e.message)}}
+function showRoom(){if(!R)return;R.visible=true;$(R.kind==='live'?'#live':'#room').classList.add('on');$('#mini').classList.remove('on');$('#nav').style.display='none'}
+function hideRoom(){if(R&&R.kind==='live')return;$('#room').classList.remove('on');$('#nav').style.display='';if(R){R.visible=false;$('#mini').classList.add('on');$('#mini-n').textContent=R.name;$('#mini-o').textContent=R.online}else $('#mini').classList.remove('on')}
+function minimize(){go(PAGE==='home'?'rooms':PAGE)}
+async function exitRoom(silent){const r=R;if(!r)return;if(!silent&&r.kind==='live'&&r.host===S.me.id&&!confirm('End the live?'))return;r.alive=false;clearTimeout(r.t);R=null;$('#live').classList.remove('on');
+  $('#room').classList.remove('on');$('#mini').classList.remove('on');$('#nav').style.display='';
+  await V.leave();api('/api/rooms/'+r.id+'/exit',{}).catch(()=>{});if(!silent&&PAGE==='rooms')loadRoomList()}
+async function poll(){
+  const r=R;if(!r||!r.alive)return;
+  try{const d=await api('/api/rooms/'+r.id+'/state?v='+r.v+'&mid='+r.mid);if(R!==r)return;
+   r.online=d.online;$('#r-on').textContent=d.online;$('#mini-o').textContent=d.online;$('#lv-on').textContent=d.online;
+   if(d.seats){r.v=d.v;r.seats={};d.seats.forEach(s=>r.seats[s.i]=s);r.kind==='live'?renderLiveHost():renderSeats()}
+   (d.msgs||[]).forEach(m=>{r.mid=Math.max(r.mid,m.id);addMsg(m,!r.init)});r.init=false;
+   if(r.kind==='voice'){const mine=Object.values(r.seats).find(s=>s.u.id===S.me.id);V.sync(!!mine,mine&&mine.m);updateMicBtn(!!mine,mine&&mine.m)}r.n=0
+  }catch(e){if(R!==r)return;if(e.message==='ROOM_GONE'){toast('Room closed');exitRoom(true);return}if(e.code===403){exitRoom(true);return}r.n++}
+  if(R===r)r.t=setTimeout(poll,document.hidden?6000:r.n>2?5000:2200)}
+function seatHTML(i,s,host){
+  if(!s)return `<div class="seat empty" onclick="seatTap(${i})"><div class="av">${i}</div><div class="nm">Empty</div></div>`;
+  return `<div class="seat ${host?'host':''}" data-uid="${s.u.id}" onclick="seatTap(${i})">${av(s.u)}${s.m?'<span class="mt">🔇</span>':''}<div class="nm ell${s.u.vip?' vipn':''}">${esc(s.u.name)}</div></div>`}
+function renderSeats(){const r=R;if(!r)return;
+  const hs=r.seats[0];$('#r-host').innerHTML=hs?seatHTML(0,hs,true):`<div class="seat host empty" onclick="seatTap(0)"><div class="av">👑</div><div class="nm">host</div></div>`;
+  let h='';for(let i=1;i<S.cfg.seats;i++)h+=seatHTML(i,r.seats[i]);$('#r-seats').innerHTML=h}
+function updateMicBtn(seated,muted){const b=$('#r-mic');if(!b)return;b.classList.toggle('on',!!seated);const off=muted||R?.selfMute;b.classList.toggle('off',!!off);b.textContent=off?'🔇':'🎤'}
+function toggleMic(){if(!R)return;R.selfMute=!R.selfMute;const mine=Object.values(R.seats).find(s=>s.u.id===S.me.id);V.sync(!!mine,mine&&mine.m);updateMicBtn(!!mine,mine&&mine.m);hap()}
+async function seatTap(i){const r=R;if(!r)return;const s=r.seats[i];
+  if(!s){if(i===0&&r.host!==S.me.id)return toast("Host's seat");if(i!==0&&r.host===S.me.id)return toast('Host on own seat');
+    if(!await V.prepMic())return;
+    try{await api('/api/rooms/'+r.id+'/seat',{idx:i});hap('medium');poll()}catch(e){toast(e.message);if(!V.pub&&V.track){V.track.close();V.track=null}}return}
+  const u=s.u,mine=u.id===S.me.id,amHost=r.host===S.me.id||S.me.is_admin;
+  modal(`<div class="col" style="align-items:center;text-align:center">${av(u,'l')}<b style="font-size:18px">${esc(u.name)}</b><div><span class="badge">${u.lvi} ${u.lvn}</span> ${vipTag(u)} ${hostTag(u)}</div><div class="mut">${esc(u.bio||'')}</div></div>
+  <div class="row" style="margin-top:14px;flex-wrap:wrap;justify-content:center">
+  ${mine?(i===0?'':`<button class="btn bad sm" onclick="seatLeave()">Leave seat</button>`):`<button class="btn gold sm" onclick="closeModal();openGift(${u.id})">🎁 Gift</button>`}
+  <button class="btn ghost sm" onclick="closeModal();openProfile(${u.id})">👤 Profile</button>
+  ${amHost&&!mine&&u.id!==r.host?`<button class="btn ghost sm" onclick="seatAct(${u.id},'${s.m?'unmute':'mute'}')">${s.m?'🔊':'🔇'}</button><button class="btn bad sm" onclick="seatAct(${u.id},'kick')">⛔</button>`:''}</div>`)}
+async function seatLeave(){closeModal();await run(null,async()=>{await api('/api/rooms/'+R.id+'/leave-seat',{});poll()})}
+async function seatAct(uid,a){closeModal();await run(null,async()=>{await api('/api/rooms/'+R.id+'/seat-action',{uid,action:a});poll()})}
+async function sendChat(){const i=$(R&&R.kind==='live'?'#lv-in':'#r-in'),t=i.value.trim();if(!t||!R)return;i.value='';try{await api('/api/rooms/'+R.id+'/chat',{text:t});poll()}catch(e){toast(e.message)}}
+function addMsg(m,anim){const c=$(R&&R.kind==='live'?'#lv-chat':'#r-chat'),near=c.scrollHeight-c.scrollTop-c.clientHeight<90,d=document.createElement('div');
+  if(m.k==='gift'){const g=m.meta||{};
+    if(g.lucky>0){d.className='msg lucky';d.innerHTML=`🍀 <b>${esc(m.n)}</b> LUCKY ×${g.lucky} → <b>${esc(g.to_name)}</b> +${fmt(g.refund)} 🪙`;if(anim)flyLucky(g,m.n)}
+    else{d.className='msg gift';d.innerHTML=`<b>${esc(m.n)}</b> → <b>${esc(g.to_name)}</b> ${g.emoji} ×${g.qty}`;if(anim)flyGift(g,m.n)}}
+  else{d.className='msg';d.innerHTML=`${m.v?'<span class="vip">VIP</span> ':''}<b class="${m.v?'vipn':''}">${esc(m.n)}:</b> ${esc(m.t)}`}
+  c.appendChild(d);while(c.children.length>120)c.firstChild.remove();if(near||!anim)c.scrollTop=c.scrollHeight}
+function flyGift(g,from){const e=document.createElement('div');e.className='fly'+(['luxury','legendary','mythic'].includes(g.tier)?' big':'');e.innerHTML=`${g.emoji}<small>${esc(from)} → ${esc(g.to_name)} ×${g.qty}</small>`;document.body.appendChild(e);setTimeout(()=>e.remove(),4000);hap('medium')}
+function flyLucky(g,from){const e=document.createElement('div');e.className='fly big luckyfly';e.innerHTML=`🍀<small>LUCKY ×${g.lucky} · +${fmt(g.refund)} 🪙</small>`;document.body.appendChild(e);setTimeout(()=>e.remove(),4000);hap('heavy')}
+function renderLiveHost(){const h=R&&R.seats[0];if(h)lvLoadFollow(h.u.id);$('#lv-host').innerHTML=h?`${av(h.u,'s')}<div style="line-height:1.2"><b class="ell" style="display:block;max-width:110px">${esc(h.u.name)}</b><span class="mut ell" style="color:#ddd;display:block;max-width:110px">${esc(R.name)}</span></div>`:'…'}
+async function flipCam(){try{const c=await AgoraRTC.getCameras();if(c.length<2||!V.vtrack)return;V.camI=((V.camI||0)+1)%c.length;await V.vtrack.setDevice(c[V.camI].deviceId)}catch(e){toast('Camera switch failed')}}
+async function liveMic(){if(!V.track||!R)return;R.selfMute=!R.selfMute;await V.track.setEnabled(!R.selfMute);$('#lv-mic').textContent=R.selfMute?'🔇':'🎤'}
+let GF={to:0,gift:null,qty:1};
+function openGift(to){if(!R)return;const r=R;
+  const rec=Object.values(r.seats).filter(s=>s.u.id!==S.me.id);if(!rec.length)return toast('No one to gift');
+  GF={to:to||rec[0].u.id,gift:S.cfg.gifts[0].key,qty:1};
+  const m=modal('');const draw=()=>{const g=S.cfg.gifts.find(x=>x.key===GF.gift);
+   m.firstChild.innerHTML=`<div class="row"><h3 class="sp" style="margin:0">🎁 Gift</h3><span class="pill">🪙 <span class="coins-n">${fmt(S.me.coins)}</span></span></div>
+   <div class="chips" style="margin:10px 0">${rec.map(s=>`<div class="chip ${GF.to===s.u.id?'on':''}" onclick="GF.to=${s.u.id};this.parentNode.querySelectorAll('.chip').forEach(c=>c.classList.remove('on'));this.classList.add('on')">${esc(s.u.name.slice(0,12))}</div>`).join('')}</div>
+   <div class="gg">${S.cfg.gifts.map(x=>`<div class="gi tier-${x.tier} ${GF.gift===x.key?'on':''}" data-k="${x.key}"><b>${x.emoji}</b>${esc(x.name)}<div class="gold">🪙${fmt(x.price)}</div>${x.tier==='lucky'?'<div class="mut" style="color:var(--ok)">LUCKY</div>':''}</div>`).join('')}</div>
+   <div class="row" style="margin-top:12px"><div class="chips sp">${[1,5,10,20,50].map(q=>`<div class="chip ${GF.qty===q?'on':''}" data-q="${q}">×${q}</div>`).join('')}</div><button class="btn gold" id="g-send">Send · ${fmt(g.price*GF.qty)}</button></div>`;
+   $$('.gi',m).forEach(e=>e.onclick=()=>{GF.gift=e.dataset.k;draw()});$$('[data-q]',m).forEach(e=>e.onclick=()=>{GF.qty=+e.dataset.q;draw()});
+   $('#g-send',m).onclick=e=>run(e.target,async()=>{const d=await api('/api/rooms/'+r.id+'/gift',{to:GF.to,gift:GF.gift,qty:GF.qty});S.me.coins=d.coins;setMe(S.me);
+     if(d.lucky>0)toast('🍀 LUCKY ×'+d.lucky+'! +'+fmt(d.refund)+' coins');else toast('✅ Sent');
+     hap('medium');poll()})};draw()}
+const GM={dice:{n:'Dice',i:'🎲',x:'4.2x',pick:[1,2,3,4,5,6],hint:'Guess the number'},flip:{n:'Coin flip',i:'🪙',x:'1.4x',pick:[1,2],lab:['Heads','Tails'],hint:'Pick'},wheel:{n:'Lucky wheel',i:'🎡',x:'5x'},race:{n:'Horse race',i:'🐎',x:'4.5x',pick:[1,2,3,4,5,6],hint:'Pick a horse'},box:{n:'Mystery box',i:'🎁',x:'10x',pick:[1,2,3],hint:'Pick a box'}};
+async function renderGames(){
+  $('#p-games').innerHTML=topbar()+`<h2>🎮 Games</h2><div class="grid2">${Object.entries(GM).map(([k,g])=>`<div class="game" onclick="openGame('${k}')"><b>${g.i}</b>${g.n}<br><span>up to ${g.x}</span></div>`).join('')}</div>
+  <h3>⚔️ P2P battles (${S.cfg.p2p_mult}x)</h3><button class="btn gold" style="width:100%;margin-bottom:10px" onclick="p2pNew()">＋ Open battle</button><div id="p2p"><div class="empty">…</div></div>
+  <h3>⚔️ Live PK Battle</h3><button class="btn bad" style="width:100%;margin-bottom:10px" onclick="openPKArena()">⚔️ PK Arena</button>
+  <h3>🍀 Lucky Gift</h3><button class="btn gold" style="width:100%;margin-bottom:10px" onclick="openLucky()">🍀 Lucky odds & stats</button>${footbar()}`;loadP2P()}
+async function loadP2P(){try{const d=await api('/api/games');const el=$('#p2p');if(!el)return;el.innerHTML=d.p2p.length?d.p2p.map(x=>`<div class="card row"><div class="sp"><b>${esc(x.name)}</b><div class="gold">🪙 ${fmt(x.bet)}</div></div>${x.mine?`<button class="btn bad sm" onclick="p2pCancel(${x.id})">Cancel</button>`:`<button class="btn sm" onclick="p2pJoin(${x.id},${x.bet})">⚔️ Join</button>`}</div>`).join(''):'<div class="empty">No open battles</div>'}catch(e){}}
+function p2pNew(){const m=modal(`<h3>⚔️ Open battle</h3><input id="pb" type="number" inputmode="numeric" placeholder="Bet (${S.cfg.min_bet}–${S.cfg.max_bet})"><button class="btn gold" id="pbb" style="width:100%;margin-top:10px">Open</button>`);
+  $('#pbb').onclick=e=>run(e.target,async()=>{const d=await api('/api/games/p2p/create',{bet:+$('#pb').value});S.me.coins=d.coins;setMe(S.me);m.close();loadP2P()})}
+async function p2pCancel(id){await run(null,async()=>{const d=await api('/api/games/p2p/cancel',{id});S.me.coins=d.coins;setMe(S.me);loadP2P()})}
+async function p2pJoin(id,bet){if(!confirm('🪙 '+bet+'? Continue?'))return;await run(null,async()=>{const d=await api('/api/games/p2p/join',{id});S.me.coins=d.coins;setMe(S.me);
+  modal(`<div class="res ${d.win?'win':'lose'}">${d.win?'🏆 Win!':'😢 Lose'}</div><div style="text-align:center" class="mut">vs ${esc(d.vs)} · ${d.win?'+'+fmt(d.prize-d.bet):'-'+fmt(d.bet)} 🪙</div><button class="btn" style="width:100%;margin-top:12px" onclick="closeModal()">OK</button>`);loadP2P()})}
+function openGame(k){const g=GM[k];let bet=50,pick=g.pick?g.pick[0]:0;
+  const m=modal(`<div class="row"><h3 class="sp" style="margin:0">${g.i} ${g.n}</h3><span class="pill">🪙 <span class="coins-n">${fmt(S.me.coins)}</span></span></div>
+  <div class="res" id="gres">${g.i}</div>
+  ${g.pick?`<div class="mut">${g.hint}</div><div class="chips" id="gp" style="margin:6px 0">${g.pick.map((p,i)=>`<div class="chip ${i?'':'on'}" data-p="${p}">${g.lab?g.lab[i]:(k==='race'?'🐎'+p:k==='box'?'🎁'+p:p)}</div>`).join('')}</div>`:''}
+  <div class="mut" style="margin-top:6px">Bet</div><div class="chips" id="gb" style="margin:6px 0">${[10,50,100,500,1000,5000].map(b=>`<div class="chip ${b===50?'on':''}" data-b="${b}">${b}</div>`).join('')}</div>
+  <button class="btn gold" id="gplay" style="width:100%;margin-top:8px">Play</button>`);
+  $$('#gp .chip',m).forEach(c=>c.onclick=()=>{pick=+c.dataset.p;$$('#gp .chip',m).forEach(x=>x.classList.toggle('on',x===c))});
+  $$('#gb .chip',m).forEach(c=>c.onclick=()=>{bet=+c.dataset.b;$$('#gb .chip',m).forEach(x=>x.classList.toggle('on',x===c))});
+  $('#gplay',m).onclick=async e=>{const b=e.target;b.disabled=true;const out=$('#gres',m);
+   const faces=k==='dice'?['⚀','⚁','⚂','⚃','⚄','⚅']:k==='flip'?['🪙','⚪']:k==='race'?['🐎','🏇','🐴']:k==='wheel'?['🎡','✨','💫']:['🎁','📦','🎀'];let n=0;const iv=setInterval(()=>out.textContent=faces[n++%faces.length],90);
+   try{const [d]=await Promise.all([api('/api/games/'+k,{bet,pick}),new Promise(r=>setTimeout(r,1100))]);clearInterval(iv);
+    S.me.coins=d.coins;setMe(S.me);let t;
+    if(k==='dice')t=faces[d.roll-1];else if(k==='flip')t=d.side===1?g.lab[0]:g.lab[1];else if(k==='race')t='🏁 #'+d.winner;else t='×'+d.mult;
+    out.innerHTML=`${t}<div style="font-size:16px" class="${d.payout>bet?'win':d.payout?'':'lose'}">${d.payout?'+'+fmt(d.payout)+' 🪙':'Lost'}${d.payout>=bet*2?' 🎉':''}</div>`;hap(d.payout>bet?'heavy':'light')
+   }catch(er){clearInterval(iv);out.textContent=g.i;toast(er.message)}b.disabled=false}}
+async function openLucky(){const m=modal('<div class="empty">…</div>');
+ try{const d=await api('/api/lucky/info');
+  m.firstChild.innerHTML=`<h3>🍀 Lucky Gift</h3>
+  <div class="card" style="background:linear-gradient(135deg,rgba(46,229,157,.15),rgba(255,215,0,.08));border-color:rgba(46,229,157,.3)">
+   <div class="row"><div class="sp" style="text-align:center"><div class="mut">Volume</div><b class="gold">${fmt(d.volume)}</b></div><div class="sp" style="text-align:center"><div class="mut">Returned 70%</div><b style="color:var(--ok)">${fmt(d.returned)}</b></div><div class="sp" style="text-align:center"><div class="mut">House 30%</div><b style="color:var(--pri2)">${fmt(d.house)}</b></div></div></div>
+  <div class="mut" style="margin:8px 0">Send a Lucky gift in any room for a chance to win a multiplier back:</div>
+  <div class="grid2">${d.table.map(x=>`<div class="card" style="margin:0;text-align:center"><b class="${x[0]>0?'win':'mut'}">×${x[0]}</b><div class="mut">${(x[1]*100).toFixed(1)}%</div></div>`).join('')}</div>
+  <div class="mut" style="margin-top:10px">70% returns to players · 30% platform. 18+ only.</div>`}catch(e){m.close();toast(e.message)}}
+async function openPKArena(){const m=modal('<div class="empty">…</div>');
+ try{const d=await api('/api/pk/active');const myHost=S.me.host==='host';
+  m.firstChild.innerHTML=`<h3>⚔️ PK Arena</h3>${myHost?`<button class="btn bad" style="width:100%;margin-bottom:12px" onclick="pkCreate()">＋ Create PK Match</button>`:'<div class="mut" style="margin-bottom:10px;text-align:center">Become a host to create PK matches</div>'}
+  ${d.pks.length?d.pks.map(pk=>`<div class="card" style="border-color:rgba(255,45,85,.3)"><div class="row"><div class="sp" style="text-align:center">${av(pk.host1,'s')}<b>${esc(pk.host1?pk.host1.name:'?')}</b><div class="gold">${fmt(pk.host1_gifts)}</div></div><b class="gold">VS</b><div class="sp" style="text-align:center">${pk.host2?av(pk.host2,'s')+'<b>'+esc(pk.host2.name)+'</b><div class="gold">'+fmt(pk.host2_gifts)+'</div>':'<div class="mut">Waiting…</div>'}</div></div>
+   <div class="row" style="margin-top:8px"><button class="btn sm sp" onclick="closeModal();enterPK(${pk.id})">👁 Watch</button>${myHost&&!pk.host2?`<button class="btn sm bad sp" onclick="pkJoin(${pk.id})">⚔️ Join as Host 2</button>`:''}</div></div>`).join(''):'<div class="empty">No active PK matches</div>'}`}catch(e){m.close();toast(e.message)}}
+async function pkCreate(){try{const d=await api('/api/pk/create',{});toast('⚔️ PK created');closeModal();enterPK(d.pk_id)}catch(e){toast(e.message)}}
+async function pkJoin(id){try{await api('/api/pk/join',{pk_id:id});toast('⚔️ Joined!');closeModal();enterPK(id)}catch(e){toast(e.message)}}
+async function startPKFromLive(){try{const d=await api('/api/pk/create',{});await exitRoom(true);enterPK(d.pk_id)}catch(e){toast(e.message)}}
+const P={client:null,track:null,vtrack:null,pid:null,pub:false,selfMute:false,t:null,alive:false,h1:0,h2:0};
+async function enterPK(pid){
+  if(P.alive)await exitPK();
+  const st=await api('/api/pk/'+pid+'/state');
+  P.pid=pid;P.alive=true;P.h1=st.host1?st.host1.id:0;P.h2=st.host2?st.host2.id:0;
+  $('#pk').classList.add('on');$('#nav').style.display='none';$('#pk-win').classList.remove('on');$('#pk-chat').innerHTML='';
+  $('#pk-tag1').innerHTML=st.host1?`${av(st.host1,'s')}<b>${esc(st.host1.name)}</b>`:'Waiting…';
+  $('#pk-tag2').innerHTML=st.host2?`${av(st.host2,'s')}<b>${esc(st.host2.name)}</b>`:'Waiting…';
+  const d=await api('/api/pk/token',{pk_id:pid});
+  AgoraRTC.setLogLevel&&AgoraRTC.setLogLevel(3);
+  const c=AgoraRTC.createClient({mode:'live',codec:'vp8'});P.client=c;
+  await c.setClientRole(d.publisher?'host':'audience');
+  c.on('user-published',async(u,m)=>{try{await c.subscribe(u,m);
+    if(m==='video'){u.videoTrack.play((u.uid===P.h2)?'pk-v2':'pk-v1',{fit:'cover'})}
+    else if(m==='audio')u.audioTrack.play()}catch(e){}});
+  await c.join(d.app_id,d.channel,d.token,d.uid);
+  if(P.client!==c){try{await c.leave()}catch(e){}return}
+  if(d.publisher){try{const[a,v]=await AgoraRTC.createMicrophoneAndCameraTracks({AEC:true,ANS:true,AGC:true},{encoderConfig:'480p_2',facingMode:'user'});P.track=a;P.vtrack=v;
+    v.play((d.uid===P.h2)?'pk-v2':'pk-v1',{mirror:true,fit:'cover'});
+    try{await c.enableDualStream()}catch(e){}await c.publish([a,v]);P.pub=true;$('#pk-mic').style.display=''}catch(e){toast('📷 Camera/mic not allowed')}}
+  pkPoll()}
+async function pkPoll(){
+  if(!P.alive)return;
+  try{const d=await api('/api/pk/'+P.pid+'/state');
+   const tot=(d.host1_gifts||0)+(d.host2_gifts||0);
+   $('#pk-s1').textContent=fmt(d.host1_gifts);$('#pk-s2').textContent=fmt(d.host2_gifts);
+   $('#pk-bl').style.width=(tot?Math.round(d.host1_gifts/tot*100):50)+'%';
+   const tl=d.time_left||0;$('#pk-timer').textContent=Math.floor(tl/60)+':'+String(tl%60).padStart(2,'0');
+   if(d.host2&&!P.h2){P.h2=d.host2.id;$('#pk-tag2').innerHTML=`${av(d.host2,'s')}<b>${esc(d.host2.name)}</b>`}
+   if(d.status==='ended'){$('#pk-win').classList.add('on');
+     const w=(d.host1&&d.winner===d.host1.id)?d.host1:d.host2;
+     $('#pk-win-t').textContent=w?'🏆 '+w.name+' WINS!':'🤝 DRAW';
+     $('#pk-win-s').textContent=fmt(d.host1_gifts)+' vs '+fmt(d.host2_gifts)+' · 70% / 20% / 10%';
+     return}
+  }catch(e){}
+  P.t=setTimeout(pkPoll,2000)}
+async function exitPK(){P.alive=false;clearTimeout(P.t);const c=P.client;P.client=null;P.pub=false;
+  if(P.track){try{P.track.close()}catch(e){}P.track=null}
+  if(P.vtrack){try{P.vtrack.close()}catch(e){}P.vtrack=null}
+  if(c){try{await c.leave()}catch(e){}}
+  $('#pk').classList.remove('on');$('#nav').style.display='';$('#pk-mic').style.display='none'}
+async function pkMic(){if(!P.track)return;P.selfMute=!P.selfMute;await P.track.setEnabled(!P.selfMute);$('#pk-mic').textContent=P.selfMute?'🔇':'🎤'}
+function openPKGift(side){
+  const m=modal('');let gift=S.cfg.gifts[0].key,qty=1;
+  const draw=()=>{const g=S.cfg.gifts.find(x=>x.key===gift);
+   m.firstChild.innerHTML=`<h3>🎁 Support ${side===1?'LEFT':'RIGHT'}</h3>
+   <div class="gg">${S.cfg.gifts.filter(x=>x.tier!=='lucky').map(x=>`<div class="gi tier-${x.tier} ${gift===x.key?'on':''}" data-k="${x.key}"><b>${x.emoji}</b>${esc(x.name)}<div class="gold">🪙${fmt(x.price)}</div></div>`).join('')}</div>
+   <div class="row" style="margin-top:12px"><div class="chips sp">${[1,5,10,20,50].map(q=>`<div class="chip ${qty===q?'on':''}" data-q="${q}">×${q}</div>`).join('')}</div><button class="btn gold" id="pk-send">Send · ${fmt(g.price*qty)}</button></div>`;
+   $$('.gi',m).forEach(e=>e.onclick=()=>{gift=e.dataset.k;draw()});$$('[data-q]',m).forEach(e=>e.onclick=()=>{qty=+e.dataset.q;draw()});
+   $('#pk-send',m).onclick=e=>run(e.target,async()=>{const d=await api('/api/pk/gift',{pk_id:P.pid,to_host:side,gift,qty});S.me.coins=d.coins;setMe(S.me);toast('✅ Sent');hap('medium');
+     const el=document.createElement('div');el.className='msg gift';el.innerHTML='🎁 '+(side===1?'Left':'Right')+' +'+fmt(g.price*qty);$('#pk-chat').appendChild(el);$('#pk-chat').scrollTop=$('#pk-chat').scrollHeight})};
+  draw()}
+async function renderWallet(){
+  const el=$('#p-wallet');el.innerHTML=topbar()+`<div class="empty">…</div>`;
+  try{const w=await api('/api/wallet');setMe(w.me);const m=w.me,u=U();
+  el.innerHTML=topbar()+`<div class="ratebar">💱 <span class="sp">Live rate</span><b class="usdt">1 USDT = ${fmt(u.birr_per_usdt)} Birr</b></div>
+  <div class="grid2"><div class="card"><div class="mut">🪙 Coins</div><div style="font-size:26px;font-weight:800" class="gold coins-n">${fmt(m.coins)}</div><button class="btn gold sm" style="width:100%;margin-top:8px" onclick="buyModal()">Buy</button></div>
+  <div class="card"><div class="mut">💰 Income</div><div style="font-size:26px;font-weight:800;color:var(--ok)">${fmt(m.earnings)}</div><div class="mut">≈ ${fmt(Math.floor(m.earnings*S.cfg.rate))} Birr · ${u2(m.earnings*u.coin_usdt)} USDT</div><button class="btn sm" style="width:100%;margin-top:4px" onclick="withModal()">Withdraw</button></div>
+  <div class="card"><div class="mut">🤝 Commission</div><div style="font-size:26px;font-weight:800;color:var(--pri2)">${fmt(m.comm)}</div><div class="mut">≈ ${fmt(Math.floor(m.comm*S.cfg.rate))} Birr · ${u2(m.comm*u.coin_usdt)} USDT</div></div>
+  <div class="card"><div class="mut">🔗 Invited</div><div style="font-size:26px;font-weight:800">${fmt(m.inv||0)}</div><button class="btn ghost sm" style="width:100%;margin-top:4px" onclick="openInvite()">Invite</button></div></div>
+  <h3>Purchase history</h3>${w.purchases.map(p=>`<div class="card row"><div class="sp"><b>${fmt(p.coins)} 🪙</b> <span class="mut">${p.birr} Birr · ${p.method==='usdt'?'USDT '+u2(p.birr/u.birr_per_usdt):'Telebirr'}</span></div><span class="badge">${{pending:'⏳',approved:'✅',rejected:'❌'}[p.status]}</span></div>`).join('')||'<div class="empty">—</div>'}
+  <h3>Withdrawal history</h3>${w.withdraws.map(p=>`<div class="card row"><div class="sp"><b>${fmt(p.coins)}</b> <span class="mut">${p.birr} Birr · ${p.method==='usdt'?'USDT '+u2(p.coins*u.coin_usdt):'Telebirr'}</span></div><span class="badge">${{pending:'⏳',paid:'✅',rejected:'❌'}[p.status]}</span></div>`).join('')||'<div class="empty">—</div>'}
+  <h3>Activity</h3>${w.txs.map(x=>`<div class="row mut" style="padding:4px 0"><span class="sp ell">${esc(x.kind)} ${esc(x.note)}</span><b class="${x.amount>=0?'win':'lose'}">${x.amount>=0?'+':''}${fmt(x.amount)}</b><span>${ago(x.ts)}</span></div>`).join('')}${footbar()}`}catch(e){toast(e.message)}}
+function buyModal(){let pk=S.cfg.packages[0];let method='telebirr';
+  const m=modal('');
+  const draw=()=>{const u=U();const isU=method==='usdt';
+   m.firstChild.innerHTML=`<h3>🪙 Buy Coins</h3>
+  <div class="chips" style="margin-bottom:10px"><div class="chip ${!isU?'on':''}" data-m="telebirr">Telebirr</div><div class="chip ${isU?'onu':''}" data-m="usdt">USDT (TRC20)</div></div>
+  <div class="ratebar">💱 <span class="sp">Market rate</span><b class="usdt">1 USDT = ${fmt(u.birr_per_usdt)} Birr</b></div>
+  <div class="grid2" id="pkgs">${S.cfg.packages.map(p=>`<div class="card" data-c="${p.coins}" style="text-align:center;margin:0;${p.coins===pk.coins?'border-color:var(--gold)':''}"><b>${fmt(p.coins)} 🪙</b><div class="mut">${fmt(p.birr)} Birr</div><div class="usdt" style="font-size:12px;font-weight:700">${u2(p.birr/u.birr_per_usdt)} USDT</div></div>`).join('')}</div>
+  ${isU?`<div class="card" style="margin-top:10px;border-color:rgba(38,161,123,.35)">1️⃣ Send <b class="usdt">${u2(pk.birr/u.birr_per_usdt)} USDT</b> (TRC20) to:<div class="addr"><b id="uaddr">${esc(u.address)}</b><button class="btn sm" style="background:linear-gradient(135deg,#26a17b,#3ddc97);color:#04231a" onclick="copyTxt('${esc(u.address)}')">Copy</button></div><div class="mut" style="margin-top:6px">2️⃣ Enter TX hash + screenshot</div></div>`:`<div class="card" style="margin-top:10px">1️⃣ Send <b class="gold">${fmt(pk.birr)} Birr</b> to Telebirr <b class="gold">${esc(S.cfg.pay_number||'—')}</b><br>2️⃣ Enter transaction ID + screenshot</div>`}
+  <div class="col"><input id="b-ref" placeholder="${isU?'USDT TX hash':'Telebirr ID'}"><input id="b-f" type="file" accept="image/*"><button class="btn gold" id="b-go">Send · ${isU?u2(pk.birr/u.birr_per_usdt)+' USDT':fmt(pk.birr)+' Birr'}</button></div>`;
+   $$('[data-m]',m).forEach(c=>c.onclick=()=>{method=c.dataset.m;draw()});
+   $$('#pkgs .card',m).forEach(c=>c.onclick=()=>{pk=S.cfg.packages.find(p=>p.coins==c.dataset.c);draw()});
+   $('#b-go',m).onclick=e=>run(e.target,async()=>{const f=$('#b-f',m).files[0];if(!f)throw new Error('Attach screenshot');const fd=new FormData();fd.append('coins',pk.coins);fd.append('ref',$('#b-ref',m).value);fd.append('method',method);fd.append('file',await shrink(f),'s.jpg');
+    await api('/api/coins/buy',fd);m.close();toast('✅ Sent — credited after approval');renderWallet()})};
+  draw()}
+function withModal(){let method='telebirr';const m=modal('');
+  const draw=()=>{const u=U();const isU=method==='usdt';const avail=(S.me.earnings||0)+(S.me.comm||0);
+   const coins=Math.max(0,+($('#w-c',m)?$('#w-c',m).value:avail)||0);
+   m.firstChild.innerHTML=`<h3>💰 Withdraw</h3>
+  <div class="chips" style="margin-bottom:10px"><div class="chip ${!isU?'on':''}" data-m="telebirr">Telebirr</div><div class="chip ${isU?'onu':''}" data-m="usdt">USDT (TRC20)</div></div>
+  <div class="ratebar">💱 <span class="sp">${isU?'You receive':'You receive'}</span><b class="${isU?'usdt':'gold'}">${isU?u2(coins*u.coin_usdt)+' USDT':fmt(Math.floor(coins*S.cfg.rate))+' Birr'}</b></div>
+  <div class="mut" style="margin-bottom:8px">${isU?`1 coin = ${u.coin_usdt} USDT · 1 USDT = ${fmt(u.birr_per_usdt)} Birr`:`1 coin = ${S.cfg.rate} Birr`} · min ${S.cfg.min_withdraw} coins</div>
+  <div class="col"><input id="w-c" type="number" inputmode="numeric" value="${avail}">
+  ${isU?`<input id="w-a" placeholder="Your USDT TRC20 address (T…)" maxlength="64">`:`<input id="w-p" placeholder="Telebirr 09xxxxxxxx" value="${esc(S.me.phone)}" maxlength="10">`}
+  <button class="btn" id="w-go">Request</button></div>`;
+   $$('[data-m]',m).forEach(c=>c.onclick=()=>{method=c.dataset.m;draw()});
+   $('#w-c',m).oninput=()=>{const v=Math.max(0,+$('#w-c',m).value||0);const b=$('.ratebar b',m);if(b)b.textContent=isU?u2(v*u.coin_usdt)+' USDT':fmt(Math.floor(v*S.cfg.rate))+' Birr'};
+   $('#w-go',m).onclick=e=>run(e.target,async()=>{const bd={coins:+$('#w-c',m).value,method};
+     if(isU)bd.address=$('#w-a',m).value.trim();else bd.phone=$('#w-p',m).value;
+     await api('/api/withdraw',bd);m.close();toast('✅ Request sent');renderWallet()})};
+  draw()}
+async function openInvite(){const m=modal('<div class="empty">…</div>');
+ try{const d=await api('/api/invite');
+  m.firstChild.innerHTML=`<h3>🔗 Invite & Earn</h3><div class="card"><div class="mut">Your invite link</div><b style="font-size:12px;word-break:break-all">${esc(d.link)}</b><button class="btn sm gold" style="margin-top:8px" onclick="copyTxt('${esc(d.link)}')">Copy</button></div>
+  <div class="grid2"><div class="card" style="margin:0"><div class="mut">Invited</div><b>${fmt(d.count)}</b></div><div class="card" style="margin:0"><div class="mut">Reward / first purchase</div><b class="gold">+${fmt(d.reward)} 🪙</b></div></div>`}catch(e){m.close();toast(e.message)}}
+async function applyHost(){await run(null,async()=>{await api('/api/host/apply',{});toast('🎤 Request sent');renderMe()})}
+async function applyAgent(){await run(null,async()=>{await api('/api/agent/apply',{});toast('🤝 You are an Agent!');renderMe()})}
+async function openAgent(){const m=modal('<div class="empty">…</div>');
+ try{const d=await api('/api/agent/dashboard');
+  m.firstChild.innerHTML=`<h3>📊 Agent Dashboard</h3><div class="grid2"><div class="card" style="margin:0"><div class="mut">Commission</div><b class="gold">${fmt(d.comm)} 🪙</b></div><div class="card" style="margin:0"><div class="mut">Total</div><b>${fmt(d.total)} 🪙</b></div></div>
+  <div class="card" style="margin-top:10px"><div class="mut">Invite link</div><b style="font-size:12px;word-break:break-all">${esc(d.link)}</b><button class="btn sm gold" style="margin-top:6px" onclick="copyTxt('${esc(d.link)}')">Copy</button></div>
+  <h3>🎤 Hosts (${d.hosts.length})</h3>${d.hosts.map(h=>`<div class="row" style="padding:5px 0">${av(h,'s')}<div class="sp ell">${esc(h.name)}</div><b class="gold">${fmt(h.earn)}</b></div>`).join('')||'<div class="empty">None</div>'}
+  <h3>🤝 Sub-agents (${d.subs.length})</h3>${d.subs.map(s=>`<div class="row" style="padding:5px 0">${av(s,'s')}<div class="sp ell">${esc(s.name)}</div><b>${fmt(s.comm)}</b></div>`).join('')||'<div class="empty">None</div>'}`}catch(e){m.close();toast(e.message)}}
+let CT='posts';
+async function renderCommunity(){
+  $('#p-community').innerHTML=topbar()+`<div class="chips" style="margin-bottom:10px"><div class="chip ${CT==='posts'?'on':''}" onclick="CT='posts';renderCommunity()">📝 Posts</div><div class="chip ${CT==='jobs'?'on':''}" onclick="CT='jobs';renderCommunity()">💼 Jobs</div></div><button class="btn" style="width:100%;margin-bottom:10px" onclick="${CT==='posts'?'postNew()':'jobNew()'}">${CT==='posts'?'＋ Write post':'＋ Post a job'}</button><div id="cl"><div class="empty">…</div></div>${footbar()}`;
+  try{if(CT==='posts'){const d=await api('/api/posts');$('#cl').innerHTML=d.posts.map(p=>`<div class="card"><div class="row">${av({id:p.uid,name:p.name,photo:p.photo,fr:p.fr},'s')}<div class="sp"><b>${esc(p.name)}</b> ${vipTag(p)} <span class="mut">${ago(p.ts)}</span></div>${p.mine||S.me.is_admin?`<span onclick="del('posts',${p.id})">🗑</span>`:''}</div><div style="margin:8px 0;white-space:pre-wrap;word-break:break-word">${esc(p.text)}</div>${p.has_image?`<img src="${p.image_url}" style="width:100%;border-radius:12px;margin-top:8px">`:''}<span class="chip" onclick="like(${p.id})">${p.liked?'❤️':'🤍'} ${p.likes}</span></div>`).join('')||'<div class="empty">No posts</div>'}
+   else{const d=await api('/api/jobs');$('#cl').innerHTML=d.jobs.map(j=>`<div class="card"><div class="row"><b class="sp">${esc(j.title)}</b>${j.mine||S.me.is_admin?`<span onclick="del('jobs',${j.id})">🗑</span>`:''}</div><div style="margin:6px 0;white-space:pre-wrap">${esc(j.desc)}</div>${j.has_image?`<img src="${j.image_url}" style="width:100%;border-radius:12px;margin-top:8px">`:''}<div class="mut">👤 ${esc(j.name)} · 📞 ${esc(j.contact)} · ${ago(j.ts)}</div></div>`).join('')||'<div class="empty">No jobs</div>'}}catch(e){toast(e.message)}}
+const like=id=>run(null,async()=>{await api('/api/posts/'+id+'/like',{});renderCommunity()});
+const del=(k,id)=>confirm('Delete?')&&run(null,async()=>{await api('/api/'+k+'/'+id+'/delete',{});renderCommunity()});
+function postNew(){const m=modal(`<h3>📝 New post</h3><textarea id="po" rows="5" maxlength="500" placeholder="What is on your mind?"></textarea><input id="po-f" type="file" accept="image/*" style="margin-top:8px"><button class="btn" id="po-b" style="width:100%;margin-top:10px">Post</button>`);
+  $('#po-b').onclick=e=>run(e.target,async()=>{const f=$('#po-f',m).files[0];const fd=new FormData();fd.append('text',$('#po',m).value);if(f)fd.append('photo',await shrink(f,800,.85),'p.jpg');await api('/api/posts/create',fd);m.close();renderCommunity()})}
+function jobNew(){const m=modal(`<h3>💼 Post a job</h3><div class="col"><input id="j-t" placeholder="Title" maxlength="80"><textarea id="j-d" rows="4" placeholder="Description" maxlength="400"></textarea><input id="j-c" placeholder="Phone / @telegram" maxlength="80"><input id="j-f" type="file" accept="image/*"><button class="btn" id="j-b">Post</button></div>`);
+  $('#j-b').onclick=e=>run(e.target,async()=>{const f=$('#j-f',m).files[0];const fd=new FormData();fd.append('title',$('#j-t',m).value);fd.append('desc',$('#j-d',m).value);fd.append('contact',$('#j-c',m).value);if(f)fd.append('photo',await shrink(f,800,.85),'p.jpg');await api('/api/jobs/create',fd);m.close();renderCommunity()})}
+async function loadMsCard(){try{const d=await api('/api/missions');const el=$('#h-ms');if(!el)return;
+  const t=d.items.length,done=d.items.filter(i=>i.count>=i.goal).length,rdy=d.items.filter(i=>!i.claimed&&i.count>=i.goal).length+(d.bonus.ready?1:0);
+  el.innerHTML=`<div class="card" onclick="openMissions()"><div class="row"><b class="sp">🎯 Daily missions</b>${rdy?`<span class="pill">🎁 ${rdy}</span>`:`<span class="mut">${done}/${t}</span>`}</div><div class="bar2" style="margin-top:8px"><i style="width:${Math.round(done/t*100)}%"></i></div></div>`}catch(e){}}
+async function openMissions(){
+  const m=modal('<div class="empty">…</div>',()=>{if(PAGE==='home')loadMsCard()});
+  const draw=d=>{const b=d.bonus;
+   m.firstChild.innerHTML=`<div class="row"><h3 class="sp" style="margin:0">🎯 Daily missions</h3><span class="pill">🪙 <span class="coins-n">${fmt(S.me.coins)}</span></span></div>
+   ${d.items.map(i=>{const ok=i.count>=i.goal;return `<div class="ms"><span style="font-size:26px">${i.emoji}</span><div class="sp"><div>${esc(i.name)}</div><div class="bar2" style="margin-top:5px"><i style="width:${Math.round(i.count/i.goal*100)}%"></i></div></div>${i.claimed?'<span class="win">✓</span>':ok?`<button class="btn gold sm" data-k="${i.key}">+${i.reward}</button>`:`<span class="mut">${i.count}/${i.goal}</span>`}</div>`}).join('')}
+   <div class="ms"><span style="font-size:26px">🏆</span><div class="sp"><b>Finish all</b></div>${b.claimed?'<span class="win">✓</span>':b.ready?`<button class="btn gold sm" data-k="all">+${b.reward}</button>`:`<span class="mut">🪙${b.reward}</span>`}</div>`;
+   $$('button[data-k]',m).forEach(btn=>btn.onclick=()=>run(btn,async()=>{const r=await api('/api/missions/claim',{key:btn.dataset.k});S.me.coins=r.coins;setMe(S.me);toast('🎉 +'+r.got);hap('medium');draw(r)}))};
+  try{draw(await api('/api/missions'))}catch(e){m.close();toast(e.message)}}
+async function openShop(){
+  const m=modal('<div class="empty">…</div>',()=>{LOAD[PAGE]&&LOAD[PAGE]()});
+  const draw=d=>{setMe(d.me);const me=d.me,cv=S.cfg.vip,days=vipLeft(me),own=new Set(d.owned);
+   m.firstChild.innerHTML=`<div class="row"><h3 class="sp" style="margin:0">✨ VIP & Frames</h3><span class="pill">🪙 <span class="coins-n">${fmt(me.coins)}</span></span></div>
+   <div class="card vipc" style="margin-top:12px"><div class="row"><span class="vip" style="font-size:12px;padding:2px 8px">VIP</span><b class="sp">${me.vip?days+' days left':'Exclusive perks'}</b></div>
+    <div class="mut" style="margin:8px 0 10px;line-height:1.8">✨ Gold VIP badge<br>🎁 Daily +${Math.round((cv.bonus-1)*100)}%<br>🖼 2 VIP frames<br>🎙 Up to ${cv.rooms} rooms</div>
+    <button class="btn gold" id="vip-go" style="width:100%">${me.vip?'Extend':'Become VIP'} · +${cv.days}d · 🪙${fmt(cv.price)}</button></div>
+   <h3 style="margin:16px 0 10px;color:#fff">🖼 Frames</h3>
+   <div class="fg">${S.cfg.frames.map(f=>{const have=own.has(f.key)||(f.vip&&me.vip),on=me.fr===f.key;
+     return `<div class="fi ${on?'on':''}" data-k="${f.key}">${av({id:me.id,name:me.name,photo:me.photo,fr:f.key})}<div>${esc(f.name)}</div><div class="fp">${on?'✓':have?'Wear':f.vip?'🔒':'🪙'+fmt(f.price)}</div></div>`}).join('')}</div>`;
+   $('#vip-go',m).onclick=e=>run(e.target,async()=>{if(!confirm('🪙'+fmt(cv.price)+' · '+cv.days+'d?'))return;draw(await api('/api/vip/buy',{}));toast('👑 VIP!');hap('heavy')});
+   $$('.fi',m).forEach(e=>e.onclick=()=>{const f=S.cfg.frames.find(x=>x.key===e.dataset.k),have=own.has(f.key)||(f.vip&&me.vip);
+     const act=(path,b,msg)=>run(null,async()=>{draw(await api(path,b));if(msg)toast(msg);hap()});
+     if(me.fr===f.key)return act('/api/frame/equip',{key:''});
+     if(have)return act('/api/frame/equip',{key:f.key},'✅');
+     if(f.vip)return toast('🔒 VIP only');
+     if(confirm(f.name+' 🪙'+fmt(f.price)+'?'))act('/api/frame/buy',{key:f.key},'✅')});
+  };
+  try{draw(await api('/api/shop'))}catch(e){m.close();toast(e.message)}}
+async function openPolicy(){const m=modal('<div class="empty">…</div>');
+ try{const d=await api('/api/policy');
+  const titles={terms:'Terms of Service',commission:'Host & Agent Commission',lucky:'Lucky Gift',pk:'PK Battle',withdraw:'Withdrawal & Payments',conduct:'Community Rules',privacy:'Privacy'};
+  m.firstChild.innerHTML='<h3>📜 Policy</h3>'+Object.entries(d.sections).map(([k,v])=>`<div class="card"><b>${titles[k]||k}</b><div class="mut" style="white-space:pre-wrap;margin-top:6px;font-size:12px">${esc(v)}</div></div>`).join('')+footbar()}catch(e){m.close();toast(e.message)}}
+async function renderMe(){
+  try{const d=await api('/api/me');setMe(d.me)}catch(e){}
+  const m=S.me,pct=m.next?Math.min(100,Math.round((m.spent-m.base)/(m.next-m.base)*100)):100;
+  $('#p-me').innerHTML=topbar()+`<div class="card" style="text-align:center"><div style="display:flex;justify-content:center">${av(m,'l')}</div><h2 style="margin:8px 0 2px">${esc(m.name)}</h2><span class="badge">${m.lvi} ${m.lvn}</span> ${vipTag(m)} ${hostTag(m)} ${agentTag(m)}<div class="mut" style="margin:6px 0">${esc(m.bio||'—')}</div><div class="pf-stats" id="me-stats"></div>
+  <div class="bar2"><i style="width:${pct}%"></i></div><div class="mut" style="margin-top:4px">${m.next?fmt(m.next-m.spent)+' 🪙 → next':'👑 MAX'}</div></div>
+  <div class="grid2"><div class="card" style="text-align:center"><div class="mut">Gifts sent</div><b class="gold">${fmt(m.sent)}</b></div><div class="card" style="text-align:center"><div class="mut">Gifts received</div><b class="gold">${fmt(m.recv)}</b></div></div>
+  <div class="col">
+  ${m.host==='none'?`<button class="btn ghost" onclick="applyHost()">🎤 Become a Host (50%)</button>`:m.host==='pending'?`<button class="btn ghost" disabled>⏳ Host pending</button>`:`<button class="btn ghost" disabled>✅ Host</button>`}
+  ${m.host==='host'&&!m.ag?`<button class="btn ghost" onclick="applyAgent()">🤝 Become an Agent</button>`:''}
+  ${m.ag?`<button class="btn" onclick="openAgent()">📊 Agent Dashboard</button>`:''}
+  <button class="btn ghost" onclick="openInvite()">🔗 Invite · ${fmt(m.inv||0)}</button>
+  <button class="btn gold" onclick="openShop()">✨ VIP & Frames${m.vip?' · '+vipLeft(m)+'d':''}</button>
+  <button class="btn ghost" onclick="editProfile()">✏️ Edit profile</button>
+  <button class="btn ghost" onclick="openPolicy()">📜 Policy</button>
+  ${String(m.tg_id).startsWith('p_')?`<button class="btn ghost" onclick="changePassword()">🔑 Change password</button>`:''}
+  <button class="btn ghost" onclick="copyTxt('${esc(m.tg_id)}')">🆔 My ID: ${esc(m.tg_id)}</button>
+  ${tgInit()?'':`<button class="btn ghost" onclick="confirm('${String(m.tg_id).startsWith('g_')?'Leave guest mode?':'Log out?'}')&&logout()">🚪 Log out</button>`}
+  ${m.is_admin?`<button class="btn gold" onclick="openAdmin()">🛡 Admin</button>`:''}
+  </div>${footbar()}`;loadMyStats()}
+function editProfile(){const m=S.me;const o=modal(`<h3>✏️ Edit profile</h3><div class="col"><input id="e-p" type="file" accept="image/*"><input id="e-n" value="${esc(m.name)}" maxlength="30"><input id="e-b" value="${esc(m.bio)}" maxlength="160"><input id="e-t" value="${esc(m.phone)}" maxlength="10" placeholder="09xxxxxxxx"><button class="btn" id="e-go">Save</button></div>`);
+  $('#e-go',o).onclick=e=>run(e.target,async()=>{const f=$('#e-p',o).files[0];if(f){const fd=new FormData();fd.append('file',await shrink(f,320,.85),'p.jpg');setMe((await api('/api/profile/photo',fd)).me)}
+   setMe((await api('/api/profile',{name:$('#e-n',o).value,bio:$('#e-b',o).value,phone:$('#e-t',o).value})).me);o.close();renderMe()})}
+function openAdmin(){const o=modal(`<div class="chips" id="at">${['overview','purchases','withdraws','users'].map((x,i)=>`<div class="chip ${i?'':'on'}" data-t="${x}">${x}</div>`).join('')}</div><div id="ab" style="margin-top:10px"></div>`);
+  const load=async x=>{$$('#at .chip',o).forEach(c=>c.classList.toggle('on',c.dataset.t===x));const b=$('#ab',o);b.innerHTML='…';
+   try{if(x==='overview'){const d=await api('/api/admin/overview');b.innerHTML=`<div class="grid2">${Object.entries(d).map(([k,v])=>`<div class="card" style="margin:0"><div class="mut">${k}</div><b>${fmt(v)}</b></div>`).join('')}</div>`}
+   else if(x==='purchases'||x==='withdraws'){const d=await api('/api/admin/'+x);b.innerHTML=d.items.map(y=>`<div class="card"><b>${esc(y.name)}</b> · ${fmt(y.coins)} 🪙 · ${fmt(y.birr)} Birr ${y.method==='usdt'?'· <span class="usdt">USDT '+(y.usdt||'')+'</span>':'· Telebirr'}<div class="mut" style="word-break:break-all">${esc(y.ref||y.address||y.phone||'')} · ${ago(y.ts)}</div><div class="row" style="margin-top:8px">${x==='purchases'?`<button class="btn ghost sm" onclick="viewShot(${y.id})">🖼</button><button class="btn sm" onclick="admAct('purchase',${y.id},'approve')">✅</button><button class="btn bad sm" onclick="admAct('purchase',${y.id},'reject')">❌</button>`:`<button class="btn sm" onclick="admAct('withdraw',${y.id},'paid')">💰</button><button class="btn bad sm" onclick="admAct('withdraw',${y.id},'reject')">❌</button>`}</div></div>`).join('')||'<div class="empty">—</div>'}
+   else{b.innerHTML=`<input id="uq" placeholder="Search name / phone / ID"><div id="ul" style="margin-top:8px"></div>`;const ld=async()=>{const d=await api('/api/admin/users?q='+encodeURIComponent($('#uq',o).value));$('#ul',o).innerHTML=d.items.map(u=>`<div class="card"><b>${esc(u.name)}</b> ${u.banned?'🚫':''} ${u.vip?'<span class="vip">VIP</span>':''} ${u.host==='host'?'<span class="hbadge">HOST</span>':''} ${u.ag?'<span class="abadge">AGENT</span>':''}<div class="mut">${u.login_phone?'📱 '+esc(u.login_phone)+' · ':''}ID:${esc(u.tg)} · 🪙${fmt(u.coins)} · 💰${fmt(u.earn)} · 🤝${fmt(u.comm)}</div><div class="row" style="margin-top:6px;flex-wrap:wrap"><button class="btn sm ghost" onclick="admUser(${u.id},'${u.banned?'unban':'ban'}')">${u.banned?'Unban':'Ban'}</button><button class="btn sm gold" onclick="admGrant(${u.id})">+🪙</button>${u.login_phone?`<button class="btn sm ghost" onclick="admReset(${u.id})">🔑</button>`:''}<button class="btn sm ghost" onclick="admVip(${u.id})">+VIP</button><button class="btn sm ${u.host==='host'?'bad':'gold'}" onclick="admUser(${u.id},'host',${u.host==='host'?0:1})">${u.host==='host'?'-Host':'+Host'}</button>${u.host==='host'?`<button class="btn sm ghost" onclick="admUser(${u.id},'agent')">${u.ag?'-Agent':'+Agent'}</button>`:''}<button class="btn sm bad" onclick="confirm('Delete?')&&admUser(${u.id},'delete')">🗑</button></div></div>`).join('')};$('#uq',o).oninput=()=>{clearTimeout(window._uq);window._uq=setTimeout(ld,350)};ld()}}catch(e){b.innerHTML=esc(e.message)}};
+  $$('#at .chip',o).forEach(c=>c.onclick=()=>load(c.dataset.t));window._admLoad=load;window._admTab=()=>$('#at .chip.on',o).dataset.t;load('overview')}
+const admAct=(k,id,a)=>run(null,async()=>{await api('/api/admin/'+k,{id,action:a});window._admLoad(window._admTab())});
+const admUser=(id,a,amount)=>run(null,async()=>{await api('/api/admin/user',{id,action:a,amount});window._admLoad(window._admTab())});
+function admVip(id){const n=prompt('VIP days (1–365)','30');if(n)admUser(id,'vip',+n)}
+function admGrant(id){const n=prompt('Coins (negative allowed)');if(n)admUser(id,'grant',+n)}
+async function viewShot(id){try{const r=await fetch('/api/admin/shot/'+id,{headers:{Authorization:'Bearer '+TOKEN}});const u=URL.createObjectURL(await r.blob());modal(`<img src="${u}" style="width:100%;border-radius:12px">`)}catch(e){toast('Not found')}}
+document.addEventListener('visibilitychange',()=>{if(!document.hidden&&R&&R.alive){clearTimeout(R.t);poll()}});
+addEventListener('pagehide',()=>{if(R&&TOKEN)try{fetch('/api/rooms/'+R.id+'/exit',{method:'POST',keepalive:true,headers:{Authorization:'Bearer '+TOKEN,'Content-Type':'application/json'},body:'{}'})}catch(e){}});
+async function boot(){try{(await resume())?startApp():showAuth()}catch(e){if(tgInit()){$('#splash-t').textContent='❌ '+e.message}else{$('#splash-t').innerHTML='❌ '+esc(e.message)+'<br><br><button class="btn gold" onclick="location.reload()">Retry</button>'}}}
+boot();
+</script>
+<script>
+if('serviceWorker' in navigator)addEventListener('load',()=>navigator.serviceWorker.register('/sw.js',{scope:'/'}));
+let _ip;
+addEventListener('beforeinstallprompt',e=>{e.preventDefault();_ip=e;const b=document.getElementById('install-btn');if(b)b.style.display='block'});
+async function installApp(){if(!_ip)return;_ip.prompt();await _ip.userChoice;_ip=null;document.getElementById('install-btn').style.display='none'}
+</script>
+<button id="install-btn" class="btn gold" style="display:none;position:fixed;bottom:90px;left:50%;transform:translateX(-50%);z-index:99" onclick="installApp()">📲 Install App</button>
+</body>
+</html>
