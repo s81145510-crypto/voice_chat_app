@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Twenty One Party - PRO backend + PWA + Guest Login + Finance Engine."""
+"""Twenty One Party - PRO backend + PWA + Guest Login + Finance + Coin Seller."""
 import os, json, hmac, hashlib, time, random, secrets, threading, urllib.request, urllib.parse
 from datetime import datetime, timedelta
 from functools import wraps
@@ -344,13 +344,14 @@ def index(): return Response(_HTML, mimetype='text/html', headers={'Cache-Contro
 def healthz():
     db.session.execute(sa_text('select 1')); return 'ok'
 
-# ================= PWA ROUTES =================
+
 @app.get('/manifest.json')
 def manifest():
     try:
         return Response(open(os.path.join(TEMPLATES_DIR, 'manifest.json'), encoding='utf-8').read(), mimetype='application/manifest+json', headers={'Cache-Control': 'no-cache'})
     except Exception as e:
         return jsonify(error=str(e)), 500
+
 
 @app.get('/sw.js')
 def sw():
@@ -359,10 +360,11 @@ def sw():
     except Exception as e:
         return jsonify(error=str(e)), 500
 
+
 @app.get('/static/<path:fn>')
 def staticf(fn):
     return send_from_directory(os.path.join(BASE, 'static'), fn)
-# ==============================================
+
 
 try:
     from .finance import init_finance
@@ -375,6 +377,16 @@ FIN = init_finance(app, db, dict(
     is_admin=lambda u: u.tg_id in ADMIN_IDS, err=err, body=body, num=num, auth=auth, admin_only=admin_only,
     jsonify=jsonify, request=request))
 
+try:
+    from .seller import init_seller
+except ImportError:
+    from seller import init_seller
+
+SELLER = init_seller(app, db, dict(
+    User=User, Tx=Tx, now=now, tx=tx, err=err, body=body, num=num,
+    auth=auth, admin_only=admin_only, notify=notify, notify_admins=notify_admins,
+    sniff_image=sniff_image, coin_birr=lambda: COIN_BIRR))
+
 GIFTS_PUB = [GIFT_MAP[k] for k, *_ in GIFTS]
 FRAMES_PUB = list(FRAME_MAP.values())
 def cfg():
@@ -385,7 +397,8 @@ def cfg():
                 vip=dict(price=VIP_PRICE, days=VIP_DAYS, bonus=VIP_DAILY_BONUS, rooms=VIP_ROOMS),
                 lucky=dict(table=[[m, p] for m, p in LUCKY_TABLE], rtp=0.70, house=0.30),
                 pk=dict(winner_share=PK_WINNER_SHARE, loser_share=PK_LOSER_SHARE, platform_share=PK_PLATFORM_SHARE, duration=PK_DURATION),
-                usdt=dict(address=USDT_ADDRESS, network='TRC20', birr_per_usdt=USDT_BIRR, coin_usdt=COIN_USDT))
+                usdt=dict(address=USDT_ADDRESS, network='TRC20', birr_per_usdt=USDT_BIRR, coin_usdt=COIN_USDT),
+                seller=dict(tiers=[SELLER['TIER_MAP'][t[0]] for t in SELLER['TIERS']], retail=0.50))
 
 
 @app.post('/api/register')
@@ -1224,6 +1237,7 @@ def lucky_info():
 POLICY = {
     'terms': "TERMS OF SERVICE\n1. Twenty One Party is a voice/live entertainment platform. Users must be 18+.\n2. One account per person.\n3. Coins are virtual currency; only earned income/commission is withdrawable.\n4. Purchases are final except where required by law.\n5. Violations lead to suspension or ban.",
     'commission': "HOST & AGENT COMMISSION\n1. Hosts receive 50% of real gift value.\n2. Agents earn ONLY from the platform share.\n3. No payment for mere registration.\n4. Commission scheme is admin-configurable and audited.",
+    'seller': "COIN SELLER (RESELLER) POLICY\n1. Approved sellers buy coins at wholesale: Starter 0.42, Silver 0.41, Gold 0.40 Birr/coin.\n2. Minimum order: Starter 5,000 / Silver 20,000 / Gold 100,000 Birr.\n3. Bonus coins are PROMO: usable for own gifting, NOT transferable, NOT withdrawable.\n4. Sellers transfer trade coins to buyers; a 2% network fee applies.\n5. Recommended retail price 0.50 Birr/coin. Sellers keep the difference.\n6. Daily transfer limit 200,000 coins. Self-transfer is forbidden.\n7. Fraud, fake payment proofs or chargebacks lead to permanent ban and forfeiture.",
     'lucky': "LUCKY GIFT POLICY\n1. Lucky gifts are chance games: sending one may return a multiplier to the sender.\n2. 70% of lucky volume returns to players; 30% retained by platform.\n3. Lucky gifts add hype/stage score but do not pay host earnings.\n4. 18+ only. Play responsibly.",
     'pk': "PK BATTLE POLICY\n1. Two hosts battle 5 minutes; viewers gift each side.\n2. Winner 70%, loser 20%, platform 10%. Tie 45/45/10.",
     'stage': "LIVE GUESTS\n1. A LIVE host may invite up to 3 guests on stage.\n2. The host can mute or remove a guest; a guest can leave anytime.\n3. No nudity, harassment or explicit content — instant removal and ban.",
