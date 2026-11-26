@@ -1,4 +1,4 @@
-const CACHE = '21party-v1';
+const CACHE = '21party-v2';
 
 self.addEventListener('install', e => {
   self.skipWaiting();
