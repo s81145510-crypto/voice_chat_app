@@ -1382,6 +1382,7 @@ def adm_user():
     elif act == 'delete':
         for M in (Seat, Presence, Post, Job, Photo, UserFrame, LiveGuest): M.query.filter(M.user_id == uid).delete(synchronize_session=False)
         AUTH['delete_login'](uid)
+        FEED['delete_follows'](uid)
         db.session.delete(u)
     else: return err('bad action')
     db.session.commit(); return jsonify(ok=1)
@@ -1389,6 +1390,16 @@ def adm_user():
 @admin_only
 def adm_room():
     delete_room(str(body().get('id'))); return jsonify(ok=1)
+
+
+try:
+    from .feed import init_feed
+except ImportError:
+    from feed import init_feed
+
+FEED = init_feed(app, db, dict(
+    User=User, Room=Room, Seat=Seat, Presence=Presence, Tx=Tx, now=now, err=err, body=body, num=num,
+    auth=auth, pub=pub, limited=limited, gc_rooms=gc_rooms))
 
 
 if __name__ == '__main__':
