@@ -114,7 +114,7 @@ class User(db.Model):
     referrer_id = db.Column(db.Integer, nullable=True); joined = db.Column(db.Integer, default=now); last_daily = db.Column(db.String(10), default=''); streak = db.Column(db.Integer, default=0)
     vip_until = db.Column(db.Integer, default=0); frame = db.Column(db.String(20), default=''); real_coins = db.Column(db.Integer, default=0, nullable=False)
     host_status = db.Column(db.String(8), default='none'); is_agent = db.Column(db.Boolean, default=False); agent_id = db.Column(db.Integer, nullable=True)
-    parent_agent_id = db.Column(db.Integer, nullable=True); commission = db.Column(db.Integer, default=0, nullable=False)
+    parent_agent_id = db.Column(db.Integer, nullable=True); commission = db.Column(db.Integer, default=0, nullable=False); auth_version = db.Column(db.Integer, default=0, nullable=False)
 
 
 class Photo(db.Model):
@@ -220,7 +220,7 @@ class LuckyStats(db.Model):
 def ensure_columns():
     from sqlalchemy import inspect
     want = {User: [('vip_until', 'INTEGER DEFAULT 0'), ('frame', "VARCHAR(20) DEFAULT ''"), ('real_coins', 'INTEGER DEFAULT 0 NOT NULL'),
-                   ('host_status', "VARCHAR(8) DEFAULT 'none'"), ('is_agent', 'BOOLEAN DEFAULT FALSE'), ('agent_id', 'INTEGER'), ('parent_agent_id', 'INTEGER'), ('commission', 'INTEGER DEFAULT 0 NOT NULL')],
+                   ('host_status', "VARCHAR(8) DEFAULT 'none'"), ('is_agent', 'BOOLEAN DEFAULT FALSE'), ('agent_id', 'INTEGER'), ('parent_agent_id', 'INTEGER'), ('commission', 'INTEGER DEFAULT 0 NOT NULL'), ('auth_version', 'INTEGER DEFAULT 0 NOT NULL')],
             Room: [('kind', "VARCHAR(8) DEFAULT 'voice'")], Post: [('has_image', 'BOOLEAN DEFAULT FALSE')], Job: [('has_image', 'BOOLEAN DEFAULT FALSE')],
             PKBattle: [('winner_id', 'INTEGER'), ('host1_real', 'INTEGER DEFAULT 0'), ('host2_real', 'INTEGER DEFAULT 0')],
             Purchase: [('method', "VARCHAR(10) DEFAULT 'telebirr'"), ('txhash', "VARCHAR(80) DEFAULT ''")],
@@ -251,12 +251,21 @@ def num(v, d=0):
     try: return int(v)
     except Exception: return d
 def sign(uid, days=30):
-    p = f'{uid}.{now() + days * 86400}'; return p + '.' + hmac.new(SECRET, p.encode(), hashlib.sha256).hexdigest()[:32]
+    u = db.session.get(User, uid)
+    version = int(u.auth_version or 0) if u else 0
+    p = f'{uid}.{now() + days * 86400}.{version}'
+    return p + '.' + hmac.new(SECRET, p.encode(), hashlib.sha256).hexdigest()[:32]
 def parse_token(t):
     try:
-        uid, exp, sig = t.split('.')
-        ok = hmac.compare_digest(sig, hmac.new(SECRET, f'{uid}.{exp}'.encode(), hashlib.sha256).hexdigest()[:32])
-        return int(uid) if ok and int(exp) > now() else None
+        parts = t.split('.')
+        if len(parts) == 3:  # accept existing sessions until their normal expiry
+            uid, exp, sig = parts; version = 0; payload = f'{uid}.{exp}'
+        elif len(parts) == 4:
+            uid, exp, version, sig = parts; payload = f'{uid}.{exp}.{version}'
+        else: return None
+        ok = hmac.compare_digest(sig, hmac.new(SECRET, payload.encode(), hashlib.sha256).hexdigest()[:32])
+        if not ok or int(exp) <= now(): return None
+        return int(uid), int(version)
     except Exception: return None
 def verify_init(init):
     # Reject duplicate fields: silently keeping the last copy can make the
@@ -279,9 +288,10 @@ def verify_init(init):
 def auth(f):
     @wraps(f)
     def w(*a, **k):
-        h = request.headers.get('Authorization', ''); uid = parse_token(h[7:]) if h.startswith('Bearer ') else None
+        h = request.headers.get('Authorization', ''); claims = parse_token(h[7:]) if h.startswith('Bearer ') else None
+        uid, version = claims if claims else (None, None)
         u = db.session.get(User, uid) if uid else None
-        if not u: return err('unauthorized', 401)
+        if not u or int(u.auth_version or 0) != version: return err('unauthorized', 401)
         if u.banned: return err('Your account is banned', 403)
         g.user = u; return f(*a, **k)
     return w
