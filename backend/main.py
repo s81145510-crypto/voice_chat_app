@@ -259,12 +259,21 @@ def parse_token(t):
         return int(uid) if ok and int(exp) > now() else None
     except Exception: return None
 def verify_init(init):
-    data = dict(parse_qsl(init, keep_blank_values=True)); h = data.pop('hash', None)
+    # Reject duplicate fields: silently keeping the last copy can make the
+    # signed payload ambiguous to different parsers.
+    pairs = parse_qsl(init, keep_blank_values=True)
+    data = dict(pairs)
+    if len(data) != len(pairs): return None
+    h = data.pop('hash', None)
     if not h or not BOT_TOKEN: return None
     check = '\n'.join(f'{k}={v}' for k, v in sorted(data.items()))
     key = hmac.new(b'WebAppData', BOT_TOKEN.encode(), hashlib.sha256).digest()
     if not hmac.compare_digest(hmac.new(key, check.encode(), hashlib.sha256).hexdigest(), h): return None
-    if now() - num(data.get('auth_date')) > 86400 * 3: return None
+    auth_date = num(data.get('auth_date'), -1)
+    age = now() - auth_date
+    # Telegram init data is short-lived. Reject missing, stale, and
+    # implausibly future-dated payloads instead of accepting them for 3 days.
+    if auth_date <= 0 or age > 86400 or age < -60: return None
     try: return json.loads(data['user']), data
     except Exception: return None
 def auth(f):
