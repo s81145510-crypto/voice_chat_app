@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """Phone number + password login for Twenty One Party."""
-import re, secrets, hashlib
+import os, re, json, hmac, secrets, hashlib, urllib.request, urllib.parse
 from flask import request, jsonify, g
 from sqlalchemy import update
 from sqlalchemy.exc import IntegrityError
@@ -11,6 +11,11 @@ WINDOW = 15 * 60
 PHONE_FAILS = 6        # wrong passwords per phone per window
 IP_FAILS = 60          # generous: many mobile users share one IP
 IP_SIGNUPS = 15        # new accounts per IP per hour
+LINK_TTL = 15 * 60     # time to open Telegram and share the number
+OTP_TTL = 10 * 60      # life of the 6-digit code
+OTP_TRIES = 5
+PENDING_TTL = 48 * 3600  # how long the admin can still approve a waiting signup
+HOOK_PATH = '/api/telegram/webhook'
 WEAK = {'123456', '1234567', '12345678', '123456789', '000000', '111111', 'password', 'qwerty', 'abc123'}
 
 
@@ -30,6 +35,7 @@ def init_auth(app, db, d):
     User, now, tx, err, body, num = d['User'], d['now'], d['tx'], d['err'], d['body'], d['num']
     auth, admin_only, sign, me_dict, cfg = d['auth'], d['admin_only'], d['sign'], d['me_dict'], d['cfg']
     welcome, referral_register, is_admin = d['welcome'], d['referral_register'], d['is_admin']
+    BOT_TOKEN, secret = d['bot_token'], d['secret']
 
     class Credential(db.Model):
         user_id = db.Column(db.Integer, primary_key=True)
@@ -46,6 +52,25 @@ def init_auth(app, db, d):
     class AppSecret(db.Model):
         key = db.Column(db.String(20), primary_key=True)
         value = db.Column(db.String(128), nullable=False)
+
+    class PendingSignup(db.Model):
+        __tablename__ = 'pending_signup'
+        id = db.Column(db.Integer, primary_key=True)
+        token = db.Column(db.String(48), unique=True, nullable=False)   # kept by the app only
+        code = db.Column(db.String(32), unique=True, nullable=False)    # inside the Telegram link
+        phone = db.Column(db.String(10), index=True, nullable=False)
+        name = db.Column(db.String(30)); pw_hash = db.Column(db.String(256)); ref = db.Column(db.String(40))
+        created = db.Column(db.Integer, default=now, index=True)
+        tg_user = db.Column(db.String(20), index=True)
+        otp_hash = db.Column(db.String(64)); otp_expires = db.Column(db.Integer, default=0)
+        tries = db.Column(db.Integer, default=0)
+
+    class TgLink(db.Model):
+        # one Telegram account can verify only one phone account
+        __tablename__ = 'tg_link'
+        tg_user = db.Column(db.String(20), primary_key=True)
+        user_id = db.Column(db.Integer, unique=True, nullable=False)
+        ts = db.Column(db.Integer, default=now)
 
     with app.app_context():
         try: db.create_all()
@@ -101,6 +126,63 @@ def init_auth(app, db, d):
 
     dummy_hash = generate_password_hash(secrets.token_hex(16))
 
+    def verify_on():
+        # emergency switch: set PHONE_VERIFY=off in Render to allow signup without Telegram
+        return os.environ.get('PHONE_VERIFY', 'on').strip().lower() != 'off'
+
+    def hook_secret():
+        return hmac.new(secret(), b'tg-webhook', hashlib.sha256).hexdigest()
+
+    def tg_api(method, **params):
+        data = urllib.parse.urlencode(params).encode()
+        with urllib.request.urlopen(f'https://api.telegram.org/bot{BOT_TOKEN}/{method}', data, timeout=8) as r:
+            return json.loads(r.read().decode()).get('result')
+
+    bot = {'name': None, 'at': 0}
+
+    def bot_ready():
+        '''Returns (bot_username, None) or (None, problem). Connects the bot to this server when it is free.'''
+        if bot['name'] and now() - bot['at'] < 600: return bot['name'], None
+        # only trust a server address from the environment, never from the request
+        base = (os.environ.get('PUBLIC_URL') or os.environ.get('RENDER_EXTERNAL_URL') or '').rstrip('/')
+        if not BOT_TOKEN: return None, 'BOT_TOKEN is missing'
+        if not base.startswith('https://'): return None, 'PUBLIC_URL is missing'
+        try:
+            name = tg_api('getMe')['username']
+            current = (tg_api('getWebhookInfo') or {}).get('url') or ''
+            if current and current != base + HOOK_PATH:
+                return None, 'The bot is already connected to another server'
+            tg_api('setWebhook', url=base + HOOK_PATH, secret_token=hook_secret(), allowed_updates='["message"]')
+        except Exception as e:
+            print('telegram setup failed:', type(e).__name__)
+            return None, 'Cannot reach Telegram'
+        bot.update(name=name, at=now())
+        return name, None
+
+    def otp_digest(p_id, otp):
+        return hmac.new(secret(), f'otp:{p_id}:{otp}'.encode(), hashlib.sha256).hexdigest()
+
+    def create_account(phone, name, pw_hash, start, tg_user=None):
+        start = start or ''; ref = ag = None
+        if start.startswith('ref_'):
+            r = User.query.filter_by(tg_id=start[4:]).first(); ref = r.id if r else None
+        elif start.startswith('ag_'):
+            a = User.query.filter_by(tg_id=start[3:]).first(); ag = a.id if a and a.is_agent else None
+        # random public id: never exposes the phone number and cannot be guessed
+        u = User(tg_id='p_' + secrets.token_hex(8), username=name, phone=phone, coins=welcome, referrer_id=ref, agent_id=ag)
+        try:
+            db.session.add(u); db.session.flush()
+            db.session.add(Credential(user_id=u.id, phone=phone, pw_hash=pw_hash))
+            if tg_user: db.session.add(TgLink(tg_user=tg_user, user_id=u.id))
+            tx(u.id, 'welcome', welcome, 'Welcome bonus')
+            if ref: referral_register(ref, u.id)
+            if ag: referral_register(ag, u.id)
+            PendingSignup.query.filter(PendingSignup.phone == phone).delete(synchronize_session=False)
+            db.session.commit()
+        except IntegrityError:
+            db.session.rollback(); return None
+        return u
+
     @app.post('/api/auth/signup')
     def auth_signup():
         b = body(); phone = normalize_phone(b.get('phone')); pw = b.get('password')
@@ -111,23 +193,99 @@ def init_auth(app, db, d):
         if problem: return err(problem)
         if Credential.query.filter_by(phone=phone).first(): return err('This number already has an account. Please log in', 409)
         if not hit(hkey('su', client_ip()), IP_SIGNUPS, 3600): return err('Too many new accounts. Try again in 1 hour', 429)
-        start = str(b.get('ref') or '')[:40]; ref = ag = None
-        if start.startswith('ref_'):
-            r = User.query.filter_by(tg_id=start[4:]).first(); ref = r.id if r else None
-        elif start.startswith('ag_'):
-            a = User.query.filter_by(tg_id=start[3:]).first(); ag = a.id if a and a.is_agent else None
-        # random public id: never exposes the phone number and cannot be guessed
-        u = User(tg_id='p_' + secrets.token_hex(8), username=name, phone=phone, coins=welcome, referrer_id=ref, agent_id=ag)
-        try:
-            db.session.add(u); db.session.flush()
-            db.session.add(Credential(user_id=u.id, phone=phone, pw_hash=generate_password_hash(pw)))
-            tx(u.id, 'welcome', welcome, 'Welcome bonus')
-            if ref: referral_register(ref, u.id)
-            if ag: referral_register(ag, u.id)
-            db.session.commit()
-        except IntegrityError:
-            db.session.rollback(); return err('This number already has an account. Please log in', 409)
-        return session_reply(u)
+        ref = str(b.get('ref') or '')[:40]
+        if not verify_on():
+            u = create_account(phone, name, generate_password_hash(pw), ref)
+            return session_reply(u) if u else err('This number already has an account. Please log in', 409)
+        PendingSignup.query.filter(PendingSignup.created < now() - PENDING_TTL).delete(synchronize_session=False)
+        p = PendingSignup(token=secrets.token_urlsafe(24), code=secrets.token_hex(12), phone=phone, name=name,
+                          pw_hash=generate_password_hash(pw), ref=ref)
+        db.session.add(p); db.session.commit()
+        bot_name, problem = bot_ready()
+        if problem: print('phone verification unavailable:', problem)
+        return jsonify(verify=dict(token=p.token, phone=phone, minutes=LINK_TTL // 60,
+                                   link=f'https://t.me/{bot_name}?start=v_{p.code}' if bot_name else ''))
+
+    @app.post('/api/auth/verify')
+    def auth_verify():
+        b = body(); token = str(b.get('token') or '')[:48]; otp = re.sub(r'\D', '', str(b.get('otp') or ''))[:6]
+        p = PendingSignup.query.filter_by(token=token).first() if token else None
+        if not p: return err('This request has expired. Sign up again', 410)
+        if not p.otp_hash: return err('First open Telegram, press Start and share your number')
+        if p.otp_expires < now(): return err('The code has expired. Sign up again', 410)
+        if len(otp) != 6: return err('Enter the 6-digit code')
+        r = db.session.execute(update(PendingSignup).where(PendingSignup.id == p.id, PendingSignup.tries < OTP_TRIES).values(tries=PendingSignup.tries + 1),
+                               execution_options={'synchronize_session': False})
+        db.session.commit()
+        if r.rowcount != 1: return err('Too many wrong codes. Sign up again', 429)
+        p = PendingSignup.query.filter_by(token=token).first()
+        if not p or not hmac.compare_digest(p.otp_hash or '', otp_digest(p.id, otp)): return err('Wrong code')
+        if db.session.get(TgLink, p.tg_user): return err('This Telegram account was already used for another account', 409)
+        u = create_account(p.phone, p.name, p.pw_hash, p.ref, p.tg_user)
+        return session_reply(u) if u else err('This number already has an account. Please log in', 409)
+
+    SHARE_BUTTON = json.dumps({'keyboard': [[{'text': '📱 ስልክ ቁጥሬን አጋራ / Share my number', 'request_contact': True}]],
+                               'resize_keyboard': True, 'one_time_keyboard': True}, ensure_ascii=False)
+    NO_KEYBOARD = json.dumps({'remove_keyboard': True})
+
+    @app.post(HOOK_PATH)
+    def telegram_webhook():
+        if not BOT_TOKEN or not hmac.compare_digest(request.headers.get('X-Telegram-Bot-Api-Secret-Token', '').encode(), hook_secret().encode()):
+            return err('forbidden', 403)
+        msg = (request.get_json(silent=True) or {}).get('message') or {}
+        chat = msg.get('chat') or {}; sender = str((msg.get('from') or {}).get('id') or '')
+        if chat.get('type') != 'private' or not sender: return jsonify(ok=1)
+
+        def reply(text, keyboard=None):
+            # answering inside the webhook response needs no extra call to Telegram
+            out = dict(method='sendMessage', chat_id=chat['id'], text=text)
+            if keyboard: out['reply_markup'] = keyboard
+            return jsonify(out)
+
+        words = str(msg.get('text') or '').split()
+        if len(words) == 2 and words[0] == '/start' and words[1].startswith('v_'):
+            p = PendingSignup.query.filter(PendingSignup.code == words[1][2:], PendingSignup.created > now() - LINK_TTL).first()
+            if not p or (p.tg_user and p.tg_user != sender):
+                return reply('⌛ ይህ link ጊዜው አልፏል። ወደ app ተመልሰህ እንደገና ተመዝገብ።\nThis link has expired. Sign up again in the app.')
+            if db.session.get(TgLink, sender):
+                return reply('⛔ በዚህ Telegram አስቀድሞ account ተከፍቷል።\nThis Telegram account was already used to verify an account.')
+            PendingSignup.query.filter(PendingSignup.tg_user == sender, PendingSignup.id != p.id).update(
+                {'tg_user': None, 'otp_hash': None}, synchronize_session=False)
+            p.tg_user = sender; db.session.commit()
+            return reply(f'🔐 Twenty One Party\n\nለ {p.phone} account እየከፈትክ ነው።\nራስህ ካልጀመርከው ምንም አታድርግ።\n\nከታች ያለውን ቁልፍ ተጫን 👇\nOnly continue if YOU started this signup.', SHARE_BUTTON)
+        contact = msg.get('contact')
+        if contact:
+            p = PendingSignup.query.filter(PendingSignup.tg_user == sender, PendingSignup.created > now() - LINK_TTL).order_by(PendingSignup.id.desc()).first()
+            if not p: return reply('⌛ መጀመሪያ በ app ውስጥ ያለውን የ Telegram ቁልፍ ተጫን።\nStart again from the app.', NO_KEYBOARD)
+            if str(contact.get('user_id') or '') != sender:
+                return reply('⛔ የራስህን ቁጥር በቁልፉ ብቻ አጋራ።\nShare YOUR OWN number with the button.', SHARE_BUTTON)
+            if normalize_phone(contact.get('phone_number')) != p.phone:
+                return reply(f'⛔ የ Telegram ቁጥርህ ከጻፍከው ({p.phone}) የተለየ ነው። በ Telegram ቁጥርህ ተመዝገብ።\nYour Telegram number is different from the number you typed.', NO_KEYBOARD)
+            otp = f'{secrets.randbelow(1000000):06d}'
+            p.otp_hash = otp_digest(p.id, otp); p.otp_expires = now() + OTP_TTL; p.tries = 0; db.session.commit()
+            return reply(f'✅ ቁጥርህ ተረጋግጧል።\n\nኮድ / Code:  {otp}\n\nይህን ኮድ ወደ app አስገባ። ለማንም አትስጥ!\nNever give this code to anyone.', NO_KEYBOARD)
+        return reply('👋 Twenty One Party\nለመመዝገብ ከ app ውስጥ Sign up ተጫን።\nTo register, tap Sign up inside the app.')
+
+    @app.get('/api/admin/pending')
+    @admin_only
+    def auth_pending_list():
+        ps = PendingSignup.query.filter(PendingSignup.created > now() - PENDING_TTL).order_by(PendingSignup.id.desc()).limit(50).all()
+        taken = {c.phone for c in Credential.query.filter(Credential.phone.in_([p.phone for p in ps] or [''])).all()}
+        name, problem = bot_ready() if verify_on() else (None, 'Verification is OFF (PHONE_VERIFY=off)')
+        return jsonify(items=[dict(id=p.id, phone=p.phone, name=p.name, age=now() - p.created) for p in ps if p.phone not in taken],
+                       bot=name or '', problem=problem or '')
+
+    @app.post('/api/admin/pending')
+    @admin_only
+    def auth_pending_action():
+        '''For people without Telegram: the admin calls the number first, then approves.'''
+        b = body(); p = db.session.get(PendingSignup, num(b.get('id')))
+        if not p: return err('Request not found', 404)
+        if b.get('action') == 'approve':
+            if not create_account(p.phone, p.name, p.pw_hash, p.ref): return err('This number already has an account', 409)
+        else:
+            db.session.delete(p); db.session.commit()
+        return jsonify(ok=1)
 
     @app.post('/api/auth/login')
     def auth_login():
@@ -171,6 +329,7 @@ def init_auth(app, db, d):
         return jsonify(phone=c.phone, password=temp)
 
     def delete_login(uid):
+        TgLink.query.filter(TgLink.user_id == uid).delete(synchronize_session=False)
         Credential.query.filter(Credential.user_id == uid).delete(synchronize_session=False)
 
     def phones_for(ids):
@@ -180,4 +339,4 @@ def init_auth(app, db, d):
         p = normalize_phone(q)
         return [c.user_id for c in Credential.query.filter(Credential.phone == p).all()] if p else []
 
-    return dict(stored_secret=stored_secret, hit=hit, hkey=hkey, delete_login=delete_login, phones_for=phones_for, ids_by_phone=ids_by_phone)
+    return dict(verify_on=verify_on, stored_secret=stored_secret, hit=hit, hkey=hkey, delete_login=delete_login, phones_for=phones_for, ids_by_phone=ids_by_phone)
