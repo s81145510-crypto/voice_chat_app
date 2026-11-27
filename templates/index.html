@@ -223,7 +223,7 @@ body:has(.mini.on) .golive{bottom:calc(136px + var(--sb))}
     <h3 style="margin:18px 0 6px">📲 ስልክህን አረጋግጥ<br><span class="mut">Verify your number</span></h3>
     <div class="au-step"><b>1</b><span>ቁልፉን ተጫንና Telegram ውስጥ <b>START</b> ንካ<br><span class="mut">Open Telegram and press START</span></span></div>
     <a id="au-tg" class="au-tg" target="_blank" rel="noopener">✈️ Open Telegram</a>
-    <div class="au-step"><b>2</b><span><b>ስልክ ቁጥሬን አጋራ</b> ተጫን። ኮድ ይደርስሃል<br><span class="mut">Share your number, you get a code</span></span></div>
+    <div class="au-step"><b>2</b><span><b>ስልክ ቁጥሬን አጋራ</b> ተጫን። ኮድ ይደርስሃል<br><span class="mut">ቁልፉ ካልታየ ከመጻፊያው ሳጥን አጠገብ ያለውን ባለ 4 ካሬ ምልክት ተጫን<br>Share your number, you get a code. No button? Tap the 4-squares icon next to the message box</span></span></div>
     <div class="au-step"><b>3</b><span>ኮዱን እዚህ አስገባ<br><span class="mut">Enter the 6-digit code for <b id="au-vphone"></b></span></span></div>
     <div class="au-field"><span>🔢</span><input id="au-otp" inputmode="numeric" autocomplete="one-time-code" placeholder="000000" maxlength="6"></div>
     <div id="au-verr" role="alert"></div>
@@ -441,7 +441,7 @@ const V={seq:0,joining:null,client:null,track:null,vtrack:null,rid:null,pub:fals
   if(this.client!==c){try{await c.leave()}catch(e){}return}
   if(kind==='live'&&isHost)await this.startHost()},
  async startHost(){try{const[a,v]=await AgoraRTC.createMicrophoneAndCameraTracks({AEC:true,ANS:true,AGC:true},{encoderConfig:'480p_2',facingMode:'user'});this.track=a;this.vtrack=v;v.play('lv-video',{mirror:true,fit:'cover'});
-   try{await this.client.enableDualStream()}catch(e){}await this.client.publish([a,v]);this.pub=true;$('#lv-flip').style.display='';$('#lv-mic').style.display='';$('#lv-pk').style.display=''}
+   try{await this.client.enableDualStream()}catch(e){}await this.client.publish([a,v]);this.pub=true;$('#lv-flip').style.display='';$('#lv-mic').style.display='';$('#lv-pk').style.display=S.me.host==='host'?'':'none'}
   catch(e){toast('📷 Camera/mic not allowed');exitRoom(true)}},
  async renew(){try{const d=await api('/api/agora-token',{room_id:this.rid});await this.client.renewToken(d.token)}catch(e){}},
  async prepMic(){if(this.track)return true;
@@ -651,12 +651,12 @@ async function pkVideo(pid){
   const c=AgoraRTC.createClient({mode:'live',codec:'vp8'});P.client=c;
   await c.setClientRole(d.publisher?'host':'audience');
   c.on('user-published',async(u,m)=>{try{await c.subscribe(u,m);
-    if(m==='video'){u.videoTrack.play((u.uid===P.h2)?'pk-v2':'pk-v1',{fit:'cover'})}
+    if(m==='video'){u.videoTrack.play((u.uid===P.h1)?'pk-v1':'pk-v2',{fit:'cover'})}
     else if(m==='audio')u.audioTrack.play()}catch(e){}});
   await c.join(d.app_id,d.channel,d.token,d.uid);
   if(P.client!==c){try{await c.leave()}catch(e){}return}
   if(d.publisher){try{const[a,v]=await AgoraRTC.createMicrophoneAndCameraTracks({AEC:true,ANS:true,AGC:true},{encoderConfig:'480p_2',facingMode:'user'});P.track=a;P.vtrack=v;
-    v.play((d.uid===P.h2)?'pk-v2':'pk-v1',{mirror:true,fit:'cover'});
+    v.play((d.uid===P.h1)?'pk-v1':'pk-v2',{mirror:true,fit:'cover'});
     try{await c.enableDualStream()}catch(e){}await c.publish([a,v]);P.pub=true;$('#pk-mic').style.display=''}catch(e){toast('📷 Camera/mic not allowed')}}}
 async function pkPoll(){
   clearTimeout(P.t);if(!P.alive)return;const pid=P.pid;
