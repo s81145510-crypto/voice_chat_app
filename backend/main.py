@@ -6,6 +6,7 @@ from functools import wraps
 from urllib.parse import parse_qsl
 from flask import Flask, request, jsonify, Response, g, send_from_directory
 from flask_sqlalchemy import SQLAlchemy
+from werkzeug.middleware.proxy_fix import ProxyFix
 from sqlalchemy import update, func, event, or_, and_, case, text as sa_text
 from sqlalchemy.engine import Engine
 from sqlalchemy.exc import IntegrityError
@@ -47,6 +48,14 @@ IS_SQLITE = DB_URL.startswith('sqlite')
 SECRET = hashlib.sha256(('sess:' + (os.environ.get('SECRET_KEY') or BOT_TOKEN or 'dev-secret')).encode()).digest()
 
 app = Flask(__name__)
+# Trust forwarded client/protocol headers only when the deployment explicitly
+# declares its reverse-proxy hop count. Default is zero (no proxy trust).
+try:
+    TRUSTED_PROXY_HOPS = max(0, min(5, int(os.environ.get('TRUSTED_PROXY_HOPS', '0'))))
+except (TypeError, ValueError):
+    TRUSTED_PROXY_HOPS = 0
+if TRUSTED_PROXY_HOPS:
+    app.wsgi_app = ProxyFix(app.wsgi_app, x_for=TRUSTED_PROXY_HOPS, x_proto=TRUSTED_PROXY_HOPS)
 app.config.update(SQLALCHEMY_DATABASE_URI=DB_URL, SQLALCHEMY_TRACK_MODIFICATIONS=False, MAX_CONTENT_LENGTH=5 * 1024 * 1024, JSON_AS_ASCII=False,
                   SQLALCHEMY_ENGINE_OPTIONS={'pool_pre_ping': True, 'pool_recycle': 300, 'pool_size': 10, 'max_overflow': 20} if not IS_SQLITE else {'pool_pre_ping': True})
 app.json.ensure_ascii = False
