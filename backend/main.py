@@ -318,6 +318,7 @@ def spend_split(uid, n):
 def add_coins(uid, n): db.session.execute(update(User).where(User.id == uid).values(coins=User.coins + n), execution_options={'synchronize_session': False})
 def tx(uid, kind, amt, note=''): db.session.add(Tx(user_id=uid, kind=kind, amount=amt, note=note[:120]))
 def notify(chat_id, text):
+    SOCIAL['system'](chat_id, text)      # in-app copy (phone accounts have no Telegram chat)
     if not BOT_TOKEN or not chat_id: return
     def run():
         try:
@@ -573,6 +574,7 @@ def gc_rooms():
     for (rid,) in db.session.query(Room.id).filter(Room.last_active < t - 3 * 86400).all(): delete_room(rid)
 def delete_room(rid):
     for M in (Seat, Presence, Message, LiveGuest): M.query.filter(M.room_id == rid).delete(synchronize_session=False)
+    SOCIAL['drop_room'](rid)
     Room.query.filter(Room.id == rid).delete(synchronize_session=False); db.session.commit()
 @app.get('/api/rooms')
 @auth
@@ -596,7 +598,9 @@ def room_create():
     elif Room.query.filter(Room.host_id == g.user.id, Room.kind != 'live').count() >= (VIP_ROOMS if vip_active(g.user) else FREE_ROOMS):
         return err('Max rooms reached')
     r = Room(id=secrets.token_hex(4), name=name, topic=str(b.get('topic', '')).strip()[:100], host_id=g.user.id, kind=kind)
-    db.session.add(r); db.session.commit(); return jsonify(id=r.id)
+    db.session.add(r); db.session.commit(); room_id = r.id
+    if kind == 'live': SOCIAL['host_live'](g.user.id, room_id, name)
+    return jsonify(id=room_id)
 @app.post('/api/rooms/<rid>/join')
 @auth
 def room_join(rid):
@@ -623,7 +627,7 @@ def room_state(rid):
     r = db.session.get(Room, rid)
     if not r: return err('ROOM_GONE', 404)
     cv, mid = num(request.args.get('v'), -1), num(request.args.get('mid'))
-    out = dict(v=r.version, online=online_count(rid), guests=guests_payload(rid))
+    out = dict(v=r.version, online=online_count(rid), guests=guests_payload(rid), likes=SOCIAL['likes'](rid))
     if cv != r.version: out['seats'] = seats_payload(rid)
     q = Message.query.filter(Message.room_id == rid)
     ms = list(reversed(q.order_by(Message.id.desc()).limit(30).all())) if mid <= 0 else q.filter(Message.id > mid).order_by(Message.id).limit(60).all()
@@ -798,6 +802,7 @@ def room_gift(rid):
     db.session.add(Message(room_id=rid, user_id=g.user.id, name=g.user.username, kind='gift', meta=json.dumps(meta, ensure_ascii=False)))
     db.session.commit(); mission_inc(g.user.id, 'gift')
     FIN['wallet_sync'](g.user.id); FIN['wallet_sync'](to)
+    SOCIAL['gift'](g.user.id, to, gift['emoji'], qty, total)
     return jsonify(coins=coins_of(g.user.id), lucky=lucky_m, refund=refund)
 @app.post('/api/agora-token')
 @auth
@@ -1228,6 +1233,8 @@ def pk_gift():
         db.session.rollback(); return err('PK has ended', 409)
     db.session.execute(update(User).where(User.id == u.id).values(spent=User.spent + total, gifts_sent=User.gifts_sent + total), execution_options={'synchronize_session': False})
     tx(u.id, 'pk_gift', -total, f'PK#{pk.id} side{to_host} {gift["key"]} {qty}'); db.session.commit(); db.session.refresh(pk)
+    target_id = pk.host1_id if to_host == 1 else pk.host2_id
+    if target_id != u.id: SOCIAL['gift'](u.id, target_id, gift['emoji'], qty, total)
     return jsonify(coins=coins_of(u.id), host1_gifts=pk.host1_gifts, host2_gifts=pk.host2_gifts)
 @app.post('/api/pk/end')
 @auth
@@ -1367,6 +1374,7 @@ def adm_purchase():
     if r.rowcount != 1:
         db.session.rollback(); return err('Already processed')
     u = db.session.get(User, p.user_id)
+    ref_note = None
     if act == 'approve':
         add_coins(p.user_id, p.coins)
         db.session.execute(update(User).where(User.id == p.user_id).values(real_coins=User.real_coins + p.coins), execution_options={'synchronize_session': False})
@@ -1374,11 +1382,13 @@ def adm_purchase():
         FIN['ledger'](p.user_id, 'purchase', p.coins, 'birr', p.id, f'{p.birr} ETB')
         if u and u.referrer_id:
             bonus = p.coins // 10; add_coins(u.referrer_id, bonus); tx(u.referrer_id, 'referral', bonus, f'from {u.id}')
-            ru = db.session.get(User, u.referrer_id); notify(ru.tg_id if ru else None, f'🎁 Referral +{bonus} coins')
+            ref_note = (u.referrer_id, bonus)
         if u and u.agent_id and not Tx.query.filter_by(user_id=p.user_id, kind='invite_reward').count():
             add_coins(u.agent_id, INVITE_REWARD); tx(u.agent_id, 'invite', INVITE_REWARD, f'invite {u.id}'); tx(p.user_id, 'invite_reward', 0, f'agent {u.agent_id}')
             FIN['referral_qualify'](p.user_id, 'first_purchase', INVITE_REWARD)
     db.session.commit()
+    if ref_note:
+        ru = db.session.get(User, ref_note[0]); notify(ru.tg_id if ru else None, f'🎁 Referral +{ref_note[1]} coins')
     if act == 'approve':
         FIN['wallet_sync'](p.user_id)
         if u and u.agent_id: FIN['wallet_sync'](u.agent_id)
@@ -1424,6 +1434,7 @@ def adm_user():
         for M in (Seat, Presence, Post, Job, Photo, UserFrame, LiveGuest): M.query.filter(M.user_id == uid).delete(synchronize_session=False)
         AUTH['delete_login'](uid)
         FEED['delete_follows'](uid)
+        SOCIAL['delete_user'](uid)
         db.session.delete(u)
     else: return err('bad action')
     db.session.commit(); return jsonify(ok=1)
@@ -1434,13 +1445,23 @@ def adm_room():
 
 
 try:
+    from .social import init_social
+except ImportError:
+    from social import init_social
+
+SOCIAL = init_social(app, db, dict(
+    User=User, Room=Room, Presence=Presence, PKBattle=PKBattle, now=now, err=err, body=body, num=num,
+    auth=auth, pub=pub, limited=limited))
+
+
+try:
     from .feed import init_feed
 except ImportError:
     from feed import init_feed
 
 FEED = init_feed(app, db, dict(
     User=User, Room=Room, Seat=Seat, Presence=Presence, Tx=Tx, now=now, err=err, body=body, num=num,
-    auth=auth, pub=pub, limited=limited, gc_rooms=gc_rooms))
+    auth=auth, pub=pub, limited=limited, gc_rooms=gc_rooms, on_follow=SOCIAL['follow']))
 
 
 if __name__ == '__main__':

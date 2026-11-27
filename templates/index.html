@@ -201,6 +201,14 @@ body:has(.mini.on) .golive{bottom:calc(136px + var(--sb))}
 .pf-stats{display:flex;justify-content:space-around;margin:12px 0}.pf-stats button{background:none;flex:1}.pf-stats b{display:block;font-size:18px}
 .pod{display:flex;align-items:flex-end;gap:8px;margin:14px 0}.pod>div{flex:1;min-width:0;text-align:center;border-radius:16px;padding:12px 4px;background:var(--card);border:1px solid var(--line);display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer}
 .pod>div.p1{padding:22px 4px;border-color:#ffd700;background:linear-gradient(180deg,#ffd70033,transparent)}.pod .ell{max-width:100%}
+.hm-ic{position:relative}.nb{position:absolute;top:-4px;right:-4px;min-width:18px;height:18px;padding:0 4px;border-radius:9px;background:#ff2d55;color:#fff;font-size:11px;font-weight:800;line-height:18px;text-align:center;font-style:normal}.nb:empty{display:none}.btn .nb{position:static;display:inline-block;margin-left:6px}.btn .nb:empty{display:none}
+.nt{display:flex;gap:10px;align-items:center;width:100%;text-align:left;padding:10px 8px;border-radius:12px;background:none;margin-bottom:4px}.nt.new{background:rgba(155,92,255,.16)}.nt .ic{width:34px;height:34px;border-radius:50%;background:var(--card);display:flex;align-items:center;justify-content:center;flex:none}.nt .tx{overflow-wrap:anywhere}
+button.vs{color:#fff}.r-ppl{cursor:pointer}
+#lv-like{position:absolute;right:10px;bottom:calc(68px + var(--sb));z-index:3;display:flex;flex-direction:column;align-items:center;background:none;padding:0;color:#fff;font-size:11px;font-weight:800;text-shadow:0 1px 3px #000;touch-action:manipulation;user-select:none}
+#lv-like i{font-style:normal;font-size:24px;width:48px;height:48px;border-radius:50%;background:#0007;display:flex;align-items:center;justify-content:center}#lv-like:active i{transform:scale(1.2)}
+.heart{position:fixed;z-index:45;pointer-events:none;font-size:28px}
+.pkh-s{display:flex;gap:8px;margin-bottom:10px}.pkh-s div{flex:1;text-align:center;border-radius:12px;padding:8px 2px;background:var(--card);border:1px solid var(--line)}.pkh-s b{display:block;font-size:19px}
+.pkh .who{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;gap:2px;cursor:pointer}.pkh .who .ell{max-width:100%}
 #lv-follow{background:linear-gradient(135deg,#ff4d8d,#9b5cff);border-radius:16px;padding:4px 11px;font-size:12px;font-weight:800;flex:none}
 #lv-hint{position:absolute;top:42%;left:50%;transform:translateX(-50%);z-index:3;background:#0009;border-radius:20px;padding:8px 16px;font-size:13px;pointer-events:none;display:none;white-space:nowrap}
 </style>
@@ -241,13 +249,14 @@ body:has(.mini.on) .golive{bottom:calc(136px + var(--sb))}
 <button data-p="wallet"><i>👛</i>Wallet</button><button data-p="community"><i>💬</i>Community</button><button data-p="me"><i>👤</i>Me</button>
 </nav>
 <div id="room">
-  <div class="rh"><button onclick="minimize()">⌄</button><div class="t"><div class="ell" id="r-name" style="font-weight:700"></div><div class="mut"><span class="live"></span><span id="r-on">0</span> online · <span class="vs" id="r-vs">🔇</span></div></div><button onclick="exitRoom()">✕</button></div>
+  <div class="rh"><button onclick="minimize()">⌄</button><div class="t"><div class="ell" id="r-name" style="font-weight:700"></div><div class="mut"><span class="r-ppl" onclick="openViewers()"><span class="live"></span><span id="r-on">0</span> online ›</span> · <span class="vs" id="r-vs">🔇</span></div></div><button onclick="exitRoom()">✕</button></div>
   <div class="seats"><div class="hostrow" id="r-host"></div><div class="sg" id="r-seats"></div></div>
   <div class="chat" id="r-chat"></div>
   <div class="bar"><button class="rb mic" id="r-mic" onclick="toggleMic()">🎤</button><input id="r-in" placeholder="Message…" maxlength="200" onkeydown="if(event.key==='Enter')sendChat()"><button class="rb" onclick="openGift()">🎁</button><button class="rb" style="background:linear-gradient(135deg,var(--pri),var(--pri2))" onclick="sendChat()">➤</button></div>
 </div>
 <div id="live"><div id="lv-video"></div><div id="lv-hint">⬆️ Swipe up for the next live</div>
-  <div class="lv-top"><div class="row sp" id="lv-host" style="background:#0007;border-radius:24px;padding:4px 12px 4px 4px;flex:0 1 auto"></div><button id="lv-follow" style="display:none" onclick="lvFollow()">＋ Follow</button><span class="lv-tag">LIVE</span><span class="vs">👁 <span id="lv-on">0</span></span><span class="vs" id="lv-vs">⏳</span><span class="sp"></span><button class="rb" id="lv-pk" style="width:36px;height:36px;font-size:15px;display:none" onclick="startPKFromLive()">⚔️</button><button class="rb" style="width:36px;height:36px;font-size:15px" onclick="exitRoom()">✕</button></div>
+  <div class="lv-top"><div class="row sp" id="lv-host" style="background:#0007;border-radius:24px;padding:4px 12px 4px 4px;flex:0 1 auto"></div><button id="lv-follow" style="display:none" onclick="lvFollow()">＋ Follow</button><span class="lv-tag">LIVE</span><button class="vs" onclick="openViewers()" aria-label="Viewers">👁 <span id="lv-on">0</span></button><span class="vs" id="lv-vs">⏳</span><span class="sp"></span><button class="rb" id="lv-pk" style="width:36px;height:36px;font-size:15px;display:none" onclick="startPKFromLive()">⚔️</button><button class="rb" style="width:36px;height:36px;font-size:15px" onclick="exitRoom()">✕</button></div>
+  <button id="lv-like" onclick="tapLike()" aria-label="Like"><i>❤️</i><span id="lv-likes">0</span></button>
   <div class="lv-bot"><div id="lv-chat"></div><div class="row"><input id="lv-in" placeholder="Message…" maxlength="200" style="background:#0007" onkeydown="if(event.key==='Enter')sendChat()"><button class="rb" id="lv-flip" style="display:none" onclick="flipCam()">🔄</button><button class="rb" id="lv-mic" style="display:none" onclick="liveMic()">🎤</button><button class="rb" onclick="openGift()">🎁</button><button class="rb" style="background:linear-gradient(135deg,var(--pri),var(--pri2))" onclick="sendChat()">➤</button></div></div>
 </div>
 <div id="gfx" aria-hidden="true"><div id="gfx-lane"></div></div>
@@ -355,12 +364,12 @@ let HT='popular',HOME_SEQ=0;
 const HOME_TABS=[['follow','Following'],['popular','Popular'],['new','New'],['live','Live'],['voice','Party']];
 function renderHome(){
   const m=S.me,el=$('#p-home');
-  el.innerHTML=`<div class="hm-top"><div class="hm-tabs">${HOME_TABS.map(t=>`<button class="${HT===t[0]?'on':''}" onclick="homeTab('${t[0]}')">${t[1]}</button>`).join('')}</div><button class="hm-ic" onclick="go('rank')" aria-label="Ranking">🏆</button><span class="pill" onclick="go('wallet')">🪙 <span class="coins-n">${fmt(m.coins)}</span></span></div>
+  el.innerHTML=`<div class="hm-top"><div class="hm-tabs">${HOME_TABS.map(t=>`<button class="${HT===t[0]?'on':''}" onclick="homeTab('${t[0]}')">${t[1]}</button>`).join('')}</div><button class="hm-ic" onclick="openNotices()" aria-label="Notifications">🔔<i class="nb">${nbText()}</i></button><span class="pill" onclick="go('wallet')">🪙 <span class="coins-n">${fmt(m.coins)}</span></span></div>
   <div class="hm-quick"><button id="daily" ${m.daily_ready?'':'disabled'}>${m.daily_ready?'🎁 Daily gift':'🎁 Claimed ✓'}</button><button onclick="openPKArena()">⚔️ PK Arena</button><button onclick="go('rank')">👑 Ranking</button></div>
   <div id="h-feed"><div class="empty">…</div></div><div id="h-ms"></div>${footbar()}<div style="height:60px"></div><button class="golive" onclick="goMenu()">📹 Go Live</button>`;
   $('#daily').onclick=e=>run(e.target,async()=>{const d=await api('/api/daily',{});setMe(d.me);toast(`🎉 +${d.reward} coins (Day ${d.streak})`);hap('medium');renderHome()});
   const tabs=$('.hm-tabs',el),on=$('.hm-tabs button.on',el);if(tabs&&on)tabs.scrollLeft=on.offsetLeft-tabs.offsetLeft-60;
-  loadMsCard();loadFeed()}
+  loadMsCard();loadFeed();loadUnread()}
 function homeTab(t){HT=t;renderHome()}
 function goMenu(){const m=modal(`<h3>Start</h3><div class="col"><button class="btn bad" id="gm-l">📹 Video Live</button><button class="btn" id="gm-v">🎙 Voice Party room</button></div>`);
   $('#gm-l',m).onclick=()=>{m.close();newRoom('live')};$('#gm-v',m).onclick=()=>{m.close();newRoom('voice')}}
@@ -379,7 +388,8 @@ async function openProfile(uid){const o=modal('<div class="empty">…</div>');
     const onStage=R&&Object.values(R.seats).some(x=>x.u.id===uid);
     box.innerHTML=`<div class="col" style="align-items:center;text-align:center">${av(u,'l')}<b style="font-size:20px">${esc(u.name)}</b><div><span class="badge">${u.lvi} Lv.${u.lv+1} ${esc(u.lvn)}</span> ${vipTag(u)} ${hostTag(u)} ${agentTag(u)}</div><div class="mut">${esc(u.bio||'')}</div></div>
     <div class="pf-stats"><button data-f="followers"><b>${fmt(d.followers)}</b><span class="mut">Followers</span></button><button data-f="following"><b>${fmt(d.following)}</b><span class="mut">Following</span></button><button><b class="gold">${fmt(d.recv)}</b><span class="mut">Received</span></button><button><b class="gold">${fmt(d.sent)}</b><span class="mut">Sent</span></button></div>
-    <div class="col">${d.me?'':`<button class="btn ${d.is_following?'ghost':''}" id="pf-f">${d.is_following?'✓ Following':'＋ Follow'}</button>`}${d.room&&!(R&&R.id===d.room.id)?`<button class="btn bad" id="pf-w">${d.room.kind==='live'?'📹 Watch live':'🎙 Join party'}</button>`:''}${!d.me&&onStage?'<button class="btn gold" id="pf-g">🎁 Send gift</button>':''}</div>`;
+    <div class="col">${d.me?'':`<button class="btn ${d.is_following?'ghost':''}" id="pf-f">${d.is_following?'✓ Following':'＋ Follow'}</button>`}${d.room&&!(R&&R.id===d.room.id)?`<button class="btn bad" id="pf-w">${d.room.kind==='live'?'📹 Watch live':'🎙 Join party'}</button>`:''}${!d.me&&onStage?'<button class="btn gold" id="pf-g">🎁 Send gift</button>':''}${u.host==='host'?'<button class="btn ghost" id="pf-pk">⚔️ PK record</button>':''}</div>`;
+    const pk=$('#pf-pk',box);if(pk)pk.onclick=()=>openPKHistory(uid);
     $$('[data-f]',box).forEach(b=>b.onclick=()=>openFollows(uid,b.dataset.f));
     const f=$('#pf-f',box);if(f)f.onclick=()=>run(f,async()=>{const r=await api('/api/follow/'+uid,{follow:!d.is_following});hap('medium');lvSetFollow(uid,r.following);await draw()});
     const w=$('#pf-w',box);if(w)w.onclick=()=>watch(d.room.id);
@@ -417,6 +427,56 @@ let SWY=null;
 $('#live').addEventListener('touchstart',e=>{SWY=e.touches.length===1&&!e.target.closest('input,button,#lv-chat,#lv-host')?[e.touches[0].clientX,e.touches[0].clientY]:null},{passive:true});
 $('#live').addEventListener('touchend',e=>{if(!SWY)return;const dx=e.changedTouches[0].clientX-SWY[0],dy=e.changedTouches[0].clientY-SWY[1];SWY=null;if(Math.abs(dy)>80&&Math.abs(dy)>Math.abs(dx)*1.5)swipeLive(dy<0?1:-1)},{passive:true});
 $('#lv-host').onclick=()=>{const h=R&&R.seats[0];if(h)openProfile(h.u.id)};
+// ---- notifications ----
+let UNREAD=0;
+const nbText=()=>UNREAD>99?'99+':UNREAD||'';
+function setUnread(n){UNREAD=n;$$('.nb').forEach(e=>e.textContent=nbText())}
+async function loadUnread(){try{setUnread((await api('/api/notices/unread')).n)}catch(e){}}
+setInterval(()=>{if(S.me&&TOKEN&&!document.hidden&&!R?.visible)loadUnread()},30000);
+function noticeText(n){const a=n.actor?`<b>${esc(n.actor.name)}</b>`:'',d=n.data||{};
+  if(n.kind==='follow')return a+' followed you · ተከተለህ';
+  if(n.kind==='live')return a+(n.ref?' is live now · አሁን live ነው':' was live')+(d.room?` <span class="mut">“${esc(d.room)}”</span>`:'');
+  if(n.kind==='gift')return `${a} sent you ${esc(d.emoji||'🎁')} ×${fmt(d.qty)} <span class="gold">(🪙${fmt(d.coins)})</span>`;
+  return esc(d.text||'')}
+async function openNotices(){const o=modal('<h3>🔔 Notifications</h3><div class="empty">…</div>');
+  try{const d=await api('/api/notices');
+    o.firstChild.innerHTML='<h3>🔔 Notifications</h3>'+(d.items.length?d.items.map((n,i)=>`<button class="nt ${n.seen?'':'new'}" data-i="${i}">${n.actor?av(n.actor,'s'):'<span class="ic">🔔</span>'}<span class="sp tx">${noticeText(n)}<br><span class="mut">${ago(n.ts)}</span></span>${n.kind==='live'&&n.ref?'<span class="lv-tag">LIVE ›</span>':''}</button>`).join(''):'<div class="empty">No notifications yet</div>');
+    $$('.nt',o).forEach(b=>b.onclick=()=>{const n=d.items[+b.dataset.i];if(n.kind==='live'&&n.ref)watch(n.ref);else if(n.actor)openProfile(n.actor.id)});
+    if(d.items.length){await api('/api/notices/read',{upto:Math.max(...d.items.map(n=>n.id))});loadUnread()}
+  }catch(e){o.firstChild.innerHTML=`<h3>🔔 Notifications</h3><div class="empty">${esc(e.message)}</div>`}}
+// ---- who is watching ----
+async function openViewers(){const r=R;if(!r)return;const o=modal('<h3>👥 Viewers</h3><div class="empty">…</div>');
+  try{const d=await api('/api/rooms/'+r.id+'/viewers');
+    o.firstChild.innerHTML=`<h3>👥 In this room · ${fmt(d.total)}</h3>`+(d.users.length?d.users.map(u=>userRow(u,u.id===r.host?'<span class="hbadge">HOST</span>':'')).join(''):'<div class="empty">Nobody yet</div>')
+  }catch(e){o.firstChild.innerHTML=`<h3>👥 Viewers</h3><div class="empty">${esc(e.message)}</div>`}}
+// ---- live likes ----
+const HEARTS=['❤️','💖','💜','🧡','💗'];
+function heart(){if(document.hidden||$$('.heart').length>=24)return;const b=$('#lv-like').getBoundingClientRect(),e=fxNode('heart',HEARTS[Math.random()*HEARTS.length|0],document.body);
+  e.style.left=b.left+8+'px';e.style.top=b.top-6+'px';const x=Math.random()*70-55,h=CALM?60:180+Math.random()*160;
+  fxAnim(e,[{transform:'translate(0,0) scale(.5)',opacity:1},{transform:`translate(${x/2}px,${-h/2}px) scale(1.2)`,opacity:.95},{transform:`translate(${x}px,${-h}px) scale(.9)`,opacity:0}],{duration:1500+Math.random()*700}).onfinish=()=>e.remove()}
+function likeShow(r,n){r.shown=Math.max(r.shown||0,n);if(R===r)$('#lv-likes').textContent=r.shown>=10000?(r.shown/1000).toFixed(1)+'K':fmt(r.shown)}
+function likeSync(r,total){if(r.likes!==undefined){const diff=Math.max(0,total-r.likes),mine=Math.min(diff,r.own||0);r.own=(r.own||0)-mine;
+    for(let i=0;i<Math.min(8,diff-mine);i++)setTimeout(()=>{if(R===r&&r.visible)heart()},i*220)}
+  r.likes=total;likeShow(r,total+(r.pend||0))}
+function tapLike(){const r=R;if(!r||r.kind!=='live')return;heart();hap();if((r.pend||0)>=60)return;r.pend=(r.pend||0)+1;likeShow(r,(r.shown||0)+1);if(!r.lt)r.lt=setTimeout(()=>flushLikes(r),1200)}
+async function flushLikes(r){r.lt=null;if(R!==r||!r.pend)return;const n=Math.min(15,r.pend);r.pend-=n;r.own=(r.own||0)+n;
+  try{await api('/api/rooms/'+r.id+'/like',{n})}catch(e){r.own=Math.max(0,r.own-n);if(e.code===429)r.pend+=n}
+  if(R===r&&r.pend&&!r.lt)r.lt=setTimeout(()=>flushLikes(r),1200)}
+let LASTTAP=0;
+$('#lv-video').addEventListener('click',()=>{const t=Date.now();if(t-LASTTAP<350)tapLike();LASTTAP=t});
+// ---- PK history ----
+async function openPKHistory(uid,scope){const o=modal('<h3>⚔️ PK history</h3><div class="empty">…</div>');
+  const mineId=uid||S.me.id;let cur=scope||'user';
+  const draw=async()=>{const want=cur;try{const d=await api('/api/pk/history?'+(want==='all'?'scope=all':'uid='+mineId));if(want!==cur)return;
+    const who=u=>`<div class="who" ${u.id?`onclick="openProfile(${u.id})"`:''}>${av(u,'s')}<span class="ell">${esc(u.name)}</span></div>`;
+    const res=x=>{if(want==='all')return x.winner?'':'<div class="mut">DRAW</div>';return !x.winner?'<div class="mut">DRAW</div>':x.winner===mineId?'<div class="win"><b>WIN</b></div>':'<div class="lose"><b>LOSS</b></div>'};
+    const st=d.stats;
+    o.firstChild.innerHTML=`<h3>⚔️ PK history</h3><div class="chips" style="margin-bottom:10px"><div class="chip ${want==='user'?'on':''}" data-s="user">${mineId===S.me.id?'My matches':'This host'}</div><div class="chip ${want==='all'?'on':''}" data-s="all">All matches</div></div>
+    ${st?`<div class="pkh-s"><div><b>${fmt(st.total)}</b><span class="mut">Matches</span></div><div><b class="win">${fmt(st.wins)}</b><span class="mut">Wins</span></div><div><b class="lose">${fmt(st.losses)}</b><span class="mut">Losses</span></div><div><b>${fmt(st.draws)}</b><span class="mut">Draws</span></div></div>`:''}
+    ${d.items.length?d.items.map(x=>`<div class="card row pkh">${who(x.host1)}<div style="text-align:center;flex:none"><b class="gold">${x.winner&&x.winner===x.host1.id?'👑 ':''}${fmt(x.s1)} : ${fmt(x.s2)}${x.winner&&x.winner===x.host2.id?' 👑':''}</b>${res(x)}<div class="mut">${ago(x.ts)}</div></div>${who(x.host2)}</div>`).join(''):'<div class="empty">No finished PK matches yet</div>'}`;
+    $$('[data-s]',o).forEach(c=>c.onclick=()=>{cur=c.dataset.s;draw()})
+  }catch(e){o.firstChild.innerHTML=`<h3>⚔️ PK history</h3><div class="empty">${esc(e.message)}</div>`}};
+  draw()}
 let RT='voice';
 function roomCard(r){const lv=r.kind==='live';return `<div class="card room-card" onclick="enterRoom('${r.id}')">${av(r.host,'')}<div class="sp"><div class="ell" style="font-weight:600">${lv?'<span class="lv-tag">LIVE</span> ':''}${esc(r.name)}</div><div class="mut ell">${esc(r.topic||('Host: '+(r.host?r.host.name:'-')))}</div></div><div style="text-align:right"><div><span class="live"></span><b>${r.online}</b></div><div class="mut">${lv?'📹':' '+r.seated+'/21'}</div></div></div>`}
 function renderRooms(){$('#p-rooms').innerHTML=topbar()+`<div class="chips" style="margin-bottom:10px"><div class="chip ${RT==='voice'?'on':''}" onclick="RT='voice';renderRooms()">🎧 Voice</div><div class="chip ${RT==='live'?'on':''}" onclick="RT='live';renderRooms()">📹 Live</div></div><div class="row" style="margin-bottom:10px"><h2 class="sp" style="margin:0">${RT==='live'?'📹 Live streams':'🎧 Voice rooms'}</h2><button class="btn sm ${RT==='live'?'bad':''}" onclick="newRoom(RT)">${RT==='live'?'📹 Go Live':'＋ Open room'}</button></div><div id="rl"><div class="empty">…</div></div>${footbar()}`;loadRoomList()}
@@ -468,7 +528,7 @@ async function enterRoom(rid){
   if(R)await exitRoom(true);
   try{const d=await api('/api/rooms/'+rid+'/join',{});
    R={kind:d.room.kind||'voice',id:rid,name:d.room.name,host:d.room.host_id,v:-1,mid:0,seats:{},online:0,init:true,alive:true,selfMute:false,visible:true,t:null,n:0};
-   $('#r-name').textContent=d.room.name;$('#r-chat').innerHTML='';$('#lv-chat').innerHTML='';$('#lv-host').innerHTML='';$('#lv-mic').style.display='none';$('#lv-flip').style.display='none';$('#lv-pk').style.display='none';$('#r-seats').innerHTML='';$('#r-host').innerHTML='';
+   $('#r-name').textContent=d.room.name;$('#r-chat').innerHTML='';$('#lv-chat').innerHTML='';$('#lv-host').innerHTML='';$('#lv-mic').style.display='none';$('#lv-flip').style.display='none';$('#lv-pk').style.display='none';$('#lv-likes').textContent='0';$('#r-seats').innerHTML='';$('#r-host').innerHTML='';
    showRoom();$('#lv-video').innerHTML='';LVF={host:0,on:false};$('#lv-follow').style.display='none';
    $('#lv-hint').style.display=R.kind==='live'&&R.host!==S.me.id?'block':'none';setTimeout(()=>$('#lv-hint').style.display='none',3500);
    V.joining=V.join(rid,R.kind,R.host===S.me.id).catch(e=>{V.set('❌','#ff5c7a');toast('Audio: '+e.message)});poll()
@@ -484,6 +544,7 @@ async function poll(){
   try{const d=await api('/api/rooms/'+r.id+'/state?v='+r.v+'&mid='+r.mid);if(R!==r)return;
    r.online=d.online;$('#r-on').textContent=d.online;$('#mini-o').textContent=d.online;$('#lv-on').textContent=d.online;
    if(d.seats){r.v=d.v;r.seats={};d.seats.forEach(s=>r.seats[s.i]=s);r.kind==='live'?renderLiveHost():renderSeats()}
+   if(r.kind==='live')likeSync(r,d.likes||0);
    (d.msgs||[]).forEach(m=>{r.mid=Math.max(r.mid,m.id);addMsg(m,!r.init)});r.init=false;
    if(r.kind==='voice'){const mine=Object.values(r.seats).find(s=>s.u.id===S.me.id);V.sync(!!mine,mine&&mine.m);updateMicBtn(!!mine,mine&&mine.m)}r.n=0
   }catch(e){if(R!==r)return;if(e.message==='ROOM_GONE'){toast('Room closed');exitRoom(true);return}if(e.code===403){exitRoom(true);return}r.n++}
@@ -552,7 +613,7 @@ function flyGift(g,from){if(document.hidden)return;giftBanner(g,from);
 function flyLucky(g,from){if(document.hidden)return;const e=fxNode('fx-lucky',`🍀<b>LUCKY ×${g.lucky}</b><span>${esc(from)} · +${fmt(g.refund)} 🪙</span>`);
   fxAnim(e,[{transform:'translate(-50%,-50%) scale(.2)',opacity:0},{transform:'translate(-50%,-50%) scale(1.15)',opacity:1,offset:.2},{transform:'translate(-50%,-50%) scale(1)',opacity:1,offset:.8},{transform:'translate(-50%,-90%) scale(.9)',opacity:0}],{duration:2800}).onfinish=()=>e.remove();
   particles(['🍀','🪙','✨'],Math.min(36,10+g.lucky),'burst');hap('heavy')}
-function clearFx(){FXGEN++;BIGQ=[];BIGBUSY=false;COMBO.forEach(c=>clearTimeout(c.t));COMBO.clear();$('#gfx-lane').innerHTML='';$$('#gfx>:not(#gfx-lane)').forEach(e=>e.remove())}
+function clearFx(){FXGEN++;BIGQ=[];BIGBUSY=false;COMBO.forEach(c=>clearTimeout(c.t));COMBO.clear();$('#gfx-lane').innerHTML='';$$('#gfx>:not(#gfx-lane),.heart').forEach(e=>e.remove())}
 function renderLiveHost(){const h=R&&R.seats[0];if(h)lvLoadFollow(h.u.id);$('#lv-host').innerHTML=h?`${av(h.u,'s')}<div style="line-height:1.2"><b class="ell" style="display:block;max-width:110px">${esc(h.u.name)}</b><span class="mut ell" style="color:#ddd;display:block;max-width:110px">${esc(R.name)}</span></div>`:'…'}
 async function flipCam(){try{const c=await AgoraRTC.getCameras();if(c.length<2||!V.vtrack)return;V.camI=((V.camI||0)+1)%c.length;await V.vtrack.setDevice(c[V.camI].deviceId)}catch(e){toast('Camera switch failed')}}
 async function liveMic(){if(!V.track||!R)return;R.selfMute=!R.selfMute;await V.track.setEnabled(!R.selfMute);$('#lv-mic').textContent=R.selfMute?'🔇':'🎤'}
@@ -606,7 +667,7 @@ async function openLucky(){const m=modal('<div class="empty">…</div>');
   <div class="mut" style="margin-top:10px">70% returns to players · 30% platform. 18+ only.</div>`}catch(e){m.close();toast(e.message)}}
 async function openPKArena(){const m=modal('<div class="empty">…</div>');
  try{const d=await api('/api/pk/active');const myHost=S.me.host==='host';
-  m.firstChild.innerHTML=`<h3>⚔️ PK Arena</h3>${myHost?`<button class="btn bad" style="width:100%;margin-bottom:12px" onclick="pkCreate()">＋ Create PK Match</button>`:'<div class="mut" style="margin-bottom:10px;text-align:center">Become a host to create PK matches</div>'}
+  m.firstChild.innerHTML=`<h3>⚔️ PK Arena</h3>${myHost?`<button class="btn bad" style="width:100%;margin-bottom:12px" onclick="pkCreate()">＋ Create PK Match</button>`:'<div class="mut" style="margin-bottom:10px;text-align:center">Become a host to create PK matches</div>'}<button class="btn ghost" style="width:100%;margin-bottom:12px" onclick="openPKHistory(0,'all')">🕘 PK history</button>
   ${d.pks.length?d.pks.map(pk=>`<div class="card" style="border-color:rgba(255,45,85,.3)"><div class="row"><div class="sp" style="text-align:center">${av(pk.host1,'s')}<b>${esc(pk.host1?pk.host1.name:'?')}</b><div class="gold">${fmt(pk.host1_gifts)}</div></div><b class="gold">VS</b><div class="sp" style="text-align:center">${pk.host2?av(pk.host2,'s')+'<b>'+esc(pk.host2.name)+'</b><div class="gold">'+fmt(pk.host2_gifts)+'</div>':'<div class="mut">Waiting…</div>'}</div></div>
    <div class="row" style="margin-top:8px"><button class="btn sm sp" onclick="closeModal();enterPK(${pk.id})">👁 Watch</button>${myHost&&!pk.host2?`<button class="btn sm bad sp" onclick="pkJoin(${pk.id})">⚔️ Join as Host 2</button>`:''}</div></div>`).join(''):'<div class="empty">No active PK matches</div>'}`}catch(e){m.close();toast(e.message)}}
 async function pkCreate(){try{const d=await api('/api/pk/create',{});toast('⚔️ PK created');closeModal();enterPK(d.pk_id)}catch(e){toast(e.message)}}
@@ -790,6 +851,8 @@ async function renderMe(){
   ${m.host==='none'?`<button class="btn ghost" onclick="applyHost()">🎤 Become a Host (50%)</button>`:m.host==='pending'?`<button class="btn ghost" disabled>⏳ Host pending</button>`:`<button class="btn ghost" disabled>✅ Host</button>`}
   ${m.host==='host'&&!m.ag?`<button class="btn ghost" onclick="applyAgent()">🤝 Become an Agent</button>`:''}
   ${m.ag?`<button class="btn" onclick="openAgent()">📊 Agent Dashboard</button>`:''}
+  <button class="btn ghost" onclick="openNotices()">🔔 Notifications<i class="nb">${nbText()}</i></button>
+  <button class="btn ghost" onclick="openPKHistory()">⚔️ My PK history</button>
   <button class="btn ghost" onclick="openInvite()">🔗 Invite · ${fmt(m.inv||0)}</button>
   <button class="btn gold" onclick="openShop()">✨ VIP & Frames${m.vip?' · '+vipLeft(m)+'d':''}</button>
   <button class="btn ghost" onclick="editProfile()">✏️ Edit profile</button>
@@ -798,7 +861,7 @@ async function renderMe(){
   <button class="btn ghost" onclick="copyTxt('${esc(m.tg_id)}')">🆔 My ID: ${esc(m.tg_id)}</button>
   ${tgInit()?'':`<button class="btn ghost" onclick="confirm('${String(m.tg_id).startsWith('g_')?'Leave guest mode?':'Log out?'}')&&logout()">🚪 Log out</button>`}
   ${m.is_admin?`<button class="btn gold" onclick="openAdmin()">🛡 Admin</button>`:''}
-  </div>${footbar()}`;loadMyStats()}
+  </div>${footbar()}`;loadMyStats();loadUnread()}
 function editProfile(){const m=S.me;const o=modal(`<h3>✏️ Edit profile</h3><div class="col"><input id="e-p" type="file" accept="image/*"><input id="e-n" value="${esc(m.name)}" maxlength="30"><input id="e-b" value="${esc(m.bio)}" maxlength="160"><input id="e-t" value="${esc(m.phone)}" maxlength="10" placeholder="09xxxxxxxx"><button class="btn" id="e-go">Save</button></div>`);
   $('#e-go',o).onclick=e=>run(e.target,async()=>{const f=$('#e-p',o).files[0];if(f){const fd=new FormData();fd.append('file',await shrink(f,320,.85),'p.jpg');setMe((await api('/api/profile/photo',fd)).me)}
    setMe((await api('/api/profile',{name:$('#e-n',o).value,bio:$('#e-b',o).value,phone:$('#e-t',o).value})).me);o.close();renderMe()})}

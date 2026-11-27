@@ -34,6 +34,11 @@
 - Activity reward እና income exchange ስሌቶች `rules.py` ውስጥ አሉ፤ **ገና አልተገናኙም።**
 - ሙከራ፦ `python -m unittest discover -s tests`። የሒሳብ ሙከራ ብቻ ነው፤ database እና API **አልተሞከሩም።**
 
+## ደረጃ A፣ ዙር 1 (2026-11-28፣ `phase4`)
+- በ app ውስጥ notifications (follow፣ live፣ ስጦታ፣ የስርዓት መልዕክት)፣ የተመልካች ዝርዝር፣ live like ❤️፣ PK history ተጽፈዋል (`backend/social.py`፤ አዲስ table፦ `social_notice`፣ `social_room_like`)።
+- ስክሪኖቹ በአስመሳይ server ተሞክረዋል። Backend ከ database ጋር **አልተሞከረም።**
+- ዙር 2 የቀረ፦ chat block፣ room admins፣ private room፣ account መሰረዝ፣ Moderator።
+
 ## 4. ቅደም ተከተል
 - **A. App ማሟላት፦** notifications፣ ተመልካች ዝርዝር፣ like፣ room moderation እና privacy፣ PK history፣ account መሰረዝ፣ Moderator
 - **B. Host activity፦** server የሚቆጥረው ጊዜ፣ ሽልማት፣ የ7 ቀን welcome፣ የተግባር ገጽ። ሐሰተኛ እንቅስቃሴን ሙሉ በሙሉ ለመከላከል በ D ተጨማሪ ማረጋገጫ ያስፈልጋል።

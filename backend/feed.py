@@ -81,15 +81,17 @@ def init_feed(app, db, d):
         if uid == g.user.id: return err('You cannot follow yourself')
         if not visible_user(uid): return err('User not found', 404)
         if limited('follow', 0.5): return err('Slow down', 429)
+        me = g.user.id; added = False
         want = bool(body().get('follow'))
         row = db.session.get(Follow, (g.user.id, uid))
         try:
             if want and not row:
                 if Follow.query.filter_by(follower_id=g.user.id).count() >= MAX_FOLLOWING: return err('You follow too many people')
-                db.session.add(Follow(follower_id=g.user.id, target_id=uid))
+                db.session.add(Follow(follower_id=g.user.id, target_id=uid)); added = True
             elif not want and row:
                 db.session.delete(row)
             db.session.commit()
+            if added and d.get('on_follow'): d['on_follow'](me, uid)
         except IntegrityError:
             db.session.rollback()
         return jsonify(following=want, followers=counts(uid)[0])
