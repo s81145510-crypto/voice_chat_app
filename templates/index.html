@@ -105,11 +105,6 @@ nav button i{font-style:normal;font-size:21px;filter:grayscale(.7)}nav button.on
 .bar input{border-radius:22px}.rb{width:44px;height:44px;border-radius:50%;background:var(--card);font-size:20px;flex:none;border:1px solid var(--line)}
 .rb.mic{background:linear-gradient(135deg,var(--ok),#10b981);display:none}.rb.mic.on{display:block}.rb.mic.off{background:linear-gradient(135deg,#ff5c7a,#d6336c)}
 .vs{font-size:11px;padding:3px 9px;border-radius:10px;background:#0006}
-.fly{position:fixed;left:50%;top:42%;z-index:90;font-size:90px;pointer-events:none;animation:fly 2.6s ease-out forwards;text-align:center;filter:drop-shadow(0 0 24px gold)}
-.fly small{display:block;font-size:14px;color:#fff;background:#000a;border-radius:12px;padding:3px 10px;margin-top:4px}
-@keyframes fly{0%{transform:translate(-50%,60px) scale(.3);opacity:0}20%{transform:translate(-50%,0) scale(1.15);opacity:1}75%{transform:translate(-50%,-20px) scale(1);opacity:1}100%{transform:translate(-50%,-120px) scale(.9);opacity:0}}
-.fly.big{font-size:150px;animation-duration:3.8s}
-.fly.luckyfly{filter:drop-shadow(0 0 30px #2ee59d)}
 .gg{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}.gi{text-align:center;padding:9px 2px;border-radius:12px;background:var(--card);border:1px solid var(--line);font-size:11px}.gi b{display:block;font-size:28px}.gi.on{border-color:var(--gold);background:rgba(255,215,0,.12)}
 .tier-rare{box-shadow:inset 0 0 0 1px #4cc9f0}.tier-epic{box-shadow:inset 0 0 0 1px #c77dff}.tier-luxury{box-shadow:inset 0 0 0 1px #ffd700}.tier-legendary{box-shadow:inset 0 0 0 1px #ff5c7a}.tier-mythic{box-shadow:inset 0 0 0 1px #2ee59d,0 0 10px #2ee59d55}
 .tier-lucky{box-shadow:inset 0 0 0 1px #2ee59d,0 0 12px #2ee59d66;background:linear-gradient(135deg,rgba(46,229,157,.12),rgba(255,215,0,.08))}
@@ -123,26 +118,52 @@ nav button i{font-style:normal;font-size:21px;filter:grayscale(.7)}nav button.on
 .ratebar{display:flex;align-items:center;gap:8px;font-size:11px;color:var(--mut);background:rgba(38,161,123,.1);border:1px solid rgba(38,161,123,.3);border-radius:12px;padding:7px 10px;margin-bottom:10px}
 .addr{display:flex;gap:8px;align-items:center;background:rgba(38,161,123,.12);border:1px solid rgba(38,161,123,.35);border-radius:12px;padding:8px 10px;margin-top:6px}
 .addr b{flex:1;min-width:0;word-break:break-all;font-size:12px;color:#3ddc97}
-#pk{position:fixed;inset:0;z-index:40;background:#000;display:none;flex-direction:column}
+#pk{position:fixed;inset:0;z-index:40;display:none;flex-direction:column;background:radial-gradient(120% 60% at 50% 0%,#3a1670,#0a0118 70%)}
 #pk.on{display:flex}
-.pk-top{position:absolute;top:calc(var(--st) + 8px);left:8px;right:8px;z-index:3;display:flex;align-items:center;gap:6px}
-.pk-vids{position:absolute;inset:0;display:flex}
-.pk-pane{flex:1;position:relative;overflow:hidden;background:radial-gradient(#1b0b33,#000)}
-.pk-pane video{width:100%;height:100%;object-fit:cover!important}
-.pk-pane .tag{position:absolute;top:calc(var(--st) + 44px);left:8px;display:flex;align-items:center;gap:6px;background:#0008;border-radius:20px;padding:3px 10px 3px 3px;z-index:2}
-.pk-pane.right .tag{left:auto;right:8px}
-.pk-pane .score{position:absolute;bottom:120px;left:0;right:0;text-align:center;font-size:26px;font-weight:800;z-index:2;text-shadow:0 2px 8px #000}
-.pk-pane.left .score{color:#7db4ff}.pk-pane.right .score{color:#ff8a8a}
-.pk-mid{position:absolute;left:50%;top:calc(var(--st) + 44px);transform:translateX(-50%);z-index:3;background:linear-gradient(135deg,#ffd700,#ff9f1c);color:#2a1a00;font-weight:900;border-radius:12px;padding:4px 12px;font-size:14px;box-shadow:0 0 20px #ffd70088}
-.pk-bar{position:absolute;top:calc(var(--st) + 76px);left:10px;right:10px;height:10px;border-radius:6px;overflow:hidden;display:flex;z-index:3;background:#222}
-.pk-bar .l{background:linear-gradient(90deg,#2563eb,#60a5fa);height:100%;transition:width .4s}
-.pk-bar .r{background:linear-gradient(90deg,#f87171,#dc2626);height:100%;flex:1}
-.pk-timer{position:absolute;top:calc(var(--st) + 92px);left:50%;transform:translateX(-50%);z-index:3;background:#000a;border-radius:12px;padding:2px 12px;font-weight:800;font-size:15px;color:var(--gold)}
-.pk-bot{position:absolute;left:0;right:0;bottom:0;padding:20px 10px calc(10px + var(--sb));background:linear-gradient(transparent,#000d);z-index:3}
-.pk-chat{max-height:22vh;overflow-y:auto;display:flex;flex-direction:column;gap:4px;margin-bottom:8px}
-.pk-win{position:absolute;inset:0;z-index:5;display:none;align-items:center;justify-content:center;flex-direction:column;gap:12px;background:#000c}
-.pk-win.on{display:flex}
-.pk-win b{font-size:30px;color:var(--gold)}
+.pk-top{display:flex;align-items:center;gap:10px;padding:calc(var(--st) + 10px) 12px 8px}
+.pk-x{background:#0007;border-radius:50%;width:36px;height:36px;font-size:18px;color:#fff}
+.pk-timer{background:#000a;border:1px solid #ffd70066;border-radius:14px;padding:3px 14px;font-weight:900;color:var(--gold);font-variant-numeric:tabular-nums}
+.pk-timer.hurry{color:#fff;background:#dc2626;animation:pkp 1s infinite}@keyframes pkp{50%{transform:scale(1.12)}}
+.pk-score{position:relative;padding:0 10px 6px}
+.pk-bar{position:relative;height:22px;border-radius:12px;display:flex;background:#222}
+.pk-bar .l{background:linear-gradient(90deg,#1d4ed8,#38bdf8);height:100%;border-radius:12px 0 0 12px;transition:width .6s cubic-bezier(.2,.9,.3,1.3)}
+.pk-bar .r{background:linear-gradient(90deg,#fb7185,#be123c);height:100%;flex:1;border-radius:0 12px 12px 0}
+.pk-bar i{position:absolute;top:50%;transform:translate(-50%,-50%);font-style:normal;font-size:24px;filter:drop-shadow(0 0 8px #ffd700);transition:left .6s cubic-bezier(.2,.9,.3,1.3)}
+.pk-n{position:absolute;top:2px;font-size:13px;text-shadow:0 1px 4px #000;pointer-events:none}.pk-n.left{left:20px}.pk-n.right{right:20px}
+.pk-vids{position:relative;display:flex;gap:2px;height:44vh;min-height:220px;flex:none}
+.pk-pane{flex:1;position:relative;overflow:hidden;background:radial-gradient(#2a1250,#05010d)}
+.pk-v{position:absolute;inset:0}.pk-pane video{width:100%;height:100%;object-fit:cover!important}
+.pk-pane .tag{position:absolute;bottom:8px;left:6px;max-width:92%;display:flex;align-items:center;gap:6px;background:#0009;border-radius:20px;padding:3px 10px 3px 3px;z-index:2;font-size:13px;white-space:nowrap;overflow:hidden;cursor:pointer}
+.pk-pane.right .tag{left:auto;right:6px}
+.pk-lead{position:absolute;top:8px;left:8px;font-size:28px;z-index:2;display:none;filter:drop-shadow(0 0 8px #ffd700)}.pk-pane.right .pk-lead{left:auto;right:8px}
+.pk-mid{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:3;width:46px;height:46px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#ffd700,#ff7a1c);color:#2a1a00;font-weight:900;font-style:italic;box-shadow:0 0 22px #ffb000}
+.pk-sup{display:flex;justify-content:space-between;padding:8px 10px;min-height:52px}
+.pk-sup>div{display:flex;gap:7px}.pk-sup>div:last-child{flex-direction:row-reverse}
+.pk-fan{position:relative;border-radius:50%;border:2px solid #cbd5e1;cursor:pointer;display:flex}.pk-fan:first-child{border-color:#ffd700}
+.pk-fan small{position:absolute;bottom:-5px;left:50%;transform:translateX(-50%);background:#000c;border-radius:8px;padding:0 5px;font-size:9px;white-space:nowrap;color:var(--gold)}
+.pk-bot{flex:1;min-height:0;display:flex;flex-direction:column;justify-content:flex-end;padding:4px 10px calc(10px + var(--sb))}
+.pk-chat{flex:1;min-height:0;overflow-y:auto;display:flex;flex-direction:column;gap:4px;margin-bottom:8px}
+.pk-gbtn{flex:1;padding:13px 6px;border-radius:26px;font-weight:800;color:#fff;font-size:13px}
+.pk-gbtn.left{background:linear-gradient(135deg,#1d4ed8,#38bdf8)}.pk-gbtn.right{background:linear-gradient(135deg,#fb7185,#be123c)}
+.pk-pop{position:absolute;top:42%;left:50%;transform:translateX(-50%);z-index:4;font-size:26px;font-weight:900;color:var(--gold);text-shadow:0 2px 10px #000;pointer-events:none;white-space:nowrap}
+.pk-win{position:absolute;inset:0;z-index:5;display:none;align-items:center;justify-content:center;flex-direction:column;gap:12px;background:#05010de8;text-align:center;padding:20px}
+.pk-win.on{display:flex;animation:fade .4s}
+.pk-win b{font-size:28px;color:var(--gold)}.pk-crown{font-size:64px;animation:pkp 1.4s infinite}.pk-final{font-size:20px;font-weight:800}
+#gfx{position:fixed;inset:0;z-index:45;pointer-events:none;overflow:hidden}
+#gfx-lane{position:absolute;left:8px;top:30%;display:flex;flex-direction:column;gap:8px}
+.fx-ban{display:flex;align-items:center;gap:8px;border-radius:30px;padding:4px 14px 4px 4px;background:linear-gradient(90deg,#7c3aedee,#7c3aed22);min-width:210px;max-width:86vw}
+.fx-ban.tier-rare{background:linear-gradient(90deg,#2563ebee,#2563eb22)}.fx-ban.tier-epic{background:linear-gradient(90deg,#db2777ee,#db277722)}
+.fx-ban.tier-luxury,.fx-ban.tier-legendary,.fx-ban.tier-mythic{background:linear-gradient(90deg,#f59e0bee,#f59e0b22)}
+.fx-av{width:34px;height:34px;border-radius:50%;background:#0006;display:flex;align-items:center;justify-content:center;font-weight:800;flex:none}
+.fx-tx{display:flex;flex-direction:column;line-height:1.15;font-size:12px;max-width:110px;min-width:0}.fx-em{font-size:30px}
+.fx-x{font-size:24px;font-weight:900;font-style:italic;color:#ffe566;text-shadow:0 2px 6px #000}
+.fx-p{position:absolute;will-change:transform,opacity;line-height:1}
+.fx-stage{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:radial-gradient(circle,#0000 0%,#000a 80%)}
+.fx-rays{position:absolute;width:160vmax;height:160vmax;border-radius:50%;background:repeating-conic-gradient(#ffd70022 0 10deg,#0000 10deg 22deg);-webkit-mask:radial-gradient(#000 0,#0000 55%);mask:radial-gradient(#000 0,#0000 55%);animation:rot 9s linear infinite}
+.fx-stage.tier-mythic .fx-rays{background:repeating-conic-gradient(#c084fc44 0 10deg,#0000 10deg 22deg)}
+.fx-hero{position:relative;font-size:min(46vw,190px);line-height:1;filter:drop-shadow(0 0 36px #ffd700aa)}
+.fx-cap{position:absolute;bottom:22%;left:16px;right:16px;text-align:center;font-size:18px;text-shadow:0 2px 8px #000}.fx-cap span{font-size:26px;font-weight:900;color:var(--gold)}
+.fx-lucky{position:absolute;left:50%;top:42%;display:flex;flex-direction:column;align-items:center;font-size:90px;filter:drop-shadow(0 0 26px #2ee59d);white-space:nowrap;text-shadow:0 2px 8px #000,0 0 3px #000}.fx-lucky b{font-size:30px;color:#2ee59d}.fx-lucky span{font-size:15px}
 #auth{position:fixed;inset:0;z-index:60;display:none;overflow-y:auto;padding:calc(var(--st) + 28px) 22px calc(24px + var(--sb));background:radial-gradient(120% 70% at 50% 0%,#5b2a9e 0%,#2a0f55 38%,#0a0118 75%)}
 #auth.on{display:block;animation:fade .3s}
 .au-box{max-width:380px;margin:0 auto;text-align:center}
@@ -155,8 +176,11 @@ nav button i{font-style:normal;font-size:21px;filter:grayscale(.7)}nav button.on
 .au-field:focus-within{border-color:#c084fc}
 #auth .au-field input{flex:1;min-width:0;background:none;border:0;outline:0;padding:15px 0;border-radius:0;font-size:16px}
 .au-field button{background:none;padding:6px;font-size:18px}
-#au-go{width:100%;padding:15px;border-radius:30px;font-weight:800;font-size:16px;color:#fff;background:linear-gradient(135deg,#ff4d8d,#9b5cff);box-shadow:0 8px 26px #ff4d8d55;margin-top:4px}
-#au-go:disabled{opacity:.6}
+.au-step{display:flex;gap:10px;text-align:left;margin:10px 0;align-items:flex-start;font-size:14px}.au-step>b{flex:none;width:26px;height:26px;border-radius:50%;background:linear-gradient(135deg,#ff4d8d,#9b5cff);display:flex;align-items:center;justify-content:center}
+.au-tg{display:block;padding:14px;border-radius:30px;font-weight:800;color:#fff;text-decoration:none;background:linear-gradient(135deg,#2aabee,#1c7fd1)}
+#au-verr{color:#ff8fa3;min-height:20px;margin:8px 0;font-size:14px}
+.au-main,#au-go{width:100%;padding:15px;border-radius:30px;font-weight:800;font-size:16px;color:#fff;background:linear-gradient(135deg,#ff4d8d,#9b5cff);box-shadow:0 8px 26px #ff4d8d55;margin-top:4px}
+#au-go:disabled,.au-main:disabled{opacity:.6}
 #au-err{color:#ff8fa3;min-height:20px;margin:8px 0;font-size:14px}
 .au-link{background:none;color:#d8c8ff;text-decoration:underline;padding:10px;font-size:14px}
 .hm-top{display:flex;align-items:center;gap:8px;margin-bottom:10px}
@@ -195,7 +219,18 @@ body:has(.mini.on) .golive{bottom:calc(136px + var(--sb))}
     <button id="au-go" type="submit">Log in · ግባ</button>
   </form>
   <button type="button" class="au-link" id="au-forgot" onclick="toast('Forgot password? Contact support: '+SUPPORT_NAME,5000)">Forgot password?</button><br>
-  <button type="button" class="au-link" onclick="authGuest()">Continue as Guest</button>
+  <div id="au-verify" style="display:none">
+    <h3 style="margin:18px 0 6px">📲 ስልክህን አረጋግጥ<br><span class="mut">Verify your number</span></h3>
+    <div class="au-step"><b>1</b><span>ቁልፉን ተጫንና Telegram ውስጥ <b>START</b> ንካ<br><span class="mut">Open Telegram and press START</span></span></div>
+    <a id="au-tg" class="au-tg" target="_blank" rel="noopener">✈️ Open Telegram</a>
+    <div class="au-step"><b>2</b><span><b>ስልክ ቁጥሬን አጋራ</b> ተጫን። ኮድ ይደርስሃል<br><span class="mut">Share your number, you get a code</span></span></div>
+    <div class="au-step"><b>3</b><span>ኮዱን እዚህ አስገባ<br><span class="mut">Enter the 6-digit code for <b id="au-vphone"></b></span></span></div>
+    <div class="au-field"><span>🔢</span><input id="au-otp" inputmode="numeric" autocomplete="one-time-code" placeholder="000000" maxlength="6"></div>
+    <div id="au-verr" role="alert"></div>
+    <button type="button" class="au-main" id="au-vgo" onclick="authVerify()">Confirm · አረጋግጥ</button>
+    <button type="button" class="au-link" onclick="authCancel()">← Back</button>
+    <div class="mut" style="margin-top:6px">Telegram የለህም? Support-ን አናግር፦ <span id="au-sup"></span></div>
+  </div>
 </div></div>
 <div class="splash" id="splash"><div class="logo" style="font-size:28px">🎙 Twenty One Party</div><div class="spin"></div><div class="mut" id="splash-t">Loading…</div></div>
 <div class="page" id="p-home"></div><div class="page" id="p-rooms"></div><div class="page" id="p-games"></div>
@@ -215,16 +250,18 @@ body:has(.mini.on) .golive{bottom:calc(136px + var(--sb))}
   <div class="lv-top"><div class="row sp" id="lv-host" style="background:#0007;border-radius:24px;padding:4px 12px 4px 4px;flex:0 1 auto"></div><button id="lv-follow" style="display:none" onclick="lvFollow()">＋ Follow</button><span class="lv-tag">LIVE</span><span class="vs">👁 <span id="lv-on">0</span></span><span class="vs" id="lv-vs">⏳</span><span class="sp"></span><button class="rb" id="lv-pk" style="width:36px;height:36px;font-size:15px;display:none" onclick="startPKFromLive()">⚔️</button><button class="rb" style="width:36px;height:36px;font-size:15px" onclick="exitRoom()">✕</button></div>
   <div class="lv-bot"><div id="lv-chat"></div><div class="row"><input id="lv-in" placeholder="Message…" maxlength="200" style="background:#0007" onkeydown="if(event.key==='Enter')sendChat()"><button class="rb" id="lv-flip" style="display:none" onclick="flipCam()">🔄</button><button class="rb" id="lv-mic" style="display:none" onclick="liveMic()">🎤</button><button class="rb" onclick="openGift()">🎁</button><button class="rb" style="background:linear-gradient(135deg,var(--pri),var(--pri2))" onclick="sendChat()">➤</button></div></div>
 </div>
+<div id="gfx" aria-hidden="true"><div id="gfx-lane"></div></div>
 <div id="pk">
-  <div class="pk-vids"><div class="pk-pane left" id="pk-v1"><div class="tag" id="pk-tag1"></div><div class="score" id="pk-s1">0</div></div><div class="pk-pane right" id="pk-v2"><div class="tag" id="pk-tag2"></div><div class="score" id="pk-s2">0</div></div></div>
-  <div class="pk-mid">VS</div>
-  <div class="pk-bar"><div class="l" id="pk-bl" style="width:50%"></div><div class="r"></div></div>
-  <div class="pk-timer" id="pk-timer">5:00</div>
-  <div class="pk-top"><span class="lv-tag">PK MATCH</span><span class="sp"></span><button class="rb" style="width:36px;height:36px;font-size:15px" onclick="exitPK()">✕</button></div>
+  <div class="pk-top"><button class="pk-x" onclick="exitPK()" aria-label="Close">←</button><b>⚔️ PK BATTLE</b><span class="sp"></span><span class="pk-timer" id="pk-timer">5:00</span></div>
+  <div class="pk-score"><div class="pk-bar" id="pk-barw"><div class="l" id="pk-bl" style="width:50%"></div><div class="r"></div><i id="pk-spark" style="left:50%">⚡</i></div>
+    <b class="pk-n left" id="pk-s1">0</b><b class="pk-n right" id="pk-s2">0</b></div>
+  <div class="pk-vids"><div class="pk-pane left"><div class="pk-v" id="pk-v1"></div><div class="tag" id="pk-tag1"></div><div class="pk-lead" id="pk-lead1">👑</div></div>
+    <div class="pk-pane right"><div class="pk-v" id="pk-v2"></div><div class="tag" id="pk-tag2"></div><div class="pk-lead" id="pk-lead2">👑</div></div><div class="pk-mid">VS</div></div>
+  <div class="pk-sup"><div id="pk-top1"></div><div id="pk-top2"></div></div>
   <div class="pk-bot"><div class="pk-chat" id="pk-chat"></div>
-    <div class="row"><button class="btn sm sp" style="background:linear-gradient(135deg,#2563eb,#60a5fa)" onclick="openPKGift(1)">🎁 Left</button><button class="btn sm sp" style="background:linear-gradient(135deg,#dc2626,#f87171)" onclick="openPKGift(2)">🎁 Right</button><button class="rb" id="pk-mic" style="display:none" onclick="pkMic()">🎤</button></div>
+    <div class="row"><button class="pk-gbtn left" onclick="openPKGift(1)">🎁 Support LEFT</button><button class="rb" id="pk-mic" style="display:none" onclick="pkMic()">🎤</button><button class="pk-gbtn right" onclick="openPKGift(2)">Support RIGHT 🎁</button></div>
   </div>
-  <div class="pk-win" id="pk-win"><b id="pk-win-t">🏆</b><div class="mut" id="pk-win-s"></div><button class="btn gold" onclick="exitPK()">Close</button></div>
+  <div class="pk-win" id="pk-win"><div class="pk-crown">👑</div><div id="pk-win-av"></div><b id="pk-win-t">🏆</b><div class="pk-final" id="pk-win-s"></div><div class="mut" id="pk-win-m"></div><button class="btn gold" onclick="exitPK()">Close</button></div>
 </div>
 <script>
 const tg=window.Telegram&&Telegram.WebApp;
@@ -270,7 +307,17 @@ async function resume(){
   const d=await r.json();S.me=d.me;S.cfg=d.cfg;return true}
 function startApp(){$('#auth').classList.remove('on');$('#splash')&&$('#splash').remove();$('#nav').style.display='';go('home')}
 let AUTH_MODE='login';
+function pvGet(){try{const v=JSON.parse(store.get('pv')||'null');return v&&Date.now()-v.ts<25*60000?v:null}catch(e){return null}}
+function showVerify(v){$('#au-form').style.display=v?'none':'';$('.au-tabs').style.display=v?'none':'';$('#au-verify').style.display=v?'':'none';
+  if(!v){authMode(AUTH_MODE);return}
+  $('#au-forgot').style.display='none';$('#au-vphone').textContent=v.phone;$('#au-sup').textContent=SUPPORT_NAME;
+  const a=$('#au-tg');if(v.link){a.href=v.link;a.style.display='';$('#au-verr').textContent=''}else{a.style.display='none';$('#au-verr').textContent='Telegram verification is not available now. Contact support.'}}
+function authCancel(){store.del('pv');$('#au-otp').value='';$('#au-verr').textContent='';showVerify(null)}
+async function authVerify(){const v=pvGet(),er=$('#au-verr'),b=$('#au-vgo');if(!v)return authCancel();er.textContent='';b.disabled=true;
+  try{useSession(await post('/api/auth/verify',{token:v.token,otp:$('#au-otp').value}));store.del('pv');$('#au-otp').value='';$('#au-form').reset();showVerify(null);startApp()}
+  catch(e){er.textContent=e.message;if(e.code===410||e.code===429){setTimeout(authCancel,2500)}}finally{b.disabled=false}}
 function showAuth(){$('#splash')&&$('#splash').remove();$('#nav').style.display='none';
+  if(pvGet())setTimeout(()=>showVerify(pvGet()),0);
   if(new URLSearchParams(location.search).get('ref'))AUTH_MODE='signup';
   $('#auth').classList.add('on');authMode(AUTH_MODE)}
 function authMode(m){AUTH_MODE=m;const su=m==='signup';
@@ -284,12 +331,13 @@ async function authSubmit(ev){ev.preventDefault();const b=$('#au-go'),er=$('#au-
   const body={phone:$('#au-phone').value,password:$('#au-pass').value};
   if(AUTH_MODE==='signup'){body.name=$('#au-name').value;body.ref=new URLSearchParams(location.search).get('ref')||'';
     if(body.password!==$('#au-pass2').value){er.textContent='The two passwords are not the same';return}}
-  b.disabled=true;try{useSession(await post('/api/auth/'+AUTH_MODE,body));$('#au-form').reset();startApp()}catch(e){er.textContent=e.message}finally{b.disabled=false}}
-async function authGuest(){const er=$('#au-err');er.textContent='';
-  let id=store.get('guest_id');if(!id){id=Array.from(crypto.getRandomValues(new Uint8Array(16)),x=>x.toString(16).padStart(2,'0')).join('');store.set('guest_id',id)}
-  try{useSession(await post('/api/register',{guest:id}));startApp()}catch(e){er.textContent=e.message}}
+  b.disabled=true;try{const d=await post('/api/auth/'+AUTH_MODE,body);
+    if(d.verify){const v=Object.assign({ts:Date.now()},d.verify);store.set('pv',JSON.stringify(v));showVerify(v)}else{useSession(d);$('#au-form').reset();startApp()}}catch(e){er.textContent=e.message}finally{b.disabled=false}}
 function changePassword(){const o=modal(`<h3>🔑 Change password</h3><div class="col"><input id="cp-o" type="password" placeholder="Old password" maxlength="72"><input id="cp-n" type="password" placeholder="New password (min 6)" maxlength="72"><button class="btn" id="cp-go">Save</button></div>`);
   $('#cp-go',o).onclick=e=>run(e.target,async()=>{await api('/api/auth/password',{old:$('#cp-o',o).value,new:$('#cp-n',o).value});o.close();toast('✅ Password changed')})}
+async function admPending(o){try{const d=await api('/api/admin/pending'),el=$('#pnd',o);if(!el)return;
+  el.innerHTML=`<div class="mut">${d.bot?'✅ Verification bot: @'+esc(d.bot):'⚠️ '+esc(d.problem)}</div>`+(d.items.length?`<h3>⏳ Waiting signups</h3><div class="mut">Telegram ለሌላቸው ብቻ። ከማጽደቅህ በፊት ወደ ቁጥሩ ደውለህ አረጋግጥ።</div>`+d.items.map(p=>`<div class="card row"><div class="sp"><b>${esc(p.name)}</b><div class="mut">📱 ${esc(p.phone)} · ${Math.floor(p.age/60)} min</div></div><button class="btn sm gold" data-id="${p.id}" data-a="approve">✓</button><button class="btn sm bad" data-id="${p.id}" data-a="reject">✕</button></div>`).join(''):'');
+  $$('[data-a]',el).forEach(b=>b.onclick=()=>{if(b.dataset.a==='approve'&&!confirm('Did you call this number and confirm it is the same person?'))return;run(b,async()=>{await api('/api/admin/pending',{id:+b.dataset.id,action:b.dataset.a});admPending(o)})})}catch(e){toast(e.message)}}
 async function admReset(id){if(!confirm('Make a new temporary password for this user?'))return;await run(null,async()=>{const d=await api('/api/admin/reset-password',{id});modal(`<h3>🔑 Temporary password</h3><p>Phone: <b>${esc(d.phone)}</b></p><p>Password: <b class="gold">${esc(d.password)}</b></p><div class="mut">Send it only to the owner of this number.</div>`)})}
 function setMe(m){S.me=m;$$('.coins-n').forEach(e=>e.textContent=fmt(m.coins))}
 function modal(html,onclose){const o=document.createElement('div');o.className='ov';o.innerHTML=`<div class="sheet">${html}</div>`;
@@ -324,7 +372,7 @@ async function loadFeed(){const seq=++HOME_SEQ,tab=HT;
     el.innerHTML=d.rooms.length?`<div class="fgrid">${d.rooms.map(feedCard).join('')}</div>`:`<div class="empty">${tab==='follow'?'People you follow are not live now.<br>Open a profile and tap Follow.':'Nobody is live yet. Be the first! 📹'}</div>`}
   catch(e){const el=$('#h-feed');if(el&&seq===HOME_SEQ&&!el.querySelector('.fgrid'))el.innerHTML=`<div class="empty">${esc(e.message)}<br><br><button class="btn sm" onclick="loadFeed()">Retry</button></div>`}}
 setInterval(()=>{if(S.me&&TOKEN&&!document.hidden&&!R?.visible&&PAGE==='home'&&!$('.ov'))loadFeed()},10000);
-function watch(rid){if(R&&R.id!==rid&&R.kind==='live'&&R.host===S.me.id&&!confirm('This will end your live. Continue?'))return;$$('.ov').forEach(o=>o.close());enterRoom(rid)}
+function watch(rid){clearFx();if(R&&R.id!==rid&&R.kind==='live'&&R.host===S.me.id&&!confirm('This will end your live. Continue?'))return;$$('.ov').forEach(o=>o.close());enterRoom(rid)}
 // ---- profile and follow ----
 async function openProfile(uid){const o=modal('<div class="empty">…</div>');
   const draw=async()=>{try{const d=await api('/api/users/'+uid),u=d.user,box=o.firstChild;
@@ -428,7 +476,7 @@ async function enterRoom(rid){
 function showRoom(){if(!R)return;R.visible=true;$(R.kind==='live'?'#live':'#room').classList.add('on');$('#mini').classList.remove('on');$('#nav').style.display='none'}
 function hideRoom(){if(R&&R.kind==='live')return;$('#room').classList.remove('on');$('#nav').style.display='';if(R){R.visible=false;$('#mini').classList.add('on');$('#mini-n').textContent=R.name;$('#mini-o').textContent=R.online}else $('#mini').classList.remove('on')}
 function minimize(){go(PAGE==='home'?'rooms':PAGE)}
-async function exitRoom(silent){const r=R;if(!r)return;if(!silent&&r.kind==='live'&&r.host===S.me.id&&!confirm('End the live?'))return;r.alive=false;clearTimeout(r.t);R=null;$('#live').classList.remove('on');
+async function exitRoom(silent){const r=R;if(!r)return;if(!silent&&r.kind==='live'&&r.host===S.me.id&&!confirm('End the live?'))return;r.alive=false;clearTimeout(r.t);R=null;clearFx();$('#live').classList.remove('on');
   $('#room').classList.remove('on');$('#mini').classList.remove('on');$('#nav').style.display='';
   await V.leave();api('/api/rooms/'+r.id+'/exit',{}).catch(()=>{});if(!silent&&PAGE==='rooms')loadRoomList()}
 async function poll(){
@@ -467,8 +515,44 @@ function addMsg(m,anim){const c=$(R&&R.kind==='live'?'#lv-chat':'#r-chat'),near=
     else{d.className='msg gift';d.innerHTML=`<b>${esc(m.n)}</b> → <b>${esc(g.to_name)}</b> ${g.emoji} ×${g.qty}`;if(anim)flyGift(g,m.n)}}
   else{d.className='msg';d.innerHTML=`${m.v?'<span class="vip">VIP</span> ':''}<b class="${m.v?'vipn':''}">${esc(m.n)}:</b> ${esc(m.t)}`}
   c.appendChild(d);while(c.children.length>120)c.firstChild.remove();if(near||!anim)c.scrollTop=c.scrollHeight}
-function flyGift(g,from){const e=document.createElement('div');e.className='fly'+(['luxury','legendary','mythic'].includes(g.tier)?' big':'');e.innerHTML=`${g.emoji}<small>${esc(from)} → ${esc(g.to_name)} ×${g.qty}</small>`;document.body.appendChild(e);setTimeout(()=>e.remove(),4000);hap('medium')}
-function flyLucky(g,from){const e=document.createElement('div');e.className='fly big luckyfly';e.innerHTML=`🍀<small>LUCKY ×${g.lucky} · +${fmt(g.refund)} 🪙</small>`;document.body.appendChild(e);setTimeout(()=>e.remove(),4000);hap('heavy')}
+const BIG_TIERS=['luxury','legendary','mythic'];
+const CALM=window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches;
+const COMBO=new Map();let BIGQ=[],BIGBUSY=false,FXGEN=0;
+function fxNode(cls,html,parent){const e=document.createElement('div');e.className=cls;e.innerHTML=html;(parent||$('#gfx')).appendChild(e);return e}
+function fxAnim(e,frames,opt){const a=e.animate(frames,Object.assign({fill:'forwards',easing:'cubic-bezier(.2,.8,.3,1)'},opt));return a}
+function particles(chars,n,mode){if(CALM)n=Math.min(n,4);const W=innerWidth,H=innerHeight,box=$('#gfx');
+  for(let i=0;i<n&&box.childElementCount<140;i++){const e=fxNode('fx-p',chars[i%chars.length]),size=14+Math.random()*22;e.style.fontSize=size+'px';let f;
+    if(mode==='burst'){const ang=Math.random()*6.283,r=80+Math.random()*Math.min(W,H)*.55;e.style.left=W/2+'px';e.style.top=H*.4+'px';
+      f=[{transform:'translate(-50%,-50%) scale(.2)',opacity:1},{transform:`translate(${Math.cos(ang)*r}px,${Math.sin(ang)*r}px) scale(1.2) rotate(${Math.random()*360}deg)`,opacity:1,offset:.7},{transform:`translate(${Math.cos(ang)*r}px,${Math.sin(ang)*r+90}px) scale(.8)`,opacity:0}]}
+    else if(mode==='rain'){e.style.left=Math.random()*W+'px';e.style.top='-40px';f=[{transform:'translateY(0) rotate(0)',opacity:1},{transform:`translateY(${H+60}px) rotate(${Math.random()*540-270}deg)`,opacity:.7}]}
+    else{e.style.left=W*.08+Math.random()*60+'px';e.style.top=H*.66+'px';f=[{transform:'translate(0,0) scale(.4)',opacity:0},{opacity:1,offset:.15},{transform:`translate(${Math.random()*90-45}px,${-H*(.2+Math.random()*.25)}px) scale(1.1)`,opacity:0}]}
+    fxAnim(e,f,{duration:1500+Math.random()*1400,delay:Math.random()*(mode==='rain'?1200:250),fill:'both'}).onfinish=()=>e.remove()}}
+function giftBanner(g,from){const key=from+'|'+g.to_name+'|'+g.gift;let c=COMBO.get(key);
+  if(c&&c.el.isConnected){c.n+=g.qty;clearTimeout(c.t)}else{
+    const lane=$('#gfx-lane');while(lane.childElementCount>=3)lane.firstChild.remove();
+    const el=fxNode('fx-ban tier-'+(g.tier||'common'),`<div class="fx-av">${esc((from||'?')[0].toUpperCase())}</div><div class="fx-tx"><b class="ell">${esc(from)}</b><span class="ell">→ ${esc(g.to_name)}</span></div><div class="fx-em">${g.emoji}</div><div class="fx-x"></div>`,lane);
+    fxAnim(el,[{transform:'translateX(-110%)',opacity:0},{transform:'translateX(0)',opacity:1}],{duration:320});c={el,n:g.qty};COMBO.set(key,c)}
+  const x=c.el.querySelector('.fx-x');x.textContent='x'+c.n;x.animate([{transform:'scale(2.2)'},{transform:'scale(1)'}],{duration:280,easing:'ease-out'});
+  c.t=setTimeout(()=>{COMBO.delete(key);fxAnim(c.el,[{opacity:1},{transform:'translateX(-40%)',opacity:0}],{duration:300}).onfinish=()=>c.el.remove()},3600)}
+const PATHS={ // how each big gift travels across the screen
+  drive:[{transform:'translate(110vw,10vh) scale(.7)'},{transform:'translate(0,0) scale(1.15)',offset:.3},{transform:'translate(0,0) scale(1.15)',offset:.72},{transform:'translate(-110vw,-6vh) scale(.8)'}],
+  fly:[{transform:'translate(-80vw,50vh) rotate(-20deg) scale(.4)'},{transform:'translate(0,0) rotate(0) scale(1.2)',offset:.35},{transform:'translate(0,-2vh) scale(1.2)',offset:.68},{transform:'translate(90vw,-60vh) rotate(15deg) scale(.6)'}],
+  launch:[{transform:'translate(0,80vh) scale(.5)'},{transform:'translate(0,0) scale(1.15)',offset:.35},{transform:'translate(0,-3vh) scale(1.2)',offset:.65},{transform:'translate(0,-100vh) scale(.7)'}],
+  zoom:[{transform:'scale(0) rotate(-40deg)',opacity:0},{transform:'scale(1.35) rotate(6deg)',opacity:1,offset:.22},{transform:'scale(1.1) rotate(0)',offset:.34},{transform:'scale(1.2)',opacity:1,offset:.8},{transform:'scale(2.4)',opacity:0}]};
+function bigShow(){if(BIGBUSY||!BIGQ.length)return;BIGBUSY=true;const{g,from}=BIGQ.shift(),gen=FXGEN,k=String(g.gift||'');
+  const path=/car/.test(k)?'drive':/jet|plane|dragon|phoenix|eagle/.test(k)?'fly':/rocket|yacht|ship/.test(k)?'launch':'zoom';
+  const st=fxNode('fx-stage tier-'+g.tier,`<div class="fx-rays"></div><div class="fx-hero">${g.emoji}</div><div class="fx-cap"><b>${esc(from)}</b> → ${esc(g.to_name)}<br><span>${g.emoji} x${g.qty}</span></div>`);
+  fxAnim(st,[{opacity:0},{opacity:1,offset:.1},{opacity:1,offset:.88},{opacity:0}],{duration:3600,easing:'linear'});
+  fxAnim(st.querySelector('.fx-hero'),CALM?PATHS.zoom:PATHS[path],{duration:3500,easing:'ease-in-out'});
+  particles(['✨','⭐',g.emoji,'💖'],g.tier==='luxury'?24:40,'burst');if(g.tier!=='luxury')particles(['🎉','✨','💎'],26,'rain');
+  hap('heavy');setTimeout(()=>{st.remove();if(gen===FXGEN){BIGBUSY=false;bigShow()}},3650)}
+function flyGift(g,from){if(document.hidden)return;giftBanner(g,from);
+  if(BIG_TIERS.includes(g.tier)){if(BIGQ.length<5){BIGQ.push({g,from});bigShow()}}
+  else{particles([g.emoji],Math.min(14,4+g.qty),'float');if(g.tier==='epic')particles(['✨',g.emoji],18,'burst');hap('medium')}}
+function flyLucky(g,from){if(document.hidden)return;const e=fxNode('fx-lucky',`🍀<b>LUCKY ×${g.lucky}</b><span>${esc(from)} · +${fmt(g.refund)} 🪙</span>`);
+  fxAnim(e,[{transform:'translate(-50%,-50%) scale(.2)',opacity:0},{transform:'translate(-50%,-50%) scale(1.15)',opacity:1,offset:.2},{transform:'translate(-50%,-50%) scale(1)',opacity:1,offset:.8},{transform:'translate(-50%,-90%) scale(.9)',opacity:0}],{duration:2800}).onfinish=()=>e.remove();
+  particles(['🍀','🪙','✨'],Math.min(36,10+g.lucky),'burst');hap('heavy')}
+function clearFx(){FXGEN++;BIGQ=[];BIGBUSY=false;COMBO.forEach(c=>clearTimeout(c.t));COMBO.clear();$('#gfx-lane').innerHTML='';$$('#gfx>:not(#gfx-lane)').forEach(e=>e.remove())}
 function renderLiveHost(){const h=R&&R.seats[0];if(h)lvLoadFollow(h.u.id);$('#lv-host').innerHTML=h?`${av(h.u,'s')}<div style="line-height:1.2"><b class="ell" style="display:block;max-width:110px">${esc(h.u.name)}</b><span class="mut ell" style="color:#ddd;display:block;max-width:110px">${esc(R.name)}</span></div>`:'…'}
 async function flipCam(){try{const c=await AgoraRTC.getCameras();if(c.length<2||!V.vtrack)return;V.camI=((V.camI||0)+1)%c.length;await V.vtrack.setDevice(c[V.camI].deviceId)}catch(e){toast('Camera switch failed')}}
 async function liveMic(){if(!V.track||!R)return;R.selfMute=!R.selfMute;await V.track.setEnabled(!R.selfMute);$('#lv-mic').textContent=R.selfMute?'🔇':'🎤'}
@@ -528,15 +612,41 @@ async function openPKArena(){const m=modal('<div class="empty">…</div>');
 async function pkCreate(){try{const d=await api('/api/pk/create',{});toast('⚔️ PK created');closeModal();enterPK(d.pk_id)}catch(e){toast(e.message)}}
 async function pkJoin(id){try{await api('/api/pk/join',{pk_id:id});toast('⚔️ Joined!');closeModal();enterPK(id)}catch(e){toast(e.message)}}
 async function startPKFromLive(){try{const d=await api('/api/pk/create',{});await exitRoom(true);enterPK(d.pk_id)}catch(e){toast(e.message)}}
-const P={client:null,track:null,vtrack:null,pid:null,pub:false,selfMute:false,t:null,alive:false,h1:0,h2:0};
+const P={client:null,track:null,vtrack:null,pid:null,pub:false,selfMute:false,t:null,alive:false,h1:0,h2:0,last:null,shown:false};
+function pkTag(el,h){el.innerHTML=h?`${av(h,'s')}<b>${esc(h.name)}</b>`:'<span style="padding-left:8px">Waiting…</span>';el.onclick=h?()=>openProfile(h.id):null}
+function pkPop(side,total){const e=fxNode('pk-pop','+'+fmt(total),$(side===1?'.pk-pane.left':'.pk-pane.right'));fxAnim(e,[{transform:'translate(-50%,30px) scale(.5)',opacity:0},{transform:'translate(-50%,0) scale(1.25)',opacity:1,offset:.25},{transform:'translate(-50%,-70px) scale(1)',opacity:0}],{duration:1600}).onfinish=()=>e.remove()}
+function pkDraw(d){
+  const a=d.host1_gifts||0,b=d.host2_gifts||0,tot=a+b,pct=tot?Math.max(8,Math.min(92,Math.round(a/tot*100))):50;
+  $('#pk-s1').textContent=fmt(a);$('#pk-s2').textContent=fmt(b);$('#pk-bl').style.width=pct+'%';$('#pk-spark').style.left=pct+'%';
+  $('#pk-lead1').style.display=a>b?'block':'none';$('#pk-lead2').style.display=b>a?'block':'none';
+  const tl=Math.max(0,d.time_left||0),t=$('#pk-timer');t.textContent=Math.floor(tl/60)+':'+String(tl%60).padStart(2,'0');t.classList.toggle('hurry',tl<=30&&d.status==='active');
+  for(const side of [1,2]){const el=$('#pk-top'+side),list=(d.top&&d.top[side])||[],sig=list.map(u=>u.id+':'+u.v).join();
+    if(el.dataset.sig!==sig){el.dataset.sig=sig;el.innerHTML=list.map(u=>`<div class="pk-fan" data-u="${u.id}">${av(u,'s')}<small>${fmt(u.v)}</small></div>`).join('');$$('.pk-fan',el).forEach(f=>f.onclick=()=>openProfile(+f.dataset.u))}}
+  const ev=d.events||[];
+  if(P.last===null)P.last=ev.length?ev[ev.length-1].id:0;
+  else for(const x of ev){if(x.id<=P.last)continue;P.last=x.id;
+    const host=x.side===1?d.host1:d.host2,to=host?host.name:(x.side===1?'LEFT':'RIGHT');
+    const line=document.createElement('div');line.className='msg gift';line.innerHTML=`<b>${esc(x.name)}</b> → <b>${esc(to)}</b> ${x.emoji} ×${x.qty}`;
+    const c=$('#pk-chat');c.appendChild(line);while(c.children.length>60)c.firstChild.remove();c.scrollTop=c.scrollHeight;
+    flyGift({gift:x.gift,emoji:x.emoji,qty:x.qty,tier:x.tier,to_name:to},x.name);pkPop(x.side,x.total)}}
+function pkResult(d){if(P.shown)return;P.shown=true;clearFx();
+  const a=d.host1_gifts||0,b=d.host2_gifts||0,w=d.winner?(d.host1&&d.winner===d.host1.id?d.host1:d.host2):null,fan=w&&d.top&&d.top[w===d.host1?1:2][0];
+  $('.pk-crown').textContent=w?'👑':'🤝';$('#pk-win-av').innerHTML=w?av(w,'l'):'';$('#pk-win-t').textContent=w?w.name+' WINS!':(a+b?'DRAW':'PK ENDED');
+  $('#pk-win-s').textContent='🔵 '+fmt(a)+'  :  '+fmt(b)+' 🔴';$('#pk-win-m').textContent=fan?'🌟 Top supporter: '+fan.name+' ('+fmt(fan.v)+')':'';
+  $('#pk-win').classList.add('on');if(w){particles(['🎉','✨','🏆','💖'],50,'rain');hap('heavy')}}
 async function enterPK(pid){
   if(P.alive)await exitPK();
   const st=await api('/api/pk/'+pid+'/state');
-  P.pid=pid;P.alive=true;P.h1=st.host1?st.host1.id:0;P.h2=st.host2?st.host2.id:0;
+  clearFx();P.pid=pid;P.alive=true;P.last=null;P.shown=false;$('#pk-v1').innerHTML='';$('#pk-v2').innerHTML='';
+  for(const n of [1,2]){$('#pk-top'+n).innerHTML='';$('#pk-top'+n).dataset.sig=''}
+  P.h1=st.host1?st.host1.id:0;P.h2=st.host2?st.host2.id:0;
   $('#pk').classList.add('on');$('#nav').style.display='none';$('#pk-win').classList.remove('on');$('#pk-chat').innerHTML='';
-  $('#pk-tag1').innerHTML=st.host1?`${av(st.host1,'s')}<b>${esc(st.host1.name)}</b>`:'Waiting…';
-  $('#pk-tag2').innerHTML=st.host2?`${av(st.host2,'s')}<b>${esc(st.host2.name)}</b>`:'Waiting…';
+  pkTag($('#pk-tag1'),st.host1);pkTag($('#pk-tag2'),st.host2);pkDraw(st);
+  pkPoll();   // scores and gifts keep updating even if video cannot connect
+  if(st.status!=='ended')pkVideo(pid).catch(e=>{if(P.alive&&P.pid===pid)toast('Video: '+e.message)})}
+async function pkVideo(pid){
   const d=await api('/api/pk/token',{pk_id:pid});
+  if(!P.alive||P.pid!==pid)return;
   AgoraRTC.setLogLevel&&AgoraRTC.setLogLevel(3);
   const c=AgoraRTC.createClient({mode:'live',codec:'vp8'});P.client=c;
   await c.setClientRole(d.publisher?'host':'audience');
@@ -547,24 +657,15 @@ async function enterPK(pid){
   if(P.client!==c){try{await c.leave()}catch(e){}return}
   if(d.publisher){try{const[a,v]=await AgoraRTC.createMicrophoneAndCameraTracks({AEC:true,ANS:true,AGC:true},{encoderConfig:'480p_2',facingMode:'user'});P.track=a;P.vtrack=v;
     v.play((d.uid===P.h2)?'pk-v2':'pk-v1',{mirror:true,fit:'cover'});
-    try{await c.enableDualStream()}catch(e){}await c.publish([a,v]);P.pub=true;$('#pk-mic').style.display=''}catch(e){toast('📷 Camera/mic not allowed')}}
-  pkPoll()}
+    try{await c.enableDualStream()}catch(e){}await c.publish([a,v]);P.pub=true;$('#pk-mic').style.display=''}catch(e){toast('📷 Camera/mic not allowed')}}}
 async function pkPoll(){
-  if(!P.alive)return;
-  try{const d=await api('/api/pk/'+P.pid+'/state');
-   const tot=(d.host1_gifts||0)+(d.host2_gifts||0);
-   $('#pk-s1').textContent=fmt(d.host1_gifts);$('#pk-s2').textContent=fmt(d.host2_gifts);
-   $('#pk-bl').style.width=(tot?Math.round(d.host1_gifts/tot*100):50)+'%';
-   const tl=d.time_left||0;$('#pk-timer').textContent=Math.floor(tl/60)+':'+String(tl%60).padStart(2,'0');
-   if(d.host2&&!P.h2){P.h2=d.host2.id;$('#pk-tag2').innerHTML=`${av(d.host2,'s')}<b>${esc(d.host2.name)}</b>`}
-   if(d.status==='ended'){$('#pk-win').classList.add('on');
-     const w=(d.host1&&d.winner===d.host1.id)?d.host1:d.host2;
-     $('#pk-win-t').textContent=w?'🏆 '+w.name+' WINS!':'🤝 DRAW';
-     $('#pk-win-s').textContent=fmt(d.host1_gifts)+' vs '+fmt(d.host2_gifts)+' · 70% / 20% / 10%';
-     return}
+  clearTimeout(P.t);if(!P.alive)return;const pid=P.pid;
+  try{const d=await api('/api/pk/'+pid+'/state');if(!P.alive||P.pid!==pid)return;
+   if(d.host2&&!P.h2){P.h2=d.host2.id;pkTag($('#pk-tag2'),d.host2)}
+   pkDraw(d);if(d.status==='ended'){pkResult(d);return}
   }catch(e){}
-  P.t=setTimeout(pkPoll,2000)}
-async function exitPK(){P.alive=false;clearTimeout(P.t);const c=P.client;P.client=null;P.pub=false;
+  clearTimeout(P.t);P.t=setTimeout(pkPoll,2000)}
+async function exitPK(){P.alive=false;clearTimeout(P.t);clearFx();const c=P.client;P.client=null;P.pub=false;
   if(P.track){try{P.track.close()}catch(e){}P.track=null}
   if(P.vtrack){try{P.vtrack.close()}catch(e){}P.vtrack=null}
   if(c){try{await c.leave()}catch(e){}}
@@ -577,8 +678,7 @@ function openPKGift(side){
    <div class="gg">${S.cfg.gifts.filter(x=>x.tier!=='lucky').map(x=>`<div class="gi tier-${x.tier} ${gift===x.key?'on':''}" data-k="${x.key}"><b>${x.emoji}</b>${esc(x.name)}<div class="gold">🪙${fmt(x.price)}</div></div>`).join('')}</div>
    <div class="row" style="margin-top:12px"><div class="chips sp">${[1,5,10,20,50].map(q=>`<div class="chip ${qty===q?'on':''}" data-q="${q}">×${q}</div>`).join('')}</div><button class="btn gold" id="pk-send">Send · ${fmt(g.price*qty)}</button></div>`;
    $$('.gi',m).forEach(e=>e.onclick=()=>{gift=e.dataset.k;draw()});$$('[data-q]',m).forEach(e=>e.onclick=()=>{qty=+e.dataset.q;draw()});
-   $('#pk-send',m).onclick=e=>run(e.target,async()=>{const d=await api('/api/pk/gift',{pk_id:P.pid,to_host:side,gift,qty});S.me.coins=d.coins;setMe(S.me);toast('✅ Sent');hap('medium');
-     const el=document.createElement('div');el.className='msg gift';el.innerHTML='🎁 '+(side===1?'Left':'Right')+' +'+fmt(g.price*qty);$('#pk-chat').appendChild(el);$('#pk-chat').scrollTop=$('#pk-chat').scrollHeight})};
+   $('#pk-send',m).onclick=e=>run(e.target,async()=>{const d=await api('/api/pk/gift',{pk_id:P.pid,to_host:side,gift,qty});S.me.coins=d.coins;setMe(S.me);toast('✅ Sent');hap('medium');m.close();clearTimeout(P.t);pkPoll()})};
   draw()}
 async function renderWallet(){
   const el=$('#p-wallet');el.innerHTML=topbar()+`<div class="empty">…</div>`;
@@ -704,7 +804,7 @@ function openAdmin(){const o=modal(`<div class="chips" id="at">${['overview','pu
   const load=async x=>{$$('#at .chip',o).forEach(c=>c.classList.toggle('on',c.dataset.t===x));const b=$('#ab',o);b.innerHTML='…';
    try{if(x==='overview'){const d=await api('/api/admin/overview');b.innerHTML=`<div class="grid2">${Object.entries(d).map(([k,v])=>`<div class="card" style="margin:0"><div class="mut">${k}</div><b>${fmt(v)}</b></div>`).join('')}</div>`}
    else if(x==='purchases'||x==='withdraws'){const d=await api('/api/admin/'+x);b.innerHTML=d.items.map(y=>`<div class="card"><b>${esc(y.name)}</b> · ${fmt(y.coins)} 🪙 · ${fmt(y.birr)} Birr ${y.method==='usdt'?'· <span class="usdt">USDT '+(y.usdt||'')+'</span>':'· Telebirr'}<div class="mut" style="word-break:break-all">${esc(y.ref||y.address||y.phone||'')} · ${ago(y.ts)}</div><div class="row" style="margin-top:8px">${x==='purchases'?`<button class="btn ghost sm" onclick="viewShot(${y.id})">🖼</button><button class="btn sm" onclick="admAct('purchase',${y.id},'approve')">✅</button><button class="btn bad sm" onclick="admAct('purchase',${y.id},'reject')">❌</button>`:`<button class="btn sm" onclick="admAct('withdraw',${y.id},'paid')">💰</button><button class="btn bad sm" onclick="admAct('withdraw',${y.id},'reject')">❌</button>`}</div></div>`).join('')||'<div class="empty">—</div>'}
-   else{b.innerHTML=`<input id="uq" placeholder="Search name / phone / ID"><div id="ul" style="margin-top:8px"></div>`;const ld=async()=>{const d=await api('/api/admin/users?q='+encodeURIComponent($('#uq',o).value));$('#ul',o).innerHTML=d.items.map(u=>`<div class="card"><b>${esc(u.name)}</b> ${u.banned?'🚫':''} ${u.vip?'<span class="vip">VIP</span>':''} ${u.host==='host'?'<span class="hbadge">HOST</span>':''} ${u.ag?'<span class="abadge">AGENT</span>':''}<div class="mut">${u.login_phone?'📱 '+esc(u.login_phone)+' · ':''}ID:${esc(u.tg)} · 🪙${fmt(u.coins)} · 💰${fmt(u.earn)} · 🤝${fmt(u.comm)}</div><div class="row" style="margin-top:6px;flex-wrap:wrap"><button class="btn sm ghost" onclick="admUser(${u.id},'${u.banned?'unban':'ban'}')">${u.banned?'Unban':'Ban'}</button><button class="btn sm gold" onclick="admGrant(${u.id})">+🪙</button>${u.login_phone?`<button class="btn sm ghost" onclick="admReset(${u.id})">🔑</button>`:''}<button class="btn sm ghost" onclick="admVip(${u.id})">+VIP</button><button class="btn sm ${u.host==='host'?'bad':'gold'}" onclick="admUser(${u.id},'host',${u.host==='host'?0:1})">${u.host==='host'?'-Host':'+Host'}</button>${u.host==='host'?`<button class="btn sm ghost" onclick="admUser(${u.id},'agent')">${u.ag?'-Agent':'+Agent'}</button>`:''}<button class="btn sm bad" onclick="confirm('Delete?')&&admUser(${u.id},'delete')">🗑</button></div></div>`).join('')};$('#uq',o).oninput=()=>{clearTimeout(window._uq);window._uq=setTimeout(ld,350)};ld()}}catch(e){b.innerHTML=esc(e.message)}};
+   else{b.innerHTML=`<input id="uq" placeholder="Search name / phone / ID"><div id="pnd" style="margin-top:8px"></div><div id="ul" style="margin-top:8px"></div>`;admPending(o);const ld=async()=>{const d=await api('/api/admin/users?q='+encodeURIComponent($('#uq',o).value));$('#ul',o).innerHTML=d.items.map(u=>`<div class="card"><b>${esc(u.name)}</b> ${u.banned?'🚫':''} ${u.vip?'<span class="vip">VIP</span>':''} ${u.host==='host'?'<span class="hbadge">HOST</span>':''} ${u.ag?'<span class="abadge">AGENT</span>':''}<div class="mut">${u.login_phone?'📱 '+esc(u.login_phone)+' · ':''}ID:${esc(u.tg)} · 🪙${fmt(u.coins)} · 💰${fmt(u.earn)} · 🤝${fmt(u.comm)}</div><div class="row" style="margin-top:6px;flex-wrap:wrap"><button class="btn sm ghost" onclick="admUser(${u.id},'${u.banned?'unban':'ban'}')">${u.banned?'Unban':'Ban'}</button><button class="btn sm gold" onclick="admGrant(${u.id})">+🪙</button>${u.login_phone?`<button class="btn sm ghost" onclick="admReset(${u.id})">🔑</button>`:''}<button class="btn sm ghost" onclick="admVip(${u.id})">+VIP</button><button class="btn sm ${u.host==='host'?'bad':'gold'}" onclick="admUser(${u.id},'host',${u.host==='host'?0:1})">${u.host==='host'?'-Host':'+Host'}</button>${u.host==='host'?`<button class="btn sm ghost" onclick="admUser(${u.id},'agent')">${u.ag?'-Agent':'+Agent'}</button>`:''}<button class="btn sm bad" onclick="confirm('Delete?')&&admUser(${u.id},'delete')">🗑</button></div></div>`).join('')};$('#uq',o).oninput=()=>{clearTimeout(window._uq);window._uq=setTimeout(ld,350)};ld()}}catch(e){b.innerHTML=esc(e.message)}};
   $$('#at .chip',o).forEach(c=>c.onclick=()=>load(c.dataset.t));window._admLoad=load;window._admTab=()=>$('#at .chip.on',o).dataset.t;load('overview')}
 const admAct=(k,id,a)=>run(null,async()=>{await api('/api/admin/'+k,{id,action:a});window._admLoad(window._admTab())});
 const admUser=(id,a,amount)=>run(null,async()=>{await api('/api/admin/user',{id,action:a,amount});window._admLoad(window._admTab())});
