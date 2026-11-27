@@ -325,7 +325,11 @@ def init_auth(app, db, d):
         if not c: return err('This user has no phone login', 404)
         if is_admin(u) and u.id != g.user.id: return err('Cannot reset another admin')
         temp = ''.join(secrets.choice('abcdefghjkmnpqrstuvwxyz23456789') for _ in range(8))
-        c.pw_hash = generate_password_hash(temp); clear(hkey('ph', c.phone)); db.session.commit()
+        c.pw_hash = generate_password_hash(temp)
+        # Invalidate every previously issued bearer token after an admin reset.
+        db.session.execute(update(User).where(User.id == u.id).values(auth_version=User.auth_version + 1),
+                           execution_options={'synchronize_session': False})
+        clear(hkey('ph', c.phone)); db.session.commit()
         return jsonify(phone=c.phone, password=temp)
 
     def delete_login(uid):
