@@ -3,7 +3,8 @@
 
 Pure functions only: no database, no Flask. All amounts are integers
 (coins, or the smallest money unit); percentages use Decimal.
-NOT yet connected to the live app.
+Connected to the app: upline() and accrue() (7-generation commission).
+The activity reward and exchange functions are not connected yet.
 """
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal, ROUND_DOWN, ROUND_HALF_UP
@@ -55,6 +56,29 @@ def split_gift(value, chain=(), eligible=lambda user_id: True):
     reserve = max(0, _floor(value, POOL_RATE) - paid)               # unallocated part of the 12%
     return dict(host=host, commissions=commissions, commission_total=paid,
                 reserve=reserve, platform=value - host - paid - reserve)
+
+
+# Small gifts would earn 0 if each commission were rounded on its own, so each person's
+# part-coins are carried over. 1 unit = 1/10,000 coin; rates are exact in these units.
+UNITS_PER_COIN = 10000
+GENERATION_UNITS = tuple(int(rate * UNITS_PER_COIN) for rate in GENERATION_RATES)
+
+
+def accrue(base, chain, eligible, carry_of):
+    """Commission on `base` purchased coins.
+
+    Returns [(generation, user_id, whole_coins_to_pay_now, new_carry_units)].
+    Over any number of gifts a person is never paid more than their exact rate.
+    """
+    base = _int_amount(base)
+    if len(chain) > len(GENERATION_UNITS) or len(set(chain)) != len(chain):
+        raise ValueError('bad referral chain')
+    plan = []
+    for generation, (user_id, rate_units) in enumerate(zip(chain, GENERATION_UNITS), start=1):
+        if base and eligible(user_id):
+            whole, carry = divmod(int(carry_of(user_id)) + base * rate_units, UNITS_PER_COIN)
+            plan.append((generation, user_id, whole, carry))
+    return plan
 
 
 # ---------- host activity rewards (spec 5) ----------

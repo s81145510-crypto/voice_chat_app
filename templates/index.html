@@ -329,7 +329,7 @@ function authMode(m){AUTH_MODE=m;const su=m==='signup';
 function authEye(){const i=$('#au-pass');i.type=i.type==='password'?'text':'password'}
 async function authSubmit(ev){ev.preventDefault();const b=$('#au-go'),er=$('#au-err');er.textContent='';
   const body={phone:$('#au-phone').value,password:$('#au-pass').value};
-  if(AUTH_MODE==='signup'){body.name=$('#au-name').value;body.ref=new URLSearchParams(location.search).get('ref')||'';
+  if(AUTH_MODE==='signup'){body.name=$('#au-name').value;body.ref=new URLSearchParams(location.search).get('ref')||store.get('ref')||'';
     if(body.password!==$('#au-pass2').value){er.textContent='The two passwords are not the same';return}}
   b.disabled=true;try{const d=await post('/api/auth/'+AUTH_MODE,body);
     if(d.verify){const v=Object.assign({ts:Date.now()},d.verify);store.set('pv',JSON.stringify(v));showVerify(v)}else{useSession(d);$('#au-form').reset();startApp()}}catch(e){er.textContent=e.message}finally{b.disabled=false}}
@@ -721,10 +721,12 @@ function withModal(){let method='telebirr';const m=modal('');
      if(isU)bd.address=$('#w-a',m).value.trim();else bd.phone=$('#w-p',m).value;
      await api('/api/withdraw',bd);m.close();toast('✅ Request sent');renderWallet()})};
   draw()}
+function genTable(){const r=(S.cfg.agent&&S.cfg.agent.rates)||[];
+  return `<div class="card" style="margin-top:10px"><b>💰 7 Generation Commission</b><div class="mut" style="margin:4px 0 8px">የጋበዝካቸው ሰዎች ስጦታ ሲቀበሉ (በተገዛ coin) ኮሚሽን ታገኛለህ።<br>Earn when people you invited receive gifts bought with purchased coins.</div>${r.map((x,i)=>`<div class="row" style="padding:3px 0"><span class="sp">Generation ${i+1}${i?'':' · የጋበዝካቸው'}</span><b class="gold">${+(x*100).toFixed(2)}%</b></div>`).join('')}</div>`}
 async function openInvite(){const m=modal('<div class="empty">…</div>');
  try{const d=await api('/api/invite');
   m.firstChild.innerHTML=`<h3>🔗 Invite & Earn</h3><div class="card"><div class="mut">Your invite link</div><b style="font-size:12px;word-break:break-all">${esc(d.link)}</b><button class="btn sm gold" style="margin-top:8px" onclick="copyTxt('${esc(d.link)}')">Copy</button></div>
-  <div class="grid2"><div class="card" style="margin:0"><div class="mut">Invited</div><b>${fmt(d.count)}</b></div><div class="card" style="margin:0"><div class="mut">Reward / first purchase</div><b class="gold">+${fmt(d.reward)} 🪙</b></div></div>`}catch(e){m.close();toast(e.message)}}
+  <div class="grid2"><div class="card" style="margin:0"><div class="mut">Invited</div><b>${fmt(d.count)}</b></div><div class="card" style="margin:0"><div class="mut">Reward / first purchase</div><b class="gold">+${fmt(d.reward)} 🪙</b></div></div>${genTable()}`}catch(e){m.close();toast(e.message)}}
 async function applyHost(){await run(null,async()=>{await api('/api/host/apply',{});toast('🎤 Request sent');renderMe()})}
 async function applyAgent(){await run(null,async()=>{await api('/api/agent/apply',{});toast('🤝 You are an Agent!');renderMe()})}
 async function openAgent(){const m=modal('<div class="empty">…</div>');
@@ -813,7 +815,8 @@ function admGrant(id){const n=prompt('Coins (negative allowed)');if(n)admUser(id
 async function viewShot(id){try{const r=await fetch('/api/admin/shot/'+id,{headers:{Authorization:'Bearer '+TOKEN}});const u=URL.createObjectURL(await r.blob());modal(`<img src="${u}" style="width:100%;border-radius:12px">`)}catch(e){toast('Not found')}}
 document.addEventListener('visibilitychange',()=>{if(!document.hidden&&R&&R.alive){clearTimeout(R.t);poll()}});
 addEventListener('pagehide',()=>{if(R&&TOKEN)try{fetch('/api/rooms/'+R.id+'/exit',{method:'POST',keepalive:true,headers:{Authorization:'Bearer '+TOKEN,'Content-Type':'application/json'},body:'{}'})}catch(e){}});
-async function boot(){try{(await resume())?startApp():showAuth()}catch(e){if(tgInit()){$('#splash-t').textContent='❌ '+e.message}else{$('#splash-t').innerHTML='❌ '+esc(e.message)+'<br><br><button class="btn gold" onclick="location.reload()">Retry</button>'}}}
+async function boot(){const rf=new URLSearchParams(location.search).get('ref');if(rf&&/^(ref|ag)_[\w-]{1,34}$/.test(rf))store.set('ref',rf);   // keep the invite even if the app is reopened
+try{(await resume())?startApp():showAuth()}catch(e){if(tgInit()){$('#splash-t').textContent='❌ '+e.message}else{$('#splash-t').innerHTML='❌ '+esc(e.message)+'<br><br><button class="btn gold" onclick="location.reload()">Retry</button>'}}}
 boot();
 </script>
 <script>

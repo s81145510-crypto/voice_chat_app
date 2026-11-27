@@ -9,11 +9,16 @@ import json
 from sqlalchemy import update, func, or_
 from sqlalchemy.exc import IntegrityError
 
+try:
+    from . import rules
+except ImportError:
+    import rules
+
 SCHEMES = {
-    'legacy3': {'depth': 3, 'rates': [0.30, 0.15, 0.05], 'label': 'Legacy 3-level (30/15/5% of margin)'},
-    'seven12': {'depth': 7, 'rates': [0.05, 0.025, 0.015, 0.01, 0.0075, 0.0075, 0.005], 'label': '7-generation (12% of pool)'},
+    'seven12': {'depth': len(rules.GENERATION_RATES), 'rates': [float(r) for r in rules.GENERATION_RATES],
+                'label': '7-generation (12% of purchased-coin gift value)'},
 }
-DEFAULT_SCHEME = 'legacy3'
+DEFAULT_SCHEME = 'seven12'
 REWARD_KINDS = ('daily', 'mission', 'welcome', 'referral', 'invite', 'grant', 'streak')
 
 
@@ -74,6 +79,11 @@ def init_finance(app, db, deps):
         gift_tx_id = db.Column(db.Integer, index=True)
         scheme = db.Column(db.String(16), default=DEFAULT_SCHEME)
         __table_args__ = (db.UniqueConstraint('gift_tx_id', 'agent_id', name='uq_fin_comm_once'),)
+
+    class CommissionCarry(db.Model):
+        __tablename__ = 'commission_carry'
+        user_id = db.Column(db.Integer, primary_key=True)
+        units = db.Column(db.Integer, default=0, nullable=False)    # 1/10,000 coin, always below 10,000
 
     class FinReferral(db.Model):
         id = db.Column(db.Integer, primary_key=True)
@@ -169,31 +179,47 @@ def init_finance(app, db, deps):
         ledger(0, 'platform_share', pool, ref=row.id, note=gift_key)
         return row.id, pool
 
-    def chain_of(start_id, depth):
-        out, cur, seen = [], start_id, set()
-        while cur and len(out) < depth and cur not in seen:
-            seen.add(cur); out.append(cur)
-            a = db.session.get(User, cur)
-            cur = a.parent_agent_id if a else None
-        return out
+    def inviter_of(user_id):
+        row = db.session.query(User.referrer_id, User.agent_id, User.parent_agent_id).filter(User.id == user_id).first()
+        return (row[0] or row[1] or row[2]) if row else None
 
-    def pay_commissions(agent_id, pool, source_user_id, gift_tx_id):
-        pool = int(pool or 0)
-        if pool <= 0 or not agent_id or not gift_tx_id: return []
-        sk = scheme(); sc = SCHEMES[sk]; paid = []; total_pct = 0.0
-        for gen, aid in enumerate(chain_of(agent_id, sc['depth']), start=1):
-            rate = sc['rates'][gen - 1]; total_pct += rate
-            if total_pct > 1.0: break
-            amount = int(pool * rate)
+    def locked_carry(user_id):
+        q = db.session.query(CommissionCarry).filter_by(user_id=user_id).with_for_update().populate_existing()
+        row = q.first()
+        if not row:
+            try:
+                with db.session.begin_nested():
+                    db.session.add(CommissionCarry(user_id=user_id, units=0))
+            except IntegrityError:
+                pass
+            row = q.first()
+        return row
+
+    def pay_commissions(receiver_id, base, source_user_id, gift_tx_id):
+        """7 generations above the gift receiver; base = purchased coins in the gift.
+        Runs inside the gift's own transaction, once per gift."""
+        base = int(base or 0)
+        if base <= 0 or not receiver_id or not gift_tx_id: return []
+        if FinCommission.query.filter_by(gift_tx_id=gift_tx_id).first(): return []
+        chain = rules.upline(receiver_id, inviter_of)
+
+        def eligible(user_id):
+            u = db.session.query(User.banned).filter(User.id == user_id).first()
+            return bool(u) and not u[0] and user_id != source_user_id   # no commission on your own gift
+
+        carries = {uid: locked_carry(uid) for uid in sorted(chain) if eligible(uid)}   # fixed lock order
+        paid = []
+        for gen, aid, amount, carry in rules.accrue(base, chain, carries.__contains__, lambda uid: carries[uid].units):
+            carries[aid].units = carry
             if amount <= 0: continue
-            if FinCommission.query.filter_by(gift_tx_id=gift_tx_id, agent_id=aid).first(): continue
             db.session.add(FinCommission(agent_id=aid, source_user_id=source_user_id, generation=gen,
-                                         rate=rate, pool=pool, amount=amount, gift_tx_id=gift_tx_id, scheme=sk))
+                                         rate=float(rules.GENERATION_RATES[gen - 1]), pool=base, amount=amount,
+                                         gift_tx_id=gift_tx_id, scheme='seven12'))
             db.session.flush()
             db.session.execute(update(User).where(User.id == aid).values(commission=User.commission + amount),
                                execution_options={'synchronize_session': False})
-            tx(aid, 'commission', amount, f'G{gen} {sk}')
-            ledger(aid, 'commission', amount, ref=gift_tx_id, note=f'G{gen} {sk}')
+            tx(aid, 'commission', amount, f'G{gen} seven12')
+            ledger(aid, 'commission', amount, ref=gift_tx_id, note=f'G{gen} seven12')
             paid.append((aid, gen, amount))
         return paid
 
@@ -270,7 +296,7 @@ def init_finance(app, db, deps):
         over = []
         for gid, pool, tot in db.session.query(FinGiftTx.id, FinGiftTx.platform_share, func.coalesce(func.sum(FinCommission.amount), 0)).outerjoin(
                 FinCommission, FinCommission.gift_tx_id == FinGiftTx.id).group_by(FinGiftTx.id).all():
-            if (tot or 0) > (pool or 0): over.append(gid)
+            if (tot or 0) > (pool or 0) + len(rules.GENERATION_RATES): over.append(gid)
         if over: issues.append(dict(kind='commission_exceeds_pool', count=len(over), severity='critical'))
         return dict(ok=not any(i['severity'] in ('critical', 'high') for i in issues), issues=issues,
                     users=db.session.query(func.count()).select_from(User).scalar(),

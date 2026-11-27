@@ -81,13 +81,11 @@ GIFTS = [
 ]
 GIFT_MAP = {k: dict(key=k, name=n, emoji=e, price=p, tier=t) for k, n, e, p, t in GIFTS}
 HOST_SHARE = 0.50
-AGENT_RATES = (0.30, 0.15, 0.05)
-MAX_AGENT_DEPTH = 3
 INVITE_REWARD = 50
 LUCKY_TABLE = [(0, .74), (1, .12), (2, .08), (5, .04), (10, .015), (14, .005)]
 PK_WINNER_SHARE, PK_LOSER_SHARE, PK_PLATFORM_SHARE = 0.70, 0.20, 0.10
 PK_DURATION = 300
-SHARE = {'luxury': 0.70, 'legendary': 0.04, 'mythic': 0.04}
+SHARE = {'luxury': 0.50, 'legendary': 0.04, 'mythic': 0.04}   # never above HOST_SHARE: 50% + 12% keeps 38% for the platform
 DEFAULT_SHARE = 0.02
 WHEEL = [(0, .41), (0.5, .34), (1, .12), (2, .09), (5, .04)]
 BOX = [(0, .58), (0.5, .20), (1, .09), (2, .07), (5, .05), (10, .01)]
@@ -311,6 +309,12 @@ def coins_of(uid): return db.session.query(User.coins).filter(User.id == uid).sc
 def spend(uid, n):
     r = db.session.execute(update(User).where(User.id == uid, User.coins >= n).values(coins=User.coins - n, real_coins=case((User.real_coins > User.coins - n, User.coins - n), else_=User.real_coins)), execution_options={'synchronize_session': False})
     return r.rowcount == 1
+def spend_split(uid, n):
+    """Spends n coins (free coins first). Returns how many PURCHASED coins were used, or None.
+    The row is locked so parallel requests cannot make free coins count as purchased."""
+    row = db.session.query(User.coins, User.real_coins).filter(User.id == uid).with_for_update().first()
+    if not row or not spend(uid, n): return None
+    return max(0, n - max(0, (row[0] or 0) - (row[1] or 0)))
 def add_coins(uid, n): db.session.execute(update(User).where(User.id == uid).values(coins=User.coins + n), execution_options={'synchronize_session': False})
 def tx(uid, kind, amt, note=''): db.session.add(Tx(user_id=uid, kind=kind, amount=amt, note=note[:120]))
 def notify(chat_id, text):
@@ -368,6 +372,11 @@ def staticf(fn):
 
 
 try:
+    from . import rules
+except ImportError:
+    import rules
+
+try:
     from .finance import init_finance
 except ImportError:
     from finance import init_finance
@@ -394,7 +403,7 @@ def cfg():
     return dict(agora_app_id=AGORA_APP_ID, gifts=GIFTS_PUB, packages=[dict(coins=c, birr=b) for c, b in PACKAGES], levels=LEVELS, pay_number=PAY_NUMBER, bot=BOT_USERNAME,
                 min_withdraw=MIN_WITHDRAW, rate=COIN_BIRR, seats=SEATS, max_guests=MAX_LIVE_GUESTS, min_bet=MIN_BET, max_bet=MAX_BET, p2p_mult=P2P_MULT, frames=FRAMES_PUB,
                 channel=CHANNEL_URL, support=SUPPORT,
-                host=dict(share=HOST_SHARE), agent=dict(rates=list(AGENT_RATES), depth=MAX_AGENT_DEPTH), invite=dict(reward=INVITE_REWARD),
+                host=dict(share=HOST_SHARE), agent=dict(rates=[float(r) for r in rules.GENERATION_RATES], depth=len(rules.GENERATION_RATES)), invite=dict(reward=INVITE_REWARD),
                 vip=dict(price=VIP_PRICE, days=VIP_DAYS, bonus=VIP_DAILY_BONUS, rooms=VIP_ROOMS),
                 lucky=dict(table=[[m, p] for m, p in LUCKY_TABLE], rtp=0.70, house=0.30),
                 pk=dict(winner_share=PK_WINNER_SHARE, loser_share=PK_LOSER_SHARE, platform_share=PK_PLATFORM_SHARE, duration=PK_DURATION),
@@ -761,7 +770,8 @@ def room_gift(rid):
     if not target: return err('user not found')
     if limited('gift', 0.4): return err('Slow down', 429)
     total = gift['price'] * qty
-    if not spend(g.user.id, total):
+    bought_used = spend_split(g.user.id, total)
+    if bought_used is None:
         db.session.rollback(); return err('Not enough coins', 402)
     lucky_m, refund = 0, 0; earn = 0; real_used = 0
     if gift['tier'] == 'lucky':
@@ -773,8 +783,7 @@ def room_gift(rid):
         if not st: st = LuckyStats(day=today()); db.session.add(st)
         st.volume = (st.volume or 0) + total; st.returned = (st.returned or 0) + refund; st.house = (st.house or 0) + (total - refund)
     else:
-        free_before = max(0, (g.user.coins or 0) - (g.user.real_coins or 0))
-        real_used = max(0, total - free_before)
+        real_used = bought_used
         rate = HOST_SHARE if target.host_status == 'host' else SHARE.get(gift['tier'], DEFAULT_SHARE)
         earn = int(real_used * rate)
         db.session.execute(update(User).where(User.id == to).values(earnings=User.earnings + earn, gifts_recv=User.gifts_recv + total), execution_options={'synchronize_session': False})
@@ -783,8 +792,8 @@ def room_gift(rid):
     db.session.execute(update(User).where(User.id == g.user.id).values(spent=User.spent + total, gifts_sent=User.gifts_sent + total), execution_options={'synchronize_session': False})
     gid, pool = FIN['record_gift'](g.user.id, to, gift['key'], qty, total, real_used, earn, rid, gift['tier'],
                                    f"{rid}:{g.user.id}:{to}:{gift['key']}:{qty}:{time.time()}:{secrets.token_hex(4)}")
-    if gift['tier'] != 'lucky' and target.agent_id and gid:
-        pay_agent_commission(target.agent_id, pool, g.user.id, gid)
+    if gift['tier'] != 'lucky' and gid:
+        FIN['pay_commissions'](to, real_used, g.user.id, gid)
     meta = dict(gift=gift['key'], emoji=gift['emoji'], qty=qty, tier=gift['tier'], to=to, to_name=target.username, price=total, lucky=lucky_m, refund=refund)
     db.session.add(Message(room_id=rid, user_id=g.user.id, name=g.user.username, kind='gift', meta=json.dumps(meta, ensure_ascii=False)))
     db.session.commit(); mission_inc(g.user.id, 'gift')
@@ -804,14 +813,6 @@ def agora_token():
     return jsonify(app_id=AGORA_APP_ID, channel=channel, token=token, uid=g.user.id, publisher=publisher, guest=guest)
 
 
-def agent_chain_of(start_id):
-    out, cur, seen = [], start_id, set()
-    while cur and len(out) < MAX_AGENT_DEPTH and cur not in seen:
-        seen.add(cur); out.append(cur); a = db.session.get(User, cur); cur = a.parent_agent_id if a else None
-    return out
-def pay_agent_commission(agent_id, pool, source_user_id=None, gift_tx_id=None):
-    if pool <= 0 or not agent_id or not gift_tx_id: return
-    FIN['pay_commissions'](agent_id, pool, source_user_id or 0, gift_tx_id)
 @app.post('/api/host/apply')
 @auth
 def host_apply():
@@ -836,14 +837,17 @@ def agent_dashboard():
     hosts = User.query.filter_by(agent_id=u.id).order_by(User.earnings.desc()).limit(50).all()
     subs = User.query.filter_by(parent_agent_id=u.id, is_agent=True).limit(50).all()
     total = db.session.query(func.coalesce(func.sum(Tx.amount), 0)).filter(Tx.user_id == u.id, Tx.kind == 'commission').scalar()
-    link = f'https://t.me/{BOT_USERNAME}?startapp=ag_{u.tg_id}' if BOT_USERNAME else f'https://{request.host}/?ref=ag_{u.tg_id}'
+    link = web_link(f'ag_{u.tg_id}')
     return jsonify(comm=u.commission or 0, total=total, hosts=[dict(pub(h), earn=h.earnings, sent=h.gifts_sent) for h in hosts], subs=[dict(pub(s), comm=s.commission or 0) for s in subs], link=link)
+def web_link(code):
+    base = (os.environ.get('PUBLIC_URL') or os.environ.get('RENDER_EXTERNAL_URL') or f'https://{request.host}').rstrip('/')
+    return f'{base}/?ref={code}'
 @app.get('/api/invite')
 @auth
 def invite_info():
     u = g.user
     code = f'{"ag" if u.is_agent else "ref"}_{u.tg_id}'
-    link = f'https://t.me/{BOT_USERNAME}?startapp={code}' if BOT_USERNAME else f'https://{request.host}/?ref={code}'
+    link = web_link(code)
     cnt = db.session.query(func.count()).select_from(User).filter(or_(User.agent_id == u.id, User.referrer_id == u.id)).scalar() or 0
     return jsonify(link=link, count=cnt, reward=INVITE_REWARD)
 
@@ -1215,8 +1219,8 @@ def pk_gift():
     else: return err('Invalid host')
     if now() > pk.started_at + pk.duration:
         finalize_pk(pk); return err('PK has ended', 409)
-    real_used = max(0, total - max(0, (u.coins or 0) - (u.real_coins or 0)))
-    if not spend(u.id, total):
+    real_used = spend_split(u.id, total)
+    if real_used is None:
         db.session.rollback(); return err('Not enough coins', 402)
     r = db.session.execute(update(PKBattle).where(PKBattle.id == pk.id, PKBattle.status == 'active').values(
         {score: func.coalesce(getattr(PKBattle, score), 0) + total, paid: func.coalesce(getattr(PKBattle, paid), 0) + real_used}), execution_options={'synchronize_session': False})
@@ -1302,7 +1306,7 @@ def lucky_info():
 
 POLICY = {
     'terms': "TERMS OF SERVICE\n1. Twenty One Party is a voice/live entertainment platform. Users must be 18+.\n2. One account per person.\n3. Coins are virtual currency; only earned income/commission is withdrawable.\n4. Purchases are final except where required by law.\n5. Violations lead to suspension or ban.",
-    'commission': "HOST & AGENT COMMISSION\n1. Hosts receive 50% of real gift value.\n2. Agents earn ONLY from the platform share.\n3. No payment for mere registration.\n4. Commission scheme is admin-configurable and audited.",
+    'commission': "HOST EARNINGS & 7-GENERATION COMMISSION\n1. Hosts receive 50% of the purchased-coin value of gifts. Free, bonus and reward coins pay no earnings or commission.\n2. When someone you invited receives a gift, you can earn: G1 5%, G2 2.5%, G3 1.5%, G4 1%, G5 0.75%, G6 0.75%, G7 0.5% (12% in total), from the platform's side. It does not reduce the receiver's earnings.\n3. Fractions of a coin are saved and paid when they add up to 1 coin.\n4. No payment for registration alone. No commission on your own gift, to banned accounts, on Lucky gifts or on PK gifts.",
     'seller': "COIN SELLER (RESELLER) POLICY\n1. Approved sellers buy coins at wholesale: Starter 0.42, Silver 0.41, Gold 0.40 Birr/coin.\n2. Minimum order: Starter 5,000 / Silver 20,000 / Gold 100,000 Birr.\n3. Bonus coins are PROMO: usable for own gifting, NOT transferable, NOT withdrawable.\n4. Sellers transfer trade coins to buyers; a 2% network fee applies.\n5. Recommended retail price 0.50 Birr/coin. Sellers keep the difference.\n6. Daily transfer limit 200,000 coins. Self-transfer is forbidden.\n7. Fraud, fake payment proofs or chargebacks lead to permanent ban and forfeiture.",
     'lucky': "LUCKY GIFT POLICY\n1. Lucky gifts are chance games: sending one may return a multiplier to the sender.\n2. 70% of lucky volume returns to players; 30% retained by platform.\n3. Lucky gifts add hype/stage score but do not pay host earnings.\n4. 18+ only. Play responsibly.",
     'pk': "PK BATTLE POLICY\n1. Two hosts battle 5 minutes; viewers gift each side.\n2. Winner 70%, loser 20%, platform 10%. Tie 45/45/10.",

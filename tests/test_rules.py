@@ -40,6 +40,34 @@ class Gifts(unittest.TestCase):
         self.assertRaises(ValueError, r.split_gift, 100, [2, 2])
 
 
+class CarriedCommission(unittest.TestCase):
+    def run_gifts(self, bases, eligible=lambda u: True):
+        carry, paid = {}, {}
+        for base in bases:
+            for gen, uid, whole, rest in r.accrue(base, CHAIN, eligible, lambda u: carry.get(u, 0)):
+                carry[uid] = rest
+                paid[uid] = paid.get(uid, 0) + whole
+        return paid, carry
+
+    def test_small_gifts_are_not_lost(self):       # 2,000 roses of 10 coins = 20,000 coins
+        paid, _ = self.run_gifts([10] * 2000)
+        self.assertEqual([paid[u] for u in CHAIN], [1000, 500, 300, 200, 150, 150, 100])
+
+    def test_never_more_than_exact_rate(self):
+        rnd = random.Random(7)
+        bases = [rnd.randrange(0, 60000) for _ in range(5000)]
+        paid, carry = self.run_gifts(bases)
+        for uid, units in zip(CHAIN, r.GENERATION_UNITS):
+            self.assertEqual(paid[uid] * r.UNITS_PER_COIN + carry[uid], sum(bases) * units)
+            self.assertLess(carry[uid], r.UNITS_PER_COIN)
+        self.assertLessEqual(sum(paid.values()), sum(bases) * 12 // 100)
+
+    def test_free_coins_and_ineligible(self):
+        self.assertEqual(r.accrue(0, CHAIN, lambda u: True, lambda u: 9999), [])
+        got = r.accrue(1000, CHAIN, lambda u: u != 11, lambda u: 0)
+        self.assertEqual(got[0], (2, 12, 25, 0))
+
+
 class Activity(unittest.TestCase):
     def test4_welcome_total(self):
         self.assertEqual(sum(2 * r.reward_per_block(d, 1) for d in range(1, 8)), 2300)

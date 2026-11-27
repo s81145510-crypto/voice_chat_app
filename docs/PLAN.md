@@ -25,9 +25,14 @@
 7. **ሒሳብ አያያዝ፦** ኮዱ float ይጠቀማል፤ ledger-ው double-entry አይደለም።
 8. **Withdraw፦** አሁን ዝቅተኛው 500 coin ነው፤ ሰነዱ 1,000 ETB እና 50% genuine gift earnings ይጠይቃል።
 
-## 3. የተጻፈ ኮድ
-`backend/rules.py`፦ የስጦታ ክፍፍል፣ 7 ደረጃ ኮሚሽን፣ activity reward እና income → coin ስሌቶች። **ከ live app ጋር ገና አልተገናኘም።**
-ሙከራ፦ `python -m unittest discover -s tests`። እነዚህ የሰነዱን TEST 1–6 **የሒሳብ ክፍል ብቻ** ይፈትናሉ። database፣ journal፣ የ wallet ገደቦች፣ የተረጋገጠ የ host ጊዜ እና TEST 7–10 **አልተሞከሩም።**
+## 3. የተጻፈ ኮድ (2026-11-27 ምሽት ተሻሽሏል)
+በ `phase4` ላይ ተሠርቷል፤ ወደ `main` እስኪገባ live አይሆንም።
+- **7 generation ኮሚሽን** ባለ 3 ደረጃውን ተክቷል። ሰንሰለቱ ከስጦታ ተቀባዩ በላይ ያሉ ጋባዦች ናቸው፤ መሠረቱ በስጦታው ውስጥ ያለው የተገዛ coin ነው። ክፍልፋዮች ተጠራቅመው ይከፈላሉ። (ክፍል 2 ቁጥር 1–3 በዚህ ተፈትቷል።)
+- Host ላልሆነ ሰው የሚላክ luxury ስጦታ ከ70% ወደ 50% ወርዷል።
+- የተገዛ coin ስሌት ላይ የነበረው የአንድ ጊዜ ጥያቄዎች ክፍተት ተዘግቷል።
+- የግብዣ link ወደ web app ይወስዳል።
+- Activity reward እና income exchange ስሌቶች `rules.py` ውስጥ አሉ፤ **ገና አልተገናኙም።**
+- ሙከራ፦ `python -m unittest discover -s tests`። የሒሳብ ሙከራ ብቻ ነው፤ database እና API **አልተሞከሩም።**
 
 ## 4. ቅደም ተከተል
 - **A. App ማሟላት፦** notifications፣ ተመልካች ዝርዝር፣ like፣ room moderation እና privacy፣ PK history፣ account መሰረዝ፣ Moderator
@@ -38,8 +43,13 @@
 **D እስኪጠናቀቅ እውነተኛ ገንዘብ አይመከርም።** አሁን ያለው app ግን coin ግዢ እና withdraw ጥያቄዎችን አስቀድሞ ይቀበላል።
 ነፃው Render database December 24, 2026 ያበቃል።
 
-## 5. የሚጠበቁ ውሳኔዎች
-1. የ7 ደረጃ ሰንሰለቱ የማን ነው? (ሐሳብ፦ ስጦታ ተቀባዩን Host የጋበዙት፤ ባለ 3 ደረጃው ይቆማል)
-2. Betting games እና Lucky gift ይዘጉ? (ሐሳብ፦ አዎ፣ ኮዱ ሳይሰረዝ በ switch)
-3. PK 70/20/10 እና draw 45/45/10 ጸድቋል?
-4. Welcome ቀን 1 ከመቼ ይጀምራል? Host Level እንዴት ይሰላል? (ሐሳብ፦ Host ከጸደቀበት ቀን ጀምሮ 7 ቀን፤ Host Level ከተቀበለው የተገዛ-coin ስጦታ፣ ደረጃዎቹ በኋላ ይጸድቃሉ)
+## 5. ውሳኔዎች
+- ባለቤቱ፦ ባለ 3 ደረጃው ወደ 7 generation ይቀየር፤ app-ው ትርፋማ፣ ሳቢ እና ኪሳራ የሌለው ይሁን።
+- የተመረጠ (ባለቤቱ ሊቀይረው ይችላል)፦ ሰንሰለቱ የስጦታ ተቀባዩ ጋባዦች ናቸው።
+- አልተቀየሩም፦ Betting games፣ Lucky gift፣ PK 70/20/10።
+- ክፍት፦ የ7 ቀን welcome መነሻ ቀን፤ የ Host Level አሰላል።
+
+## 6. የኪሳራ አደጋዎች
+- **USDT withdraw፦** `USDT_BIRR` ከገበያ ዋጋ በጣም ዝቅ ካለ የሚከፈለው USDT በ Birr ውድ ይሆናል። በ PK እና በዝቅተኛው ሽያጭ ዋጋ ከ 178 በላይ የገበያ ዋጋ ኪሳራ ያመጣል (በ `USDT_BIRR=161` ከሆነ)።
+- **ሐሰተኛ የክፍያ screenshot፦** ከማጽደቅ በፊት ገንዘቡ መግባቱን በራስህ Telebirr/USDT account ማረጋገጥ።
+- hosting፣ Agora፣ የክፍያ ክፍያዎች፣ ግብር እና refund በስሌቱ ውስጥ የሉም።
