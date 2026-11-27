@@ -410,7 +410,8 @@ except ImportError:
 AUTH = init_auth(app, db, dict(
     User=User, now=now, tx=tx, err=err, body=body, num=num, auth=auth, admin_only=admin_only,
     sign=sign, me_dict=me_dict, cfg=cfg, welcome=WELCOME,
-    referral_register=lambda a, b: FIN['referral_register'](a, b), is_admin=lambda u: u.tg_id in ADMIN_IDS))
+    referral_register=lambda a, b: FIN['referral_register'](a, b), is_admin=lambda u: u.tg_id in ADMIN_IDS,
+    bot_token=BOT_TOKEN, secret=lambda: SECRET))
 # Never sign sessions with a public default key (anyone could forge an admin login).
 if not (os.environ.get('SECRET_KEY') or BOT_TOKEN):
     SECRET = AUTH['stored_secret']()
@@ -437,6 +438,8 @@ def register():
     else:
         return err('Please log in with your phone number', 401)
     u = User.query.filter_by(tg_id=tgid).first()
+    if not u and tgid.startswith('g_') and AUTH['verify_on']():
+        return err('Guest mode is closed. Please sign up with your phone number', 403)
     if not u:
         ref = None; ag = None
         if start.startswith('ref_'):
@@ -1168,15 +1171,17 @@ def finalize_pk(pk):
     db.session.refresh(pk)
     h1, h2 = pk.host1_gifts or 0, pk.host2_gifts or 0
     if h1 + h2 > 0:
-        if h1 >= h2: win, lose = pk.host1_id, pk.host2_id
-        else: win, lose = pk.host2_id, pk.host1_id
-        pk.winner_id = win
         real = (pk.host1_real or 0) + (pk.host2_real or 0)
-        ws = int(real * PK_WINNER_SHARE); ls = int(real * PK_LOSER_SHARE)
-        if win and ws:
-            db.session.execute(update(User).where(User.id == win).values(earnings=User.earnings + ws)); tx(win, 'pk_win', ws, f'PK #{pk.id}')
-        if lose and ls:
-            db.session.execute(update(User).where(User.id == lose).values(earnings=User.earnings + ls)); tx(lose, 'pk_lose', ls, f'PK #{pk.id}')
+        if h1 == h2 and pk.host2_id:      # draw: 45% / 45% / 10% as written in the policy
+            each = int(real * (PK_WINNER_SHARE + PK_LOSER_SHARE) / 2)
+            pay = [(pk.host1_id, each, 'pk_draw'), (pk.host2_id, each, 'pk_draw')]
+        else:
+            win, lose = (pk.host1_id, pk.host2_id) if h1 >= h2 else (pk.host2_id, pk.host1_id)
+            pk.winner_id = win
+            pay = [(win, int(real * PK_WINNER_SHARE), 'pk_win'), (lose, int(real * PK_LOSER_SHARE), 'pk_lose')]
+        for uid, amount, kind in pay:
+            if uid and amount:
+                db.session.execute(update(User).where(User.id == uid).values(earnings=User.earnings + amount)); tx(uid, kind, amount, f'PK #{pk.id}')
     db.session.commit()
 @app.post('/api/pk/create')
 @auth
@@ -1218,7 +1223,7 @@ def pk_gift():
     if r.rowcount != 1:
         db.session.rollback(); return err('PK has ended', 409)
     db.session.execute(update(User).where(User.id == u.id).values(spent=User.spent + total, gifts_sent=User.gifts_sent + total), execution_options={'synchronize_session': False})
-    tx(u.id, 'pk_gift', -total, f'PK#{pk.id} side{to_host}'); db.session.commit(); db.session.refresh(pk)
+    tx(u.id, 'pk_gift', -total, f'PK#{pk.id} side{to_host} {gift["key"]} {qty}'); db.session.commit(); db.session.refresh(pk)
     return jsonify(coins=coins_of(u.id), host1_gifts=pk.host1_gifts, host2_gifts=pk.host2_gifts)
 @app.post('/api/pk/end')
 @auth
@@ -1236,6 +1241,37 @@ def pk_active():
         h1 = db.session.get(User, pk.host1_id); h2 = db.session.get(User, pk.host2_id) if pk.host2_id else None
         out.append(dict(id=pk.id, host1=pub(h1) if h1 else None, host2=pub(h2) if h2 else None, host1_gifts=pk.host1_gifts or 0, host2_gifts=pk.host2_gifts or 0, time_left=max(0, pk.started_at + pk.duration - now())))
     return jsonify(pks=out)
+_pk_cache = {}
+
+
+def pk_feed(pk):
+    """Recent gifts (for animations) and the top 3 supporters of each side."""
+    c = _pk_cache.get(pk.id)
+    if c and time.time() - c[0] < 1.5: return c[1], c[2]
+    rows = Tx.query.filter(Tx.kind == 'pk_gift', Tx.ts >= pk.started_at - pk.duration - 120,
+                           Tx.note.like(f'PK#{pk.id} side%')).order_by(Tx.id).all()
+    parsed = []
+    for r in rows:
+        w = r.note.split()
+        side = 2 if len(w) > 1 and w[1] == 'side2' else 1
+        parsed.append((r.id, side, r.user_id, w[2] if len(w) > 3 else '', num(w[3], 1) if len(w) > 3 else 1, -r.amount))
+    totals = {1: {}, 2: {}}
+    for _, side, uid, _, _, amount in parsed: totals[side][uid] = totals[side].get(uid, 0) + amount
+    best = {side: sorted(t.items(), key=lambda x: -x[1])[:3] for side, t in totals.items()}
+    last = parsed[-15:]
+    ids = {x[2] for x in last} | {uid for l in best.values() for uid, _ in l}
+    users = {x.id: x for x in User.query.filter(User.id.in_(list(ids) or [0])).all()}
+    events = []
+    for eid, side, uid, key, qty, amount in last:
+        gf = GIFT_MAP.get(key) or {}
+        events.append(dict(id=eid, side=side, name=users[uid].username if uid in users else '?', emoji=gf.get('emoji', '🎁'),
+                           gift=key, tier=gf.get('tier', 'common'), qty=qty, total=amount))
+    top = {str(side): [dict(pub(users[uid]), v=v) for uid, v in l if uid in users] for side, l in best.items()}
+    if len(_pk_cache) > 100: _pk_cache.clear()
+    _pk_cache[pk.id] = (time.time(), events, top)
+    return events, top
+
+
 @app.get('/api/pk/<int:pid>/state')
 @auth
 def pk_state(pid):
@@ -1243,7 +1279,8 @@ def pk_state(pid):
     if not pk: return err('PK not found', 404)
     if pk.status == 'active' and now() > pk.started_at + pk.duration: finalize_pk(pk)
     h1 = db.session.get(User, pk.host1_id); h2 = db.session.get(User, pk.host2_id) if pk.host2_id else None
-    return jsonify(id=pk.id, status=pk.status, host1=pub(h1) if h1 else None, host2=pub(h2) if h2 else None, host1_gifts=pk.host1_gifts or 0, host2_gifts=pk.host2_gifts or 0,
+    events, top = pk_feed(pk)
+    return jsonify(id=pk.id, status=pk.status, events=events, top=top, duration=pk.duration, host1=pub(h1) if h1 else None, host2=pub(h2) if h2 else None, host1_gifts=pk.host1_gifts or 0, host2_gifts=pk.host2_gifts or 0,
                    time_left=max(0, pk.started_at + pk.duration - now()), winner=pk.winner_id)
 @app.post('/api/pk/token')
 @auth
