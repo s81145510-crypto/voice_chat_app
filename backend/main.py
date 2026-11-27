@@ -174,6 +174,9 @@ class Withdraw(db.Model):
     id = db.Column(db.Integer, primary_key=True); user_id = db.Column(db.Integer, index=True); username = db.Column(db.String(60)); coins = db.Column(db.Integer); birr = db.Column(db.Integer)
     phone = db.Column(db.String(20)); status = db.Column(db.String(10), default='pending', index=True); ts = db.Column(db.Integer, default=now)
     method = db.Column(db.String(10), default='telebirr'); usdt_address = db.Column(db.String(64), default='')
+    # Preserve the exact source buckets so a rejected withdrawal refunds correctly.
+    earnings_coins = db.Column(db.Integer, default=0, nullable=False)
+    commission_coins = db.Column(db.Integer, default=0, nullable=False)
 
 
 class Post(db.Model):
@@ -221,7 +224,7 @@ def ensure_columns():
             Room: [('kind', "VARCHAR(8) DEFAULT 'voice'")], Post: [('has_image', 'BOOLEAN DEFAULT FALSE')], Job: [('has_image', 'BOOLEAN DEFAULT FALSE')],
             PKBattle: [('winner_id', 'INTEGER'), ('host1_real', 'INTEGER DEFAULT 0'), ('host2_real', 'INTEGER DEFAULT 0')],
             Purchase: [('method', "VARCHAR(10) DEFAULT 'telebirr'"), ('txhash', "VARCHAR(80) DEFAULT ''")],
-            Withdraw: [('method', "VARCHAR(10) DEFAULT 'telebirr'"), ('usdt_address', "VARCHAR(64) DEFAULT ''")]}
+            Withdraw: [('method', "VARCHAR(10) DEFAULT 'telebirr'"), ('usdt_address', "VARCHAR(64) DEFAULT ''"), ('earnings_coins', 'INTEGER DEFAULT 0 NOT NULL'), ('commission_coins', 'INTEGER DEFAULT 0 NOT NULL')]}
     insp = inspect(db.engine)
     for M, cols in want.items():
         tbl = M.__tablename__; have = {c['name'] for c in insp.get_columns(tbl)}
@@ -999,11 +1002,20 @@ def withdraw():
     else:
         phone = str(b.get('phone') or g.user.phone or '').strip()
         if not (phone.isdigit() and len(phone) == 10): return err('Enter valid phone number')
-    min_c = case((User.commission <= coins, User.commission), else_=coins)
-    r = db.session.execute(update(User).where(User.id == g.user.id, User.earnings + User.commission >= coins).values(commission=User.commission - min_c, earnings=User.earnings - (coins - min_c)), execution_options={'synchronize_session': False})
-    if r.rowcount != 1:
+    # Lock and split the debit between the two withdrawable source buckets.
+    # These exact amounts are stored on the request and restored to the same
+    # buckets if an administrator rejects it.
+    balances = db.session.query(User.earnings, User.commission).filter(User.id == g.user.id).with_for_update().first()
+    if not balances or int(balances[0] or 0) + int(balances[1] or 0) < coins:
         db.session.rollback(); return err('Not enough income')
-    w = Withdraw(user_id=g.user.id, username=g.user.username, coins=coins, birr=int(coins * COIN_BIRR), phone=phone, method=method, usdt_address=address); db.session.add(w)
+    commission_part = min(max(0, int(balances[1] or 0)), coins)
+    earnings_part = coins - commission_part
+    r = db.session.execute(update(User).where(User.id == g.user.id, User.earnings >= earnings_part, User.commission >= commission_part).values(
+        commission=User.commission - commission_part, earnings=User.earnings - earnings_part), execution_options={'synchronize_session': False})
+    if r.rowcount != 1:
+        db.session.rollback(); return err('Balances changed; please retry')
+    w = Withdraw(user_id=g.user.id, username=g.user.username, coins=coins, birr=int(coins * COIN_BIRR), phone=phone, method=method, usdt_address=address,
+                 earnings_coins=earnings_part, commission_coins=commission_part); db.session.add(w)
     tx(g.user.id, 'withdraw', -coins, f'{method} withdraw'); db.session.commit()
     dest = address if method == 'usdt' else phone
     notify_admins(f'💸 {method.upper()} Withdraw: {g.user.username} — {coins} coins = {w.birr} Birr / {round(coins*COIN_USDT,4)} USDT → {dest}'); return jsonify(ok=1)
@@ -1395,7 +1407,14 @@ def adm_withdraw():
         db.session.rollback(); return err('Already processed')
     u = db.session.get(User, w.user_id)
     if act != 'paid':
-        db.session.execute(update(User).where(User.id == w.user_id).values(earnings=User.earnings + w.coins), execution_options={'synchronize_session': False}); tx(w.user_id, 'refund', w.coins, f'withdraw #{w.id} rejected')
+        # Legacy requests have zero source fields; refund those to earnings as before.
+        refund_earnings = int(w.earnings_coins or 0)
+        refund_commission = int(w.commission_coins or 0)
+        if refund_earnings + refund_commission == 0:
+            refund_earnings = int(w.coins or 0)
+        db.session.execute(update(User).where(User.id == w.user_id).values(
+            earnings=User.earnings + refund_earnings, commission=User.commission + refund_commission), execution_options={'synchronize_session': False})
+        tx(w.user_id, 'refund', w.coins, f'withdraw #{w.id} rejected (earnings {refund_earnings}, commission {refund_commission})')
     db.session.commit()
     if u: notify(u.tg_id, '💰 Payment sent!' if act == 'paid' else f'❌ Rejected; {w.coins} refunded.')
     return jsonify(ok=1)
