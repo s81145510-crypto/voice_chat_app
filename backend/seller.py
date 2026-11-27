@@ -170,7 +170,10 @@ def init_seller(app, db, deps):
     @app.post('/api/seller/transfer')
     @auth
     def seller_transfer():
-        u = g.user; s = db.session.get(Seller, u.id)
+        u = g.user
+        # Serialize transfers per seller so concurrent requests cannot both
+        # pass the rolling 24-hour transfer-limit check on PostgreSQL.
+        s = db.session.query(Seller).filter_by(user_id=u.id).with_for_update().first()
         if not s or s.status != 'approved': return err('Not an approved seller', 403)
         b = body(); to = num(b.get('to')); amt = num(b.get('amount'))
         if amt < MIN_TRANSFER: return err(f'Minimum transfer {MIN_TRANSFER} coins')
