@@ -28,7 +28,9 @@ def normalize_phone(raw):
 
 
 def client_ip():
-    return (request.headers.get('X-Forwarded-For', '').split(',')[0].strip() or request.remote_addr or '?')[:45]
+    # X-Forwarded-For is attacker-controlled unless ProxyFix is configured
+    # with an explicit trusted hop count by the deployment.
+    return (request.remote_addr or '?')[:45]
 
 
 def init_auth(app, db, d):
