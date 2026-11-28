@@ -1208,6 +1208,11 @@ def finalize_pk(pk):
         for uid, amount, kind in pay:
             if uid and amount:
                 db.session.execute(update(User).where(User.id == uid).values(earnings=User.earnings + amount)); tx(uid, kind, amount, f'PK #{pk.id}')
+        if real > 0:
+            JOURNAL['post_internal'](
+                source='pk_payout', reference=str(pk.id), idempotency_key=f'pk_payout:{pk.id}:COIN',
+                currency='COIN', description=f'PK #{pk.id} prize settlement',
+                lines=JOURNAL['pk_payout_lines'](int(real), pay))
     db.session.commit()
 @app.post('/api/pk/create')
 @auth
@@ -1249,7 +1254,17 @@ def pk_gift():
     if r.rowcount != 1:
         db.session.rollback(); return err('PK has ended', 409)
     db.session.execute(update(User).where(User.id == u.id).values(spent=User.spent + total, gifts_sent=User.gifts_sent + total), execution_options={'synchronize_session': False})
-    tx(u.id, 'pk_gift', -total, f'PK#{pk.id} side{to_host} {gift["key"]} {qty}'); db.session.commit(); db.session.refresh(pk)
+    pk_tx = Tx(user_id=u.id, kind='pk_gift', amount=-total, note=f'PK#{pk.id} side{to_host} {gift["key"]} {qty}')
+    db.session.add(pk_tx); db.session.flush()
+    try:
+        JOURNAL['post_internal'](
+            source='pk_gift', reference=str(pk_tx.id), idempotency_key=f'pk_gift:{pk_tx.id}:COIN',
+            currency='COIN', description=f'PK #{pk.id} gift {gift["key"]} x{qty}',
+            lines=JOURNAL['pk_gift_lines'](u.id, int(total), int(real_used)))
+    except Exception:
+        db.session.rollback()
+        return err('PK gift transaction failed; all changes rolled back', 500)
+    db.session.commit(); db.session.refresh(pk)
     return jsonify(coins=coins_of(u.id), host1_gifts=pk.host1_gifts, host2_gifts=pk.host2_gifts)
 @app.post('/api/pk/end')
 @auth
