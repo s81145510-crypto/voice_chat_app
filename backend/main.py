@@ -811,7 +811,8 @@ def room_gift(rid):
                 source='gift', reference=str(gid), idempotency_key=f'gift:{gid}:COIN',
                 currency='COIN', description=f"{'Lucky ' if gift['tier'] == 'lucky' else ''}gift {gift['key']} x{qty}",
                 lines=JOURNAL['gift_lines'](g.user.id, int(total), int(real_used), int(earn),
-                                            commission_total=commission_total, lucky_refund=int(refund)))
+                                            commission_total=commission_total, lucky_refund=int(refund),
+                                            is_lucky=(gift['tier'] == 'lucky')))
         except Exception:
             db.session.rollback()
             return err('Gift transaction failed; all changes rolled back', 500)
