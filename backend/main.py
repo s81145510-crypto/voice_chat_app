@@ -121,7 +121,7 @@ def now(): return int(time.time())
 
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True); tg_id = db.Column(db.String(32), unique=True, index=True); username = db.Column(db.String(60), default='User')
-    coins = db.Column(db.Integer, default=0, nullable=False); earnings = db.Column(db.Integer, default=0, nullable=False); spent = db.Column(db.Integer, default=0, nullable=False)
+    coins = db.Column(db.Integer, default=0, nullable=False); earnings = db.Column(db.Integer, default=0, nullable=False); gift_earnings = db.Column(db.Integer, default=0, nullable=False); spent = db.Column(db.Integer, default=0, nullable=False)
     gifts_sent = db.Column(db.Integer, default=0, nullable=False); gifts_recv = db.Column(db.Integer, default=0, nullable=False)
     bio = db.Column(db.String(160), default=''); phone = db.Column(db.String(20), default=''); tg_photo = db.Column(db.String(300), default='')
     has_photo = db.Column(db.Boolean, default=False); photo_v = db.Column(db.Integer, default=0); banned = db.Column(db.Boolean, default=False)
@@ -191,6 +191,8 @@ class Withdraw(db.Model):
     # Preserve the exact source buckets so a rejected withdrawal refunds correctly.
     earnings_coins = db.Column(db.Integer, default=0, nullable=False)
     commission_coins = db.Column(db.Integer, default=0, nullable=False)
+    gift_earnings_coins = db.Column(db.Integer, default=0, nullable=False)
+    pk_earnings_coins = db.Column(db.Integer, default=0, nullable=False)
     reviewed_by = db.Column(db.String(32), default='')
     reviewed_ts = db.Column(db.Integer, nullable=True)
     processed_by = db.Column(db.String(32), default='')
@@ -238,21 +240,34 @@ class LuckyStats(db.Model):
 
 def ensure_columns():
     from sqlalchemy import inspect
-    want = {User: [('vip_until', 'INTEGER DEFAULT 0'), ('frame', "VARCHAR(20) DEFAULT ''"), ('real_coins', 'INTEGER DEFAULT 0 NOT NULL'),
+    want = {User: [('gift_earnings', 'INTEGER DEFAULT 0 NOT NULL'), ('vip_until', 'INTEGER DEFAULT 0'), ('frame', "VARCHAR(20) DEFAULT ''"), ('real_coins', 'INTEGER DEFAULT 0 NOT NULL'),
                    ('host_status', "VARCHAR(8) DEFAULT 'none'"), ('is_agent', 'BOOLEAN DEFAULT FALSE'), ('agent_id', 'INTEGER'), ('parent_agent_id', 'INTEGER'), ('commission', 'INTEGER DEFAULT 0 NOT NULL'), ('auth_version', 'INTEGER DEFAULT 0 NOT NULL')],
             Room: [('kind', "VARCHAR(8) DEFAULT 'voice'")], Post: [('has_image', 'BOOLEAN DEFAULT FALSE')], Job: [('has_image', 'BOOLEAN DEFAULT FALSE')],
             PKBattle: [('winner_id', 'INTEGER'), ('host1_real', 'INTEGER DEFAULT 0'), ('host2_real', 'INTEGER DEFAULT 0')],
             Purchase: [('method', "VARCHAR(10) DEFAULT 'telebirr'"), ('txhash', "VARCHAR(80) DEFAULT ''")],
-            Withdraw: [('method', "VARCHAR(10) DEFAULT 'telebirr'"), ('usdt_address', "VARCHAR(64) DEFAULT ''"), ('earnings_coins', 'INTEGER DEFAULT 0 NOT NULL'), ('commission_coins', 'INTEGER DEFAULT 0 NOT NULL'), ('reviewed_by', "VARCHAR(32) DEFAULT ''"), ('reviewed_ts', 'INTEGER'), ('processed_by', "VARCHAR(32) DEFAULT ''"), ('processed_ts', 'INTEGER'), ('payout_reference', "VARCHAR(80) DEFAULT ''") ]}
+            Withdraw: [('method', "VARCHAR(10) DEFAULT 'telebirr'"), ('usdt_address', "VARCHAR(64) DEFAULT ''"), ('earnings_coins', 'INTEGER DEFAULT 0 NOT NULL'), ('commission_coins', 'INTEGER DEFAULT 0 NOT NULL'), ('gift_earnings_coins', 'INTEGER DEFAULT 0 NOT NULL'), ('pk_earnings_coins', 'INTEGER DEFAULT 0 NOT NULL'), ('reviewed_by', "VARCHAR(32) DEFAULT ''"), ('reviewed_ts', 'INTEGER'), ('processed_by', "VARCHAR(32) DEFAULT ''"), ('processed_ts', 'INTEGER'), ('payout_reference', "VARCHAR(80) DEFAULT ''") ]}
     insp = inspect(db.engine)
+    gift_earnings_column_added = False
     for M, cols in want.items():
         tbl = M.__tablename__; have = {c['name'] for c in insp.get_columns(tbl)}
         for name, ddl in cols:
             if name in have: continue
             try:
                 db.session.execute(sa_text(f'ALTER TABLE "{tbl}" ADD COLUMN {name} {ddl}')); db.session.commit()
+                if M is User and name == 'gift_earnings': gift_earnings_column_added = True
             except Exception as e:
                 db.session.rollback(); print('ensure_columns:', tbl, name, e)
+    if gift_earnings_column_added:
+        # Legacy earnings included PK rewards. Conservatively remove all recorded
+        # PK payouts from the current balance; older users may see a lower eligible
+        # gift balance, but PK rewards are never misclassified as gift earnings.
+        try:
+            table = User.__tablename__
+            pk_sum = f"(SELECT COALESCE(SUM(amount), 0) FROM tx WHERE tx.user_id = \\"{table}\\".id AND tx.kind IN ('pk_win','pk_lose','pk_draw') AND tx.amount > 0)"
+            db.session.execute(sa_text(f'UPDATE "{table}" SET gift_earnings = CASE WHEN earnings > {pk_sum} THEN earnings - {pk_sum} ELSE 0 END'))
+            db.session.commit()
+        except Exception as e:
+            db.session.rollback(); print('ensure_columns: gift earnings backfill', e)
     # Withdrawal workflow states include UNDER_REVIEW and PROCESSING (12+ chars).
     # PostgreSQL enforces VARCHAR length, so widen existing installations safely.
     if db.engine.dialect.name == 'postgresql':
@@ -877,7 +892,7 @@ def room_gift(rid):
         real_used = bought_used
         rate = HOST_SHARE if target.host_status == 'host' else SHARE.get(gift['tier'], DEFAULT_SHARE)
         earn = int(real_used * rate)
-        db.session.execute(update(User).where(User.id == to).values(earnings=User.earnings + earn, gifts_recv=User.gifts_recv + total), execution_options={'synchronize_session': False})
+        db.session.execute(update(User).where(User.id == to).values(earnings=User.earnings + earn, gift_earnings=User.gift_earnings + earn, gifts_recv=User.gifts_recv + total), execution_options={'synchronize_session': False})
         if earn: tx(to, 'earn', earn, f'gift from {g.user.id}')
         tx(g.user.id, 'gift', -total, f'{gift["key"]}x{qty} -> {to}')
     db.session.execute(update(User).where(User.id == g.user.id).values(spent=User.spent + total, gifts_sent=User.gifts_sent + total), execution_options={'synchronize_session': False})
@@ -1090,20 +1105,23 @@ def withdraw():
     if not (phone.isdigit() and len(phone) == 10): return err('Enter valid Telebirr phone number')
     # Lock and validate the two withdrawable buckets. Activity and promo coins
     # are intentionally not considered as cash-out sources.
-    balances = db.session.query(User.earnings, User.commission).filter(User.id == g.user.id).with_for_update().first()
+    balances = db.session.query(User.earnings, User.gift_earnings, User.commission).filter(User.id == g.user.id).with_for_update().first()
     if not balances:
         db.session.rollback(); return err('User wallet not found', 404)
     try:
-        split = rules.withdrawal_source_split(coins, int(balances[0] or 0), int(balances[1] or 0))
+        pk_earnings = max(0, int(balances[0] or 0) - int(balances[1] or 0))
+        split = rules.withdrawal_source_split(coins, int(balances[1] or 0), pk_earnings, int(balances[2] or 0))
     except (TypeError, ValueError) as e:
         db.session.rollback(); return err(str(e))
     earnings_part, commission_part = split['earnings'], split['commission']
-    r = db.session.execute(update(User).where(User.id == g.user.id, User.earnings >= earnings_part, User.commission >= commission_part).values(
-        commission=User.commission - commission_part, earnings=User.earnings - earnings_part), execution_options={'synchronize_session': False})
+    gift_earnings_part, pk_earnings_part = split['gift_earnings'], split['pk_earnings']
+    r = db.session.execute(update(User).where(User.id == g.user.id, User.earnings >= earnings_part, User.gift_earnings >= gift_earnings_part, User.commission >= commission_part).values(
+        commission=User.commission - commission_part, earnings=User.earnings - earnings_part, gift_earnings=User.gift_earnings - gift_earnings_part), execution_options={'synchronize_session': False})
     if r.rowcount != 1:
         db.session.rollback(); return err('Balances changed; please retry')
     w = Withdraw(user_id=g.user.id, username=g.user.username, coins=coins, birr=quote['birr'], phone=phone, method='telebirr', usdt_address='',
-                 earnings_coins=earnings_part, commission_coins=commission_part); db.session.add(w)
+                 earnings_coins=earnings_part, commission_coins=commission_part,
+                 gift_earnings_coins=gift_earnings_part, pk_earnings_coins=pk_earnings_part); db.session.add(w)
     tx(g.user.id, 'withdraw', -coins, 'telebirr withdraw'); db.session.commit()
     notify_admins(f'💸 TELEBIRR Withdraw: {g.user.username} — {coins} coins = {w.birr} Birr → {phone}')
     return jsonify(ok=1, coins=coins, birr=w.birr, method='telebirr')
@@ -1554,11 +1572,14 @@ def adm_withdraw():
     u = db.session.get(User, w.user_id)
     if new == 'rejected':
         refund_earnings = int(w.earnings_coins or 0)
+        refund_gift_earnings = int(w.gift_earnings_coins or 0)
         refund_commission = int(w.commission_coins or 0)
         if refund_earnings + refund_commission == 0:
             refund_earnings = int(w.coins or 0)  # legacy request before source-bucket tracking
+            refund_gift_earnings = 0  # ambiguous legacy source: do not reclassify as gift earnings
         db.session.execute(update(User).where(User.id == w.user_id).values(
-            earnings=User.earnings + refund_earnings, commission=User.commission + refund_commission),
+            earnings=User.earnings + refund_earnings, gift_earnings=User.gift_earnings + refund_gift_earnings,
+            commission=User.commission + refund_commission),
             execution_options={'synchronize_session': False})
         tx(w.user_id, 'refund', w.coins, f'withdraw #{w.id} rejected (earnings {refund_earnings}, commission {refund_commission})')
     tx(w.user_id, 'withdraw_status', 0, f'withdraw #{w.id}: {old}->{new}; admin {g.user.tg_id}' +
