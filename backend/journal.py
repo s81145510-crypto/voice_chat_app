@@ -88,6 +88,38 @@ def init_journal(app, db, deps):
             raise ValueError('unbalanced journal: total debits must equal total credits')
         return clean
 
+    def post_internal(source, reference, idempotency_key, currency, description, lines):
+        """Add a validated journal entry to the caller's transaction; never commits."""
+        source = str(source or '').strip()
+        idem = str(idempotency_key or '').strip()
+        currency = str(currency or '').strip().upper()
+        reference = str(reference or '')[:100]
+        description = str(description or '')[:240]
+        if not re.fullmatch(r'[A-Za-z0-9_.-]{2,40}', source):
+            raise ValueError('invalid journal source')
+        if not re.fullmatch(r'[A-Za-z0-9_.:-]{8,100}', idem):
+            raise ValueError('invalid journal idempotency key')
+        if not re.fullmatch(r'[A-Z]{3,12}', currency):
+            raise ValueError('invalid journal currency')
+        clean = validate_lines(lines, currency)
+        existing = JournalEntry.query.filter_by(idempotency_key=idem).first()
+        if existing:
+            prior = serialize(existing)
+            requested = [(x['account_code'], x['user_id'], x['debit'], x['credit'], x['currency'], x['memo']) for x in clean]
+            recorded = [(x['account_code'], x['user_id'], x['debit'], x['credit'], x['currency'], x['memo']) for x in prior['lines']]
+            if (existing.source, existing.currency, existing.reference, existing.description, recorded) != (source, currency, reference, description, requested):
+                raise ValueError('journal idempotency key conflict')
+            return existing, True
+        entry = JournalEntry(source=source, reference=reference, idempotency_key=idem,
+                             currency=currency, description=description,
+                             created_by=str(getattr(getattr(g, 'user', None), 'tg_id', '') or 'system'))
+        db.session.add(entry)
+        db.session.flush()
+        for line in clean:
+            db.session.add(JournalLine(entry_id=entry.id, **line))
+        db.session.flush()
+        return entry, False
+
     @app.post('/api/fin/journal/post')
     @admin_only
     def journal_post():
