@@ -167,6 +167,13 @@ def init_finance(app, db, deps):
         try: db.session.commit()
         except Exception: db.session.rollback()
 
+    def find_gift_idem(idem):
+        row = FinGiftTx.query.filter_by(idem=str(idem)[:80]).first()
+        if not row: return None
+        return dict(sender_id=row.sender_id, receiver_id=row.receiver_id, gift_key=row.gift_key,
+                    qty=int(row.qty or 0), room_id=str(row.room_id or ''),
+                    total=int(row.total or 0), lucky=(row.tier == 'lucky'))
+
     def record_gift(sender_id, receiver_id, gift_key, qty, total, real_used, host_earning, room_id, tier, idem):
         pool = max(0, int(real_used) - int(host_earning))
         row = FinGiftTx(sender_id=sender_id, receiver_id=receiver_id, gift_key=gift_key, qty=qty,
@@ -519,7 +526,7 @@ def init_finance(app, db, deps):
             note='Balances are recorded coin balances, not a guarantee of cash redemption. Activity rewards are reported separately and are not included in withdrawable earnings.'
         )
 
-    return dict(record_gift=record_gift, pay_commissions=pay_commissions, wallet_sync=wallet_sync,
+    return dict(record_gift=record_gift, find_gift_idem=find_gift_idem, pay_commissions=pay_commissions, wallet_sync=wallet_sync,
                 referral_register=referral_register, referral_qualify=referral_qualify,
                 reward_allowed=reward_allowed, reward_spend=reward_spend, ledger=ledger,
                 audit=audit, flag=flag, pnl=pnl, reconcile=reconcile, scan=scan, scheme=scheme)
