@@ -25,6 +25,20 @@ class WithdrawalPolicyTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "not enough"):
             rules.withdrawal_source_split(10000, 6000, 3000)
 
+    def test_withdrawal_state_machine_rejects_skipped_steps(self):
+        self.assertEqual(rules.withdrawal_next_status("pending", "under_review"), "under_review")
+        self.assertEqual(rules.withdrawal_next_status("under_review", "approve"), "approved")
+        self.assertEqual(rules.withdrawal_next_status("approved", "processing"), "processing")
+        self.assertEqual(rules.withdrawal_next_status("processing", "paid"), "paid")
+        self.assertIsNone(rules.withdrawal_next_status("pending", "paid"))
+        self.assertIsNone(rules.withdrawal_next_status("under_review", "paid"))
+        self.assertIsNone(rules.withdrawal_next_status("paid", "reject"))
+
+    def test_rejection_allowed_before_payout_processing_only(self):
+        for status in ("pending", "under_review", "approved"):
+            self.assertEqual(rules.withdrawal_next_status(status, "reject"), "rejected")
+        self.assertIsNone(rules.withdrawal_next_status("processing", "reject"))
+
     def test_activity_and_promo_coins_are_not_cashout_sources(self):
         with self.assertRaises(ValueError):
             rules.withdrawal_source_split(10000, 4000, 5000)
