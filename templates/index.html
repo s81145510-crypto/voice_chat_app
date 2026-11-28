@@ -285,6 +285,21 @@ nav button.on i{transform:translateY(-1px) scale(1.08);filter:none}
 @media(min-width:600px){#p-home .hm-top{margin-left:-22px;margin-right:-22px;padding-left:22px;padding-right:22px}}
 @media(prefers-reduced-motion:reduce){#p-home .fcard,#p-home .hm-quick button{transition:none}}
 
+/* Creator studio dashboard */
+.cd-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.cd-balance{padding:18px;border-radius:19px;background:linear-gradient(130deg,rgba(108,91,225,.34),rgba(163,77,224,.18),rgba(255,214,107,.08));border:1px solid rgba(218,204,255,.2);margin-bottom:12px}
+.cd-total{font-size:30px;font-weight:850;letter-spacing:-.7px;color:#ffe39a;margin:4px 0}
+.cd-total small{font-size:12px;color:#d8cdef;font-weight:600}
+.cd-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+.cd-stat{padding:13px;border-radius:15px;background:linear-gradient(145deg,rgba(42,37,79,.88),rgba(22,19,49,.9));border:1px solid rgba(211,195,255,.13);min-width:0}
+.cd-stat span,.cd-stat small{display:block;color:#bcb4d7;font-size:11px}
+.cd-stat b{display:block;font-size:21px;margin:5px 0 2px;overflow-wrap:anywhere}
+.cd-stat small{font-size:10px}
+.cd-follow{margin:12px 0;padding:12px 14px;border-radius:14px;background:rgba(255,255,255,.045);border:1px solid rgba(211,195,255,.12);font-size:12px}
+.cd-follow b{float:right;color:#ffe39a}
+.cd-row{display:flex;align-items:center;gap:10px;padding:11px 3px;border-bottom:1px solid rgba(211,195,255,.1)}
+.cd-note{line-height:1.55;margin-top:13px}
+
 </style>
 </head>
 <body>
@@ -916,6 +931,27 @@ async function openPolicy(){const m=modal('<div class="empty">…</div>');
  try{const d=await api('/api/policy');
   const titles={terms:'Terms of Service',commission:'Host & Agent Commission',lucky:'Lucky Gift',pk:'PK Battle',withdraw:'Withdrawal & Payments',conduct:'Community Rules',privacy:'Privacy'};
   m.firstChild.innerHTML='<h3>📜 Policy</h3>'+Object.entries(d.sections).map(([k,v])=>`<div class="card"><b>${titles[k]||k}</b><div class="mut" style="white-space:pre-wrap;margin-top:6px;font-size:12px">${esc(v)}</div></div>`).join('')+footbar()}catch(e){m.close();toast(e.message)}}
+async function openCreatorDashboard(){
+  const m=modal('<div class="empty">Loading creator dashboard…</div>');
+  const statusLabel={pending:'Pending',under_review:'Under review',approved:'Approved',processing:'Processing',paid:'Paid',rejected:'Rejected',failed:'Failed',reversed:'Reversed'};
+  try{
+    const d=await api('/api/creator/dashboard');
+    const b=d.balances||{},s=d.last_30_days||{};
+    const money=n=>fmt(Number(n||0));
+    const withdrawRows=(d.withdrawals||[]).map(w=>`<div class="cd-row"><div class="sp"><b>${money(w.birr)} Birr</b><div class="mut">${money(w.coins)} Coins · ${ago(w.ts)}</div></div><span class="badge">${esc(statusLabel[w.status]||w.status||'Unknown')}</span></div>`).join('');
+    m.firstChild.innerHTML=`<div class="cd-head"><div><div class="mut">CREATOR STUDIO</div><h3 style="margin:3px 0 0;font-size:20px">📊 Creator Dashboard</h3></div><span class="pill">30 days</span></div>
+    <div class="cd-balance"><div class="mut">Withdrawable earnings</div><div class="cd-total">${money(b.earnings_coins)} <small>Coins</small></div><div class="mut">Commission balance · ${money(b.commission_coins)} Coins</div></div>
+    <div class="cd-grid">
+      <div class="cd-stat"><span>🎁 Gifts received</span><b>${money(s.gift_count)}</b><small>${money(s.gift_volume_coins)} Coins volume</small></div>
+      <div class="cd-stat"><span>💜 Host earnings</span><b>${money(s.host_earned_coins)}</b><small>From gifts · Coins</small></div>
+      <div class="cd-stat"><span>🤝 Commission</span><b>${money(s.commission_earned_coins)}</b><small>Earned · Coins</small></div>
+      <div class="cd-stat"><span>⭐ Activity rewards</span><b>${money(s.activity_reward_coins)}</b><small>Non-withdrawable · Coins</small></div>
+    </div>
+    <div class="cd-follow">${d.follower_tracking_enabled?`👥 Followers <b>${money(d.followers)}</b>`:'👥 Follower statistics are not available yet'}</div>
+    <h3>💸 Withdrawal history</h3>${withdrawRows||'<div class="empty">No withdrawal requests yet</div>'}
+    <p class="mut cd-note">${esc(d.note||'Balances shown are recorded coin balances and do not guarantee cash redemption.')}</p>${footbar()}`;
+  }catch(e){m.firstChild.innerHTML='<h3>📊 Creator Dashboard</h3><div class="empty">'+esc(e.message)+'</div><button class="btn ghost" onclick="this.closest(\'.ov\').remove()">Close</button>'}
+}
 async function renderMe(){
   try{const d=await api('/api/me');setMe(d.me)}catch(e){}
   const m=S.me,pct=m.next?Math.min(100,Math.round((m.spent-m.base)/(m.next-m.base)*100)):100;
@@ -923,6 +959,7 @@ async function renderMe(){
   <div class="bar2"><i style="width:${pct}%"></i></div><div class="mut" style="margin-top:4px">${m.next?fmt(m.next-m.spent)+' 🪙 → next':'👑 MAX'}</div></div>
   <div class="grid2"><div class="card" style="text-align:center"><div class="mut">Gifts sent</div><b class="gold">${fmt(m.sent)}</b></div><div class="card" style="text-align:center"><div class="mut">Gifts received</div><b class="gold">${fmt(m.recv)}</b></div></div>
   <div class="col">
+  <button class="btn gold" onclick="openCreatorDashboard()">📊 Creator Dashboard</button>
   ${m.host==='none'?`<button class="btn ghost" onclick="applyHost()">🎤 Become a Host (50%)</button>`:m.host==='pending'?`<button class="btn ghost" disabled>⏳ Host pending</button>`:`<button class="btn ghost" disabled>✅ Host</button>`}
   ${m.host==='host'&&!m.ag?`<button class="btn ghost" onclick="applyAgent()">🤝 Become an Agent</button>`:''}
   ${m.ag?`<button class="btn" onclick="openAgent()">📊 Agent Dashboard</button>`:''}
