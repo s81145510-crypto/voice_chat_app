@@ -434,6 +434,64 @@ def test_lucky_room_gift_tracks_purchased_spend_and_promo_payout(monkeypatch):
             m.db.session.commit()
 
 
+def test_two_simultaneous_pk_finalizations_pay_hosts_only_once():
+    """Concurrent end requests cannot settle one PK prize pool twice."""
+    with m.app.app_context():
+        if m.db.engine.dialect.name != "postgresql":
+            pytest.skip("requires PostgreSQL conditional-update concurrency")
+    marker = uuid4().hex[:10]
+    with m.app.app_context():
+        host1 = m.User(tg_id="pk-end-h1-" + marker, username="pk-end-host-1",
+                       coins=0, real_coins=0, earnings=0, host_status="host")
+        host2 = m.User(tg_id="pk-end-h2-" + marker, username="pk-end-host-2",
+                       coins=0, real_coins=0, earnings=0, host_status="host")
+        m.db.session.add_all([host1, host2])
+        m.db.session.flush()
+        pk = m.PKBattle(host1_id=host1.id, host2_id=host2.id,
+                        host1_gifts=120, host2_gifts=80,
+                        host1_real=120, host2_real=80,
+                        status="active", started_at=m.now()-301, duration=300)
+        m.db.session.add(pk)
+        m.db.session.commit()
+        pk_id, h1_id, h2_id = pk.id, host1.id, host2.id
+        tokens = [m.sign(h1_id), m.sign(h2_id)]
+
+    barrier = Barrier(2)
+
+    def end(token):
+        client = m.app.test_client()
+        barrier.wait(timeout=10)
+        return client.post("/api/pk/end", json={"pk_id": pk_id},
+                           headers={"Authorization": "Bearer " + token})
+
+    try:
+        with ThreadPoolExecutor(max_workers=2) as pool:
+            futures = [pool.submit(end, token) for token in tokens]
+            responses = [future.result(timeout=30) for future in futures]
+        assert [response.status_code for response in responses] == [200, 200]
+        with m.app.app_context():
+            saved = m.db.session.get(m.PKBattle, pk_id)
+            assert saved.status == "ended"
+            assert saved.winner_id == h1_id
+            assert m.db.session.get(m.User, h1_id).earnings == 140
+            assert m.db.session.get(m.User, h2_id).earnings == 40
+            assert m.Tx.query.filter(m.Tx.user_id.in_([h1_id, h2_id]),
+                                     m.Tx.kind.in_(["pk_win", "pk_lose"])).count() == 2
+            assert m.JOURNAL["JournalEntry"].query.filter_by(
+                source="pk_payout", reference=str(pk_id)).count() == 1
+    finally:
+        with m.app.app_context():
+            entry = m.JOURNAL["JournalEntry"].query.filter_by(
+                source="pk_payout", reference=str(pk_id)).first()
+            if entry:
+                m.JOURNAL["JournalLine"].query.filter_by(entry_id=entry.id).delete()
+                m.db.session.delete(entry)
+            m.db.session.query(m.PKBattle).filter_by(id=pk_id).delete()
+            m.db.session.query(m.Tx).filter(m.Tx.user_id.in_([h1_id, h2_id])).delete(synchronize_session=False)
+            m.db.session.query(m.User).filter(m.User.id.in_([h1_id, h2_id])).delete(synchronize_session=False)
+            m.db.session.commit()
+
+
 def test_pk_gift_racing_with_finalization_is_either_paid_or_rejected(monkeypatch):
     """A PK gift racing settlement is either fully included in payout or fully rolled back."""
     with m.app.app_context():
