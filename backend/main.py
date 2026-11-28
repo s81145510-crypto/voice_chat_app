@@ -1535,16 +1535,7 @@ def adm_withdraw():
     w = db.session.query(Withdraw).filter_by(id=wid).with_for_update().first()
     if not w: return err('not found', 404)
     old = w.status
-    allowed = {
-        ('pending', 'under_review'): 'under_review',
-        ('pending', 'reject'): 'rejected',
-        ('under_review', 'approve'): 'approved',
-        ('under_review', 'reject'): 'rejected',
-        ('approved', 'processing'): 'processing',
-        ('approved', 'reject'): 'rejected',
-        ('processing', 'paid'): 'paid',
-    }
-    new = allowed.get((old, act))
+    new = rules.withdrawal_next_status(old, act)
     if not new: return err(f'Invalid withdrawal transition: {old} -> {act}')
     payout_reference = ''
     if new == 'paid':
