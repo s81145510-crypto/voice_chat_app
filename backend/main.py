@@ -171,7 +171,7 @@ class Tx(db.Model):
 
 class Purchase(db.Model):
     id = db.Column(db.Integer, primary_key=True); user_id = db.Column(db.Integer, index=True); username = db.Column(db.String(60)); coins = db.Column(db.Integer); birr = db.Column(db.Integer)
-    ref = db.Column(db.String(40), unique=True); status = db.Column(db.String(10), default='pending', index=True); ts = db.Column(db.Integer, default=now)
+    ref = db.Column(db.String(40), unique=True); status = db.Column(db.String(20), default='pending', index=True); ts = db.Column(db.Integer, default=now)
     method = db.Column(db.String(10), default='telebirr'); txhash = db.Column(db.String(80), default='')
 
 
@@ -243,6 +243,17 @@ def ensure_columns():
                 db.session.execute(sa_text(f'ALTER TABLE "{tbl}" ADD COLUMN {name} {ddl}')); db.session.commit()
             except Exception as e:
                 db.session.rollback(); print('ensure_columns:', tbl, name, e)
+    # Withdrawal workflow states include UNDER_REVIEW and PROCESSING (12+ chars).
+    # PostgreSQL enforces VARCHAR length, so widen existing installations safely.
+    if db.engine.dialect.name == 'postgresql':
+        try:
+            status_col = next((c for c in inspect(db.engine).get_columns(Withdraw.__tablename__)
+                               if c['name'] == 'status'), None)
+            if status_col and getattr(status_col['type'], 'length', None) and status_col['type'].length < 20:
+                db.session.execute(sa_text('ALTER TABLE withdraw ALTER COLUMN status TYPE VARCHAR(20)'))
+                db.session.commit()
+        except Exception as e:
+            db.session.rollback(); print('ensure_columns: withdraw status length', e)
 
 
 _init_lock = threading.Lock()
