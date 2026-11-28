@@ -801,8 +801,20 @@ def room_gift(rid):
     db.session.execute(update(User).where(User.id == g.user.id).values(spent=User.spent + total, gifts_sent=User.gifts_sent + total), execution_options={'synchronize_session': False})
     gid, pool = FIN['record_gift'](g.user.id, to, gift['key'], qty, total, real_used, earn, rid, gift['tier'],
                                    f"{rid}:{g.user.id}:{to}:{gift['key']}:{qty}:{time.time()}:{secrets.token_hex(4)}")
+    commission_payments = []
     if gift['tier'] != 'lucky' and gid:
-        FIN['pay_commissions'](to, real_used, g.user.id, gid)
+        commission_payments = FIN['pay_commissions'](to, real_used, g.user.id, gid)
+    if gid:
+        try:
+            commission_total = sum(int(item[2]) for item in commission_payments)
+            JOURNAL['post_internal'](
+                source='gift', reference=str(gid), idempotency_key=f'gift:{gid}:COIN',
+                currency='COIN', description=f"{'Lucky ' if gift['tier'] == 'lucky' else ''}gift {gift['key']} x{qty}",
+                lines=JOURNAL['gift_lines'](g.user.id, int(total), int(real_used), int(earn),
+                                            commission_total=commission_total, lucky_refund=int(refund)))
+        except Exception:
+            db.session.rollback()
+            return err('Gift transaction failed; all changes rolled back', 500)
     meta = dict(gift=gift['key'], emoji=gift['emoji'], qty=qty, tier=gift['tier'], to=to, to_name=target.username, price=total, lucky=lucky_m, refund=refund)
     db.session.add(Message(room_id=rid, user_id=g.user.id, name=g.user.username, kind='gift', meta=json.dumps(meta, ensure_ascii=False)))
     db.session.commit(); mission_inc(g.user.id, 'gift')
