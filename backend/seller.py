@@ -22,7 +22,7 @@ RETAIL_PRICE = 0.50
 
 
 def init_seller(app, db, deps):
-    User = deps['User']; Tx = deps['Tx']
+    User = deps['User']; Tx = deps['Tx']; JOURNAL = deps.get('JOURNAL')
     now = deps['now']; tx = deps['tx']; err = deps['err']; body = deps['body']; num = deps['num']
     auth = deps['auth']; admin_only = deps['admin_only']; notify = deps['notify']
     notify_admins = deps['notify_admins']; sniff_image = deps['sniff_image']
@@ -191,13 +191,26 @@ def init_seller(app, db, deps):
             db.session.rollback(); return err('Not enough TRADE coins (promo coins cannot be transferred)', 402)
         db.session.execute(update(User).where(User.id == to).values(coins=User.coins + net, real_coins=User.real_coins + net),
                            execution_options={'synchronize_session': False})
-        db.session.add(SellerTransfer(from_id=u.id, to_id=to, amount=amt, fee=fee, net=net))
-        db.session.execute(update(Seller).where(Seller.user_id == u.id)
-                           .values(sold_coins=Seller.sold_coins + amt, fees_paid=Seller.fees_paid + fee),
-                           execution_options={'synchronize_session': False})
-        tx(u.id, 'sell', -amt, f'to {to} fee {fee}')
-        tx(to, 'buy_from_seller', net, f'from {u.id}')
-        db.session.commit()
+        transfer = SellerTransfer(from_id=u.id, to_id=to, amount=amt, fee=fee, net=net)
+        db.session.add(transfer)
+        try:
+            db.session.flush()
+            if JOURNAL:
+                JOURNAL['post_internal'](
+                    source='seller_transfer', reference=str(transfer.id),
+                    idempotency_key=f'seller-transfer:{transfer.id}:COIN',
+                    currency='COIN',
+                    description=f'Seller {u.id} transferred {amt} purchased coins to buyer {to}',
+                    lines=JOURNAL['seller_transfer_lines'](int(u.id), int(to), int(amt), int(fee), int(net)))
+            db.session.execute(update(Seller).where(Seller.user_id == u.id)
+                               .values(sold_coins=Seller.sold_coins + amt, fees_paid=Seller.fees_paid + fee),
+                               execution_options={'synchronize_session': False})
+            tx(u.id, 'sell', -amt, f'to {to} fee {fee}')
+            tx(to, 'buy_from_seller', net, f'from {u.id}')
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
+            return err('Seller transfer accounting failed; no transfer was applied', 500)
         notify(target.tg_id, f'🪙 You received {net} coins from {s.shop_name or u.username}!')
         return jsonify(ok=1, sent=amt, fee=fee, received=net)
 
