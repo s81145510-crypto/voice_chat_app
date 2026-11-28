@@ -7,6 +7,7 @@ migrated and reconciled.
 """
 import re
 from sqlalchemy import func
+from flask import g
 
 
 def init_journal(app, db, deps):
@@ -117,7 +118,7 @@ def init_journal(app, db, deps):
 
             entry = JournalEntry(source=source, reference=reference, idempotency_key=idem,
                                  currency=currency, description=description,
-                                 created_by=str(getattr(getattr(request, 'user', None), 'tg_id', '') or 'admin'))
+                                 created_by=str(getattr(getattr(g, 'user', None), 'tg_id', '') or 'admin'))
             db.session.add(entry)
             db.session.flush()
             for line in lines:
