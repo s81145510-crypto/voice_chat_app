@@ -129,3 +129,39 @@ def test_two_hosts_cannot_claim_the_same_pk_slot(monkeypatch):
             m.db.session.query(m.PKBattle).filter_by(id=pk_id).delete()
             m.db.session.query(m.User).filter(m.User.id.in_(user_ids)).delete(synchronize_session=False)
             m.db.session.commit()
+
+
+
+def test_concurrent_lucky_stats_updates_are_not_lost():
+    """Two simultaneous Lucky gifts must both contribute to the daily totals."""
+    with m.app.app_context():
+        if m.db.engine.dialect.name != "postgresql":
+            pytest.skip("requires PostgreSQL upsert/concurrency semantics")
+        day = m.today()
+        m.db.session.query(m.LuckyStats).filter_by(day=day).delete()
+        m.db.session.commit()
+
+    barrier = Barrier(2)
+
+    def record_gift():
+        with m.app.app_context():
+            barrier.wait(timeout=10)
+            m.record_lucky_stats(10, 0)
+            m.db.session.commit()
+
+    try:
+        with ThreadPoolExecutor(max_workers=2) as pool:
+            futures = [pool.submit(record_gift) for _ in range(2)]
+            for future in futures:
+                future.result(timeout=30)
+
+        with m.app.app_context():
+            stats = m.db.session.get(m.LuckyStats, m.today())
+            assert stats is not None
+            assert stats.volume == 20
+            assert stats.returned == 0
+            assert stats.house == 20
+    finally:
+        with m.app.app_context():
+            m.db.session.query(m.LuckyStats).filter_by(day=m.today()).delete()
+            m.db.session.commit()
