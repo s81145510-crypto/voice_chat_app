@@ -38,5 +38,30 @@ Do not merge or deploy on the strength of this document. Before historical migra
 5. Add tests for rollback, duplicate requests, concurrent claims, purchased-vs-promo allocation, and reconciliation.
 6. Only after a production snapshot and signed-off opening-balance mapping, design a dry-run historical migration report. Do not write historical journal entries until the owner reviews and approves that report.
 
+
+## Seller / reseller route trace (source review completed)
+Reviewed `backend/seller.py` at the current branch head. The following live paths are separate from the core purchase journal:
+
+| Route | Mutation | Accounting requirement |
+|---|---|---|
+| `POST /api/seller/order` | Creates a pending wholesale order with Birr, payment reference and screenshot | No wallet mutation until approval; needs payment-review evidence and duplicate-safe decision |
+| `POST /api/seller/admin/order` approve | Credits `coins` with trade coins + bonus; increases `real_coins` only by trade coins; updates seller lifetime purchase totals | Must post a COIN purchased-liability issuance and separate promo-liability issuance in the same transaction. Birr cash/clearing side must not be posted as settled cash until manual payment verification is evidenced |
+| `POST /api/seller/transfer` | Debits seller trade balance by gross amount, credits buyer by net amount, removes fee; records `SellerTransfer` and two `Tx` rows | Clear double-entry mapping exists: debit seller's purchased-coin liability by gross; credit buyer's purchased-coin liability by net; credit seller-transfer-fee revenue by fee. Must be same transaction and idempotent to the transfer row |
+| `POST /api/seller/admin/seller` | Approve/reject/suspend/tier changes | No wallet movement; should have admin audit trail but is not itself a journal transaction |
+
+### Seller-specific safety findings
+- Seller transfer currently uses a conditional SQL update requiring both `User.coins >= amount` and `User.real_coins >= amount`; promo coins cannot be transferred. It credits the recipient's `coins` and `real_coins` by net and stores the 2% fee.
+- The current transfer route has no double-entry journal post and no explicit stable idempotency token from the client. Retrying after an uncertain network response may create a second transfer if the first request actually committed.
+- The seller wholesale approval route conditionally changes order status from pending, but its approval credits trade and promo coins without journal entries or a payment-review audit record equivalent to the main customer purchase review.
+- Seller wholesale order methods currently accept `telebirr` or `usdt`, but this route is not shown using the main Telebirr manual-verification / TRON verifier policy. This is a release-blocking payment-control gap; do not approve seller USDT orders as if chain-verified.
+- Seller transfer fee is a platform fee in COIN units, not ETB cash received. It must not be mixed into Birr revenue without a real settlement/conversion event.
+
+### Seller implementation order
+1. Add seller-order review parity: evidence record, manual Telebirr verification, and reuse the read-only TRON verification path for USDT; preserve conditional pending-to-final status transition.
+2. Add stable client transfer request IDs and a unique database constraint; return the original result on an exact retry and reject an idempotency-key payload mismatch.
+3. Add transfer journal lines in the same transaction as both wallet updates and `SellerTransfer` insertion.
+4. Add wholesale issuance journal entries only after an explicit approved payment-control design. Keep Birr cash-clearing and COIN liability ledgers separate; never imply that a screenshot itself proves settlement.
+5. Add tests for seller-to-buyer transfer split (gross/net/fee), promo-balance exclusion, concurrent duplicate transfer, exact retry, journal failure rollback, and seller wholesale duplicate approval / payment-verification gating.
+
 ## UI verification boundary
 The purchase-review modal has been code-inspected and its inline JavaScript syntax is checked in CI. No real browser interaction test has been performed yet; receipt loading, checkbox gating, approval/rejection, and review-history rendering still need manual or browser-automation verification.
