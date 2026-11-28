@@ -391,6 +391,26 @@ def init_journal(app, db, deps):
                        tracked_by_status=by_status, legacy_untracked_count=legacy_count,
                        note='Paid withdrawals remain in pending liability until cross-currency settlement is implemented and reconciled.')
 
+    def seller_transfer_lines(seller_id, buyer_id, gross, fee, net):
+        """Move purchased COIN liability from seller to buyer and recognize fee revenue."""
+        values = (seller_id, buyer_id, gross, fee, net)
+        if any(isinstance(v, bool) or not isinstance(v, int) for v in values):
+            raise ValueError('seller transfer values must be whole integers')
+        if seller_id <= 0 or buyer_id <= 0 or seller_id == buyer_id:
+            raise ValueError('invalid seller transfer users')
+        if gross <= 0 or fee < 0 or net <= 0 or fee + net != gross:
+            raise ValueError('seller transfer allocation does not balance')
+        lines = [
+            dict(account_code='liability.user_coin_balance', user_id=seller_id,
+                 debit=gross, credit=0, memo='Seller purchased coins transferred'),
+            dict(account_code='liability.user_coin_balance', user_id=buyer_id,
+                 debit=0, credit=net, memo='Buyer purchased coins received'),
+        ]
+        if fee:
+            lines.append(dict(account_code='revenue.seller_transfer_fee', debit=0, credit=fee,
+                              memo='Seller transfer platform fee in COIN'))
+        return lines
+
     def withdrawal_reserve_lines(user_id, earnings_coins, commission_coins):
         """Move withdrawable COIN balances into a pending-withdrawal liability."""
         values = (earnings_coins, commission_coins)
@@ -428,4 +448,4 @@ def init_journal(app, db, deps):
                               debit=0, credit=commission_coins, memo='Restore agent commission'))
         return lines
 
-    return dict(JournalEntry=JournalEntry, JournalLine=JournalLine, serialize=serialize, post_internal=post_internal, reconcile=reconcile_journal, gift_lines=gift_lines, purchase_coin_lines=purchase_coin_lines, pk_gift_lines=pk_gift_lines, pk_payout_lines=pk_payout_lines, withdrawal_reserve_lines=withdrawal_reserve_lines, withdrawal_release_lines=withdrawal_release_lines)
+    return dict(JournalEntry=JournalEntry, JournalLine=JournalLine, serialize=serialize, post_internal=post_internal, reconcile=reconcile_journal, gift_lines=gift_lines, purchase_coin_lines=purchase_coin_lines, pk_gift_lines=pk_gift_lines, pk_payout_lines=pk_payout_lines, seller_transfer_lines=seller_transfer_lines, withdrawal_reserve_lines=withdrawal_reserve_lines, withdrawal_release_lines=withdrawal_release_lines)
