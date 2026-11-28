@@ -12,6 +12,7 @@ def init_feed(app, db, d):
     User, Room, Seat, Presence, Tx, now = d['User'], d['Room'], d['Seat'], d['Presence'], d['Tx'], d['now']
     err, body, num, auth, pub = d['err'], d['body'], d['num'], d['auth'], d['pub']
     limited, gc_rooms = d['limited'], d['gc_rooms']
+    admin_only = d.get('admin_only')
 
     class Follow(db.Model):
         __tablename__ = 'user_follow'
@@ -46,6 +47,9 @@ def init_feed(app, db, d):
         reason = db.Column(db.String(32), nullable=False)
         details = db.Column(db.String(500), default='')
         status = db.Column(db.String(16), default='pending', nullable=False, index=True)
+        reviewed_by = db.Column(db.Integer, nullable=True)
+        reviewed_ts = db.Column(db.Integer, nullable=True)
+        resolution = db.Column(db.String(32), default='')
         ts = db.Column(db.Integer, default=now, index=True)
 
     def notify_user(user_id, actor_id, kind, title, message='', target=''):
@@ -221,6 +225,48 @@ def init_feed(app, db, d):
         db.session.add(UserReport(reporter_id=g.user.id, target_type='user', target_id=uid, reason=reason, details=details))
         db.session.commit()
         return jsonify(ok=1, message='Report submitted for review')
+
+    if admin_only:
+        @app.get('/api/admin/reports')
+        @admin_only
+        def admin_reports():
+            status = (request.args.get('status') or 'pending').strip().lower()
+            allowed_status = {'pending', 'reviewing', 'resolved', 'dismissed', 'all'}
+            if status not in allowed_status: return err('Invalid report status')
+            q = UserReport.query
+            if status != 'all': q = q.filter_by(status=status)
+            rows = q.order_by(UserReport.ts.desc(), UserReport.id.desc()).limit(50).all()
+            ids = {x for r in rows for x in (r.reporter_id, r.target_id)}
+            users = {u.id: u.username for u in User.query.filter(User.id.in_(ids)).all()} if ids else {}
+            return jsonify(items=[dict(id=r.id, reporter_id=r.reporter_id, reporter=users.get(r.reporter_id, 'Deleted user'),
+                target_id=r.target_id, target=users.get(r.target_id, 'Deleted user'), reason=r.reason,
+                details=r.details or '', status=r.status, ts=r.ts, reviewed_ts=r.reviewed_ts,
+                resolution=r.resolution or '') for r in rows])
+
+        @app.post('/api/admin/report')
+        @admin_only
+        def admin_report_update():
+            b = body()
+            rid = num(b.get('id'))
+            status = str(b.get('status') or '').strip().lower()
+            resolution = str(b.get('resolution') or '').strip().lower()
+            if status not in {'reviewing', 'resolved', 'dismissed'}:
+                return err('Invalid report status')
+            if resolution not in {'', 'warning', 'temporary_ban', 'permanent_ban', 'no_action'}:
+                return err('Invalid moderation action')
+            report = db.session.query(UserReport).filter_by(id=rid).with_for_update().first()
+            if not report: return err('Report not found', 404)
+            if report.status in {'resolved', 'dismissed'}:
+                return err('Report already closed', 409)
+            target = db.session.get(User, report.target_id)
+            if resolution in {'temporary_ban', 'permanent_ban'} and target:
+                target.banned = True
+            report.status = status
+            report.reviewed_by = g.user.id
+            report.reviewed_ts = now()
+            report.resolution = resolution
+            db.session.commit()
+            return jsonify(ok=1, status=report.status, resolution=report.resolution)
 
     _cache = {}
 
