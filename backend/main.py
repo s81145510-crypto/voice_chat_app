@@ -1563,5 +1563,15 @@ FEED = init_feed(app, db, dict(
     auth=auth, pub=pub, limited=limited, gc_rooms=gc_rooms, admin_only=admin_only))
 
 
+try:
+    from .host_rewards import init_host_rewards
+except ImportError:
+    from host_rewards import init_host_rewards
+
+HOST_REWARDS = init_host_rewards(app, db, dict(
+    User=User, Room=Room, Presence=Presence, now=now, tx=tx, auth=auth
+))
+
+
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 10000)), debug=False, threaded=True)
