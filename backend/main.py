@@ -315,6 +315,19 @@ def body(): return request.get_json(silent=True) or {}
 def num(v, d=0):
     try: return int(v)
     except Exception: return d
+def strict_num(v, d=None):
+    """Parse whole-number API values without truncating floats or accepting booleans."""
+    if isinstance(v, bool):
+        return d
+    if isinstance(v, int):
+        return v
+    if isinstance(v, str):
+        s = v.strip()
+        digits = s[1:] if s.startswith('-') else s
+        if digits and digits.isdigit():
+            try: return int(s)
+            except (TypeError, ValueError, OverflowError): return d
+    return d
 def sign(uid, days=30):
     u = db.session.get(User, uid)
     version = int(u.auth_version or 0) if u else 0
@@ -886,7 +899,8 @@ def room_chat(rid):
 def room_gift(rid):
     r = get_room(rid)
     if not r: return err('ROOM_GONE', 404)
-    b = body(); gift = GIFT_MAP.get(b.get('gift')); qty = max(1, min(99, num(b.get('qty'), 1))); to = num(b.get('to'))
+    b = body(); gift = GIFT_MAP.get(b.get('gift')); qty = strict_num(b.get('qty'), 1); to = strict_num(b.get('to'))
+    if qty is None or not 1 <= qty <= 99 or to is None or to <= 0: return err('Invalid gift quantity or recipient')
     if not gift or to == g.user.id: return err('bad request')
     on_stage = to == r.host_id or Seat.query.filter_by(room_id=rid, user_id=to).first() or LiveGuest.query.filter_by(room_id=rid, user_id=to, status='live').first()
     if not on_stage: return err('Recipient must be on stage')
@@ -1115,7 +1129,7 @@ def coins_buy():
 @app.post('/api/withdraw')
 @auth
 def withdraw():
-    b = body(); coins = num(b.get('coins')); method = (b.get('method') or 'telebirr').strip()
+    b = body(); coins = strict_num(b.get('coins')); method = (b.get('method') or 'telebirr').strip()
     if method != 'telebirr': return err('Only Telebirr withdrawals are currently supported')
     try:
         quote = rules.withdrawal_quote(coins)
@@ -1354,7 +1368,7 @@ def pk_join():
 @app.post('/api/pk/gift')
 @auth
 def pk_gift():
-    u = g.user; pk = db.session.get(PKBattle, num(body().get('pk_id')))
+    u = g.user; b = body(); pk_id = strict_num(b.get('pk_id')); pk = db.session.get(PKBattle, pk_id) if pk_id and pk_id > 0 else None
     if not pk or pk.status != 'active': return err('PK not found', 404)
     to_host = num(body().get('to_host')); gift = GIFT_MAP.get(body().get('gift')); qty = max(1, min(99, num(body().get('qty'), 1)))
     if not gift: return err('Gift not found')
