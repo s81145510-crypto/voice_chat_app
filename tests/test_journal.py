@@ -157,6 +157,26 @@ class JournalValidationTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "whole integers"):
             JOURNAL["gift_lines"](1, 10, True, 0)
 
+    def test_purchase_coin_journal_separates_purchased_and_promo_credits(self):
+        lines = JOURNAL["purchase_coin_lines"](
+            purchase_user_id=51, purchased_coins=100,
+            referral_user_id=52, referral_coins=10,
+            invite_user_id=53, invite_coins=50,
+        )
+        self.assertEqual(sum(x["debit"] for x in lines), 160)
+        self.assertEqual(sum(x["credit"] for x in lines), 160)
+        credits = {(x["account_code"], x.get("user_id")): x["credit"] for x in lines if x["credit"]}
+        self.assertEqual(credits[("liability.user_coin_balance", 51)], 100)
+        self.assertEqual(credits[("liability.promo_coin_balance", 52)], 10)
+        self.assertEqual(credits[("liability.promo_coin_balance", 53)], 50)
+
+    def test_lucky_payout_is_credited_to_promo_coin_liability(self):
+        lines = JOURNAL["gift_lines"](sender_id=54, total=50, real_used=40,
+                                      host_earning=0, lucky_refund=100, is_lucky=True)
+        payout = next(x for x in lines if x["memo"].startswith("Lucky payout credited"))
+        self.assertEqual(payout["account_code"], "liability.promo_coin_balance")
+        self.assertEqual(payout["credit"], 100)
+
     def test_pk_gift_separates_purchased_prize_pool_and_promo_spend(self):
         lines = JOURNAL["pk_gift_lines"](sender_id=21, total=100, real_used=70)
         self.assertEqual(sum(x["debit"] for x in lines), 100)
