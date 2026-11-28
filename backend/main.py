@@ -175,6 +175,10 @@ class Withdraw(db.Model):
     phone = db.Column(db.String(20)); status = db.Column(db.String(10), default='pending', index=True); ts = db.Column(db.Integer, default=now)
     method = db.Column(db.String(10), default='telebirr'); usdt_address = db.Column(db.String(64), default='')
     commission_coins = db.Column(db.Integer, default=0, nullable=False); earnings_coins = db.Column(db.Integer, default=0, nullable=False)
+    settlement_reference = db.Column(db.String(120), default='', nullable=False)
+    settlement_amount = db.Column(db.String(32), default='', nullable=False)
+    settlement_currency = db.Column(db.String(8), default='', nullable=False)
+    settled_at = db.Column(db.Integer, default=0, nullable=False)
 
 
 class Post(db.Model):
@@ -223,7 +227,11 @@ def ensure_columns():
             PKBattle: [('winner_id', 'INTEGER'), ('host1_real', 'INTEGER DEFAULT 0'), ('host2_real', 'INTEGER DEFAULT 0')],
             Purchase: [('method', "VARCHAR(10) DEFAULT 'telebirr'"), ('txhash', "VARCHAR(80) DEFAULT ''")],
             Withdraw: [('method', "VARCHAR(10) DEFAULT 'telebirr'"), ('usdt_address', "VARCHAR(64) DEFAULT ''"),
-                       ('commission_coins', 'INTEGER DEFAULT 0 NOT NULL'), ('earnings_coins', 'INTEGER DEFAULT 0 NOT NULL')]}
+                       ('commission_coins', 'INTEGER DEFAULT 0 NOT NULL'), ('earnings_coins', 'INTEGER DEFAULT 0 NOT NULL'),
+                       ('settlement_reference', "VARCHAR(120) DEFAULT '' NOT NULL"),
+                       ('settlement_amount', "VARCHAR(32) DEFAULT '' NOT NULL"),
+                       ('settlement_currency', "VARCHAR(8) DEFAULT '' NOT NULL"),
+                       ('settled_at', 'INTEGER DEFAULT 0 NOT NULL')]}
     insp = inspect(db.engine)
     for M, cols in want.items():
         tbl = M.__tablename__; have = {c['name'] for c in insp.get_columns(tbl)}
@@ -1474,6 +1482,21 @@ def adm_withdraw():
     if not w: return err('not found', 404)
     if act not in ('paid', 'rejected'):
         return err('action must be paid or rejected')
+    if act == 'paid':
+        settlement_ref = str(b.get('settlement_reference') or '').strip()
+        settlement_amount = str(b.get('settlement_amount') or '').strip()
+        settlement_currency = 'USDT' if w.method == 'usdt' else 'ETB'
+        if bool(settlement_ref) != bool(settlement_amount):
+            return err('Provide both settlement_reference and settlement_amount, or leave both blank')
+        if settlement_ref:
+            if len(settlement_ref) < 5 or len(settlement_ref) > 120:
+                return err('settlement_reference must be 5-120 characters')
+            if not re.fullmatch(r'[0-9]+(?:\\.[0-9]{1,6})?', settlement_amount) or float(settlement_amount) <= 0:
+                return err('settlement_amount must be a positive decimal with up to 6 places')
+            w.settlement_reference = settlement_ref
+            w.settlement_amount = settlement_amount
+            w.settlement_currency = settlement_currency
+            w.settled_at = now()
     new = 'paid' if act == 'paid' else 'rejected'
     r = db.session.execute(update(Withdraw).where(Withdraw.id == wid, Withdraw.status == 'pending').values(status=new), execution_options={'synchronize_session': False})
     if r.rowcount != 1:
@@ -1503,6 +1526,27 @@ def adm_withdraw():
     db.session.commit()
     if u: notify(u.tg_id, '💰 Payment sent!' if act == 'paid' else f'❌ Rejected; {w.coins} refunded.')
     return jsonify(ok=1)
+@app.get('/api/admin/withdraw-settlement-audit')
+@admin_only
+def adm_withdraw_settlement_audit():
+    rows = Withdraw.query.filter_by(status='paid').order_by(Withdraw.id.desc()).limit(200).all()
+    items = []
+    missing = 0
+    for w in rows:
+        recorded = bool(w.settlement_reference and w.settlement_amount and w.settlement_currency)
+        if not recorded: missing += 1
+        items.append(dict(id=w.id, user_id=w.user_id, name=w.username, method=w.method,
+                          coins=w.coins, expected_birr=w.birr,
+                          expected_usdt=round(w.coins * COIN_USDT, 6),
+                          settlement_reference=w.settlement_reference or '',
+                          settlement_amount=w.settlement_amount or '',
+                          settlement_currency=w.settlement_currency or '',
+                          settled_at=w.settled_at or 0, evidence_recorded=recorded))
+    return jsonify(total=len(items), evidence_recorded=len(items)-missing,
+                   missing_evidence=missing, items=items,
+                   note='Admin-entered settlement evidence is an audit record, not independent confirmation of a Telebirr or TRC20 transfer.')
+
+
 @app.post('/api/admin/user')
 @admin_only
 def adm_user():
