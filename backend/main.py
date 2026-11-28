@@ -453,6 +453,20 @@ except ImportError:
 JOURNAL = init_journal(app, db, dict(
     now=now, admin_only=admin_only, jsonify=jsonify, request=request, body=body, Withdraw=Withdraw))
 
+def journal_promo_credit(uid, amount, source, reference, idempotency_key, description):
+    """Record a promo-coin liability increase in the same transaction as the wallet mutation."""
+    amount = int(amount)
+    if amount <= 0:
+        return
+    JOURNAL['post_internal'](
+        source=source, reference=str(reference), idempotency_key=idempotency_key,
+        currency='COIN', description=description,
+        lines=[
+            dict(account_code='expense.coin_issuance', debit=amount, credit=0, memo=description),
+            dict(account_code='liability.promo_coin_balance', user_id=int(uid),
+                 debit=0, credit=amount, memo=description),
+        ])
+
 
 try:
     from .seller import init_seller
@@ -532,6 +546,7 @@ def register():
         db.session.add(u)
         try:
             db.session.flush(); tx(u.id, 'welcome', bonus, 'Welcome bonus')
+            journal_promo_credit(u.id, bonus, 'welcome_reward', str(u.id), f'welcome:{u.id}:COIN', 'New-account welcome promo coins')
             if ref: FIN['referral_register'](ref, u.id)
             if ag: FIN['referral_register'](ag, u.id)
             db.session.commit()
@@ -584,7 +599,13 @@ def daily():
     if not FIN['reward_allowed'](t, 'daily', reward): return err('Daily reward budget reached')
     r = db.session.execute(update(User).where(User.id == u.id, User.last_daily != t).values(last_daily=t, streak=streak, coins=User.coins + reward), execution_options={'synchronize_session': False})
     if r.rowcount != 1: return err('Already claimed')
-    tx(u.id, 'daily', reward, f'Day {streak}'); db.session.commit()
+    tx(u.id, 'daily', reward, f'Day {streak}')
+    try:
+        journal_promo_credit(u.id, reward, 'daily_reward', f'{u.id}:{t}', f'daily:{u.id}:{t}:COIN', f'Daily reward day {streak}')
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        return err('Daily reward accounting failed; no reward was credited', 500)
     FIN['reward_spend'](t, 'daily', reward); FIN['ledger'](u.id, 'daily', reward); db.session.commit()
     db.session.refresh(u)
     return jsonify(reward=reward, streak=streak, me=me_dict(u))
@@ -1032,7 +1053,13 @@ def mission_claim():
         r = db.session.execute(update(MissionProgress).where(MissionProgress.user_id == u.id, MissionProgress.day == d, MissionProgress.key == key, MissionProgress.claimed == False, MissionProgress.count >= m[3]).values(claimed=True), execution_options={'synchronize_session': False})
         if r.rowcount != 1:
             db.session.rollback(); return err('Not ready or claimed')
-    add_coins(u.id, reward); tx(u.id, 'mission', reward, key); db.session.commit()
+    add_coins(u.id, reward); tx(u.id, 'mission', reward, key)
+    try:
+        journal_promo_credit(u.id, reward, 'mission_reward', f'{u.id}:{d}:{key}', f'mission:{u.id}:{d}:{key}:COIN', f'Mission reward {key}')
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        return err('Mission reward accounting failed; no reward was credited', 500)
     out = missions_state(u); out['got'] = reward; return jsonify(out)
 
 
