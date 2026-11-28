@@ -1491,7 +1491,7 @@ def adm_withdraw():
         if settlement_ref:
             if len(settlement_ref) < 5 or len(settlement_ref) > 120:
                 return err('settlement_reference must be 5-120 characters')
-            if not re.fullmatch(r'[0-9]+(?:\\.[0-9]{1,6})?', settlement_amount) or float(settlement_amount) <= 0:
+            if not re.fullmatch(r'[0-9]+(?:\.[0-9]{1,6})?', settlement_amount) or float(settlement_amount) <= 0:
                 return err('settlement_amount must be a positive decimal with up to 6 places')
             w.settlement_reference = settlement_ref
             w.settlement_amount = settlement_amount
