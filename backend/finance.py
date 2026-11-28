@@ -282,8 +282,14 @@ def init_finance(app, db, deps):
         return dict(days=days, revenue_birr=revenue, coins_sold=coins_sold, paid_out_birr=paid_out, pending_withdraw_birr=pending_out,
                     host_liability_birr=host_liab_birr, commission_liability_birr=comm_liab_birr, promo_coins_issued=promo,
                     game_house_coins=-game_net, lucky_house_coins=lucky_house, gift_volume_coins=gift_volume,
-                    host_earned_coins=host_paid_coins, commission_paid_coins=comm_paid_coins, estimated_net_birr=est_net,
-                    estimated_margin_pct=margin, target_margin_pct=30, on_target=margin >= 30, scheme=scheme(), coin_birr=rate, usdt_birr=usdt_birr())
+                    host_earned_coins=host_paid_coins, commission_paid_coins=comm_paid_coins,
+                    # Compatibility fields only: this is not a statutory P&L or net margin.
+                    estimated_net_birr=est_net, estimated_margin_pct=margin,
+                    estimated_liability_adjusted_surplus_birr=est_net,
+                    estimated_liability_adjusted_surplus_pct=margin,
+                    target_margin_pct=30, on_target=None, net_profit_verified=False,
+                    margin_status='unverified_operating_costs_and_period_liabilities_incomplete',
+                    scheme=scheme(), coin_birr=rate, usdt_birr=usdt_birr())
 
     def reconcile():
         issues = []
