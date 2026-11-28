@@ -74,6 +74,7 @@ def test_single_player_loss_posts_stake_and_house_margin(game_api, monkeypatch):
 def test_single_player_win_journals_payout_above_stake(game_api, monkeypatch):
     client, users, headers = game_api
     user = users[0]
+    monkeypatch.setattr(m, "limited", lambda *args: False)
     monkeypatch.setattr(m.rnd, "random", lambda: 0.0)
     response = client.post("/api/games/flip", json={"bet": 10, "pick": 1}, headers=headers[user.tg_id])
     assert response.status_code == 200
@@ -90,6 +91,7 @@ def test_single_player_win_journals_payout_above_stake(game_api, monkeypatch):
 def test_game_journal_failure_rolls_back_wager_and_payout(game_api, monkeypatch):
     client, users, headers = game_api
     user = users[0]
+    monkeypatch.setattr(m, "limited", lambda *args: False)
     monkeypatch.setitem(m.JOURNAL, "post_internal", lambda **kwargs: (_ for _ in ()).throw(RuntimeError("journal down")))
     response = client.post("/api/games/flip", json={"bet": 10, "pick": 1}, headers=headers[user.tg_id])
     assert response.status_code == 500
@@ -126,7 +128,7 @@ def test_p2p_join_settles_both_stakes_and_platform_margin(game_api, monkeypatch)
     battle_id = created.json["id"]
     monkeypatch.setattr(m.rnd, "random", lambda: 0.0)
     joined = client.post("/api/games/p2p/join", json={"id": battle_id}, headers=headers[joiner.tg_id])
-    assert joined.status_code == 200
+    assert joined.status_code == 200, joined.json
     assert joined.json["win"] is True and joined.json["prize"] == 19
     m.db.session.refresh(creator)
     m.db.session.refresh(joiner)
