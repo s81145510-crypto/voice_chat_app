@@ -263,11 +263,11 @@ def init_finance(app, db, deps):
         except Exception: db.session.rollback()
 
     def pnl(days=30):
-        cutoff = now() - days * 86400; rate = coin_birr()
+        cutoff = now() - days * 86400; rate = float(rules.WITHDRAW_ETB_PER_COIN)
         revenue = db.session.query(func.coalesce(func.sum(Purchase.birr), 0)).filter(Purchase.status == 'approved', Purchase.ts >= cutoff).scalar() or 0
         coins_sold = db.session.query(func.coalesce(func.sum(Purchase.coins), 0)).filter(Purchase.status == 'approved', Purchase.ts >= cutoff).scalar() or 0
         paid_out = db.session.query(func.coalesce(func.sum(Withdraw.birr), 0)).filter(Withdraw.status == 'paid', Withdraw.ts >= cutoff).scalar() or 0
-        pending_out = db.session.query(func.coalesce(func.sum(Withdraw.birr), 0)).filter(Withdraw.status == 'pending').scalar() or 0
+        pending_out = db.session.query(func.coalesce(func.sum(Withdraw.birr), 0)).filter(Withdraw.status.in_(('pending', 'under_review', 'approved', 'processing'))).scalar() or 0
         host_liab_coins = db.session.query(func.coalesce(func.sum(User.earnings), 0)).scalar() or 0
         comm_liab_coins = db.session.query(func.coalesce(func.sum(User.commission), 0)).scalar() or 0
         promo = db.session.query(func.coalesce(func.sum(Tx.amount), 0)).filter(Tx.kind.in_(REWARD_KINDS), Tx.amount > 0, Tx.ts >= cutoff).scalar() or 0
@@ -277,7 +277,7 @@ def init_finance(app, db, deps):
         host_paid_coins = db.session.query(func.coalesce(func.sum(FinGiftTx.host_earning), 0)).filter(FinGiftTx.ts >= cutoff).scalar() or 0
         comm_paid_coins = db.session.query(func.coalesce(func.sum(FinCommission.amount), 0)).filter(FinCommission.ts >= cutoff).scalar() or 0
         host_liab_birr = round(host_liab_coins * rate, 2); comm_liab_birr = round(comm_liab_coins * rate, 2)
-        est_net = round(revenue - paid_out - host_liab_birr - comm_liab_birr, 2)
+        est_net = round(revenue - paid_out - pending_out - host_liab_birr - comm_liab_birr, 2)
         margin = round((est_net / revenue * 100), 2) if revenue else 0.0
         return dict(days=days, revenue_birr=revenue, coins_sold=coins_sold, paid_out_birr=paid_out, pending_withdraw_birr=pending_out,
                     host_liability_birr=host_liab_birr, commission_liability_birr=comm_liab_birr, promo_coins_issued=promo,
@@ -289,8 +289,10 @@ def init_finance(app, db, deps):
         issues = []
         bad = db.session.query(func.count()).select_from(User).filter(User.real_coins > User.coins).scalar() or 0
         if bad: issues.append(dict(kind='real_gt_coins', count=bad, severity='high'))
-        neg = db.session.query(func.count()).select_from(User).filter(or_(User.coins < 0, User.earnings < 0, User.commission < 0)).scalar() or 0
+        neg = db.session.query(func.count()).select_from(User).filter(or_(User.coins < 0, User.earnings < 0, User.gift_earnings < 0, User.commission < 0)).scalar() or 0
         if neg: issues.append(dict(kind='negative_balance', count=neg, severity='critical'))
+        gift_over = db.session.query(func.count()).select_from(User).filter(User.gift_earnings > User.earnings).scalar() or 0
+        if gift_over: issues.append(dict(kind='gift_earnings_exceed_total_earnings', count=gift_over, severity='critical'))
         dup = db.session.query(FinCommission.gift_tx_id, FinCommission.agent_id, func.count()).group_by(FinCommission.gift_tx_id, FinCommission.agent_id).having(func.count() > 1).all()
         if dup: issues.append(dict(kind='duplicate_commission', count=len(dup), severity='critical'))
         over = []
