@@ -229,3 +229,154 @@ def test_two_simultaneous_purchase_approvals_credit_only_once(monkeypatch):
             m.db.session.query(m.Tx).filter(m.Tx.user_id.in_([customer_id, admin_id])).delete(synchronize_session=False)
             m.db.session.query(m.User).filter(m.User.id.in_([customer_id, admin_id])).delete(synchronize_session=False)
             m.db.session.commit()
+
+
+
+def test_concurrent_room_gifts_cannot_overspend_purchased_coins(monkeypatch):
+    """Two simultaneous gifts share one sender balance; only affordable spend commits."""
+    with m.app.app_context():
+        if m.db.engine.dialect.name != "postgresql":
+            pytest.skip("requires PostgreSQL row-level locking")
+    monkeypatch.setattr(m, "limited", lambda *args, **kwargs: False)
+    monkeypatch.setitem(m.FIN, "wallet_sync", lambda *args, **kwargs: None)
+
+    marker = uuid4().hex[:10]
+    with m.app.app_context():
+        sender = m.User(tg_id="gift-sender-" + marker, username="gift-sender",
+                        coins=100, real_coins=100)
+        host = m.User(tg_id="gift-host-" + marker, username="gift-host",
+                      coins=0, real_coins=0, host_status="host")
+        m.db.session.add_all([sender, host])
+        m.db.session.flush()
+        room_id = "g" + marker
+        room = m.Room(id=room_id, name="Gift race", host_id=host.id)
+        m.db.session.add(room)
+        m.db.session.commit()
+        sender_id, host_id = sender.id, host.id
+        token = m.sign(sender_id)
+
+    barrier = Barrier(2)
+
+    def send_gift():
+        client = m.app.test_client()
+        barrier.wait(timeout=10)
+        return client.post(
+            f"/api/rooms/{room_id}/gift",
+            json={"gift": "rose", "qty": 6, "to": host_id},
+            headers={"Authorization": "Bearer " + token},
+        )
+
+    try:
+        with ThreadPoolExecutor(max_workers=2) as pool:
+            futures = [pool.submit(send_gift) for _ in range(2)]
+            responses = [future.result(timeout=30) for future in futures]
+        assert sorted(response.status_code for response in responses) == [200, 402]
+        with m.app.app_context():
+            saved_sender = m.db.session.get(m.User, sender_id)
+            saved_host = m.db.session.get(m.User, host_id)
+            assert saved_sender.coins == 40
+            assert saved_sender.real_coins == 40
+            assert saved_host.earnings == 30
+            assert m.Tx.query.filter_by(user_id=sender_id, kind="gift").count() == 1
+            gift_entries = m.JOURNAL["JournalEntry"].query.filter_by(source="gift").all()
+            assert len([entry for entry in gift_entries if entry.description.startswith("gift rose")]) >= 1
+    finally:
+        with m.app.app_context():
+            entry_ids = [x.id for x in m.JOURNAL["JournalEntry"].query.filter(
+                m.JOURNAL["JournalEntry"].description.like("gift rose%")).all()]
+            if entry_ids:
+                m.db.session.query(m.JOURNAL["JournalLine"]).filter(
+                    m.JOURNAL["JournalLine"].entry_id.in_(entry_ids)).delete(synchronize_session=False)
+                m.db.session.query(m.JOURNAL["JournalEntry"]).filter(
+                    m.JOURNAL["JournalEntry"].id.in_(entry_ids)).delete(synchronize_session=False)
+            m.db.session.query(m.Message).filter_by(room_id=room_id).delete()
+            m.db.session.query(m.Room).filter_by(id=room_id).delete()
+            m.db.session.query(m.Tx).filter(m.Tx.user_id.in_([sender_id, host_id])).delete(synchronize_session=False)
+            m.db.session.query(m.User).filter(m.User.id.in_([sender_id, host_id])).delete(synchronize_session=False)
+            m.db.session.commit()
+
+
+def test_pk_gift_racing_with_finalization_is_either_paid_or_rejected(monkeypatch):
+    """A PK gift racing settlement is either fully included in payout or fully rolled back."""
+    with m.app.app_context():
+        if m.db.engine.dialect.name != "postgresql":
+            pytest.skip("requires PostgreSQL row-level update concurrency")
+    marker = uuid4().hex[:10]
+    with m.app.app_context():
+        host1 = m.User(tg_id="pk-race-h1-" + marker, username="pk-host-1",
+                       coins=0, real_coins=0, host_status="host")
+        host2 = m.User(tg_id="pk-race-h2-" + marker, username="pk-host-2",
+                       coins=0, real_coins=0, host_status="host")
+        sender = m.User(tg_id="pk-race-s-" + marker, username="pk-sender",
+                        coins=100, real_coins=100)
+        m.db.session.add_all([host1, host2, sender])
+        m.db.session.flush()
+        pk = m.PKBattle(host1_id=host1.id, host2_id=host2.id,
+                        status="active", started_at=m.now(), duration=300)
+        m.db.session.add(pk)
+        m.db.session.commit()
+        pk_id, h1_id, h2_id, sender_id = pk.id, host1.id, host2.id, sender.id
+        host_token, sender_token = m.sign(h1_id), m.sign(sender_id)
+
+    barrier = Barrier(2)
+
+    def gift():
+        client = m.app.test_client()
+        barrier.wait(timeout=10)
+        return client.post("/api/pk/gift", json={"pk_id": pk_id, "to_host": 1, "gift": "rose", "qty": 10},
+                           headers={"Authorization": "Bearer " + sender_token})
+
+    def end():
+        client = m.app.test_client()
+        barrier.wait(timeout=10)
+        return client.post("/api/pk/end", json={"pk_id": pk_id},
+                           headers={"Authorization": "Bearer " + host_token})
+
+    try:
+        with ThreadPoolExecutor(max_workers=2) as pool:
+            gift_future = pool.submit(gift)
+            end_future = pool.submit(end)
+            gift_response = gift_future.result(timeout=30)
+            end_response = end_future.result(timeout=30)
+        assert end_response.status_code == 200
+        assert gift_response.status_code in (200, 409)
+        with m.app.app_context():
+            saved_pk = m.db.session.get(m.PKBattle, pk_id)
+            saved_sender = m.db.session.get(m.User, sender_id)
+            saved_h1 = m.db.session.get(m.User, h1_id)
+            saved_h2 = m.db.session.get(m.User, h2_id)
+            assert saved_pk.status == "ended"
+            if gift_response.status_code == 200:
+                assert saved_pk.host1_gifts == 100
+                assert saved_pk.host1_real == 100
+                assert saved_sender.coins == 0
+                assert saved_h1.earnings == 70
+                assert saved_h2.earnings == 20
+                assert m.Tx.query.filter_by(user_id=sender_id, kind="pk_gift").count() == 1
+            else:
+                assert saved_pk.host1_gifts == 0
+                assert saved_pk.host1_real == 0
+                assert saved_sender.coins == 100
+                assert saved_h1.earnings == 0
+                assert saved_h2.earnings == 0
+                assert m.Tx.query.filter_by(user_id=sender_id, kind="pk_gift").count() == 0
+    finally:
+        with m.app.app_context():
+            ids = [pk_id]
+            entry_ids = [x.id for x in m.JOURNAL["JournalEntry"].query.filter(
+                m.JOURNAL["JournalEntry"].source.in_(["pk_gift", "pk_payout"]),
+                m.JOURNAL["JournalEntry"].reference.in_([str(pk_id)])
+            ).all()]
+            # PK gift entries reference the Tx id; remove payout by PK id and gift via source rows.
+            gift_tx_ids = [x.id for x in m.Tx.query.filter_by(user_id=sender_id, kind="pk_gift").all()]
+            gift_entries = m.JOURNAL["JournalEntry"].query.filter_by(source="pk_gift").all()
+            entry_ids += [x.id for x in gift_entries if x.reference in {str(xid) for xid in gift_tx_ids}]
+            if entry_ids:
+                m.db.session.query(m.JOURNAL["JournalLine"]).filter(
+                    m.JOURNAL["JournalLine"].entry_id.in_(set(entry_ids))).delete(synchronize_session=False)
+                m.db.session.query(m.JOURNAL["JournalEntry"]).filter(
+                    m.JOURNAL["JournalEntry"].id.in_(set(entry_ids))).delete(synchronize_session=False)
+            m.db.session.query(m.PKBattle).filter_by(id=pk_id).delete()
+            m.db.session.query(m.Tx).filter(m.Tx.user_id.in_([h1_id, h2_id, sender_id])).delete(synchronize_session=False)
+            m.db.session.query(m.User).filter(m.User.id.in_([h1_id, h2_id, sender_id])).delete(synchronize_session=False)
+            m.db.session.commit()
