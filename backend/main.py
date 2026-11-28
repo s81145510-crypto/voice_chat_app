@@ -522,17 +522,15 @@ def journal_p2p_join(creator_id, creator_real_used, joiner_id, joiner_real_used,
     creator_promo = bet - int(creator_real_used)
     joiner_promo = bet - int(joiner_real_used)
     lines = []
-    for uid, real_used, promo_used, label in (
-        (creator_id, int(creator_real_used), creator_promo, 'creator'),
-        (joiner_id, int(joiner_real_used), joiner_promo, 'joiner'),
-    ):
-        if real_used:
-            lines.append(dict(account_code='liability.user_coin_balance', user_id=int(uid),
-                              debit=real_used, credit=0, memo=f'P2P {label} purchased stake settled'))
-        if promo_used:
-            lines.append(dict(account_code='liability.promo_coin_balance', user_id=int(uid),
-                              debit=promo_used, credit=0, memo=f'P2P {label} promo stake settled'))
-    # The creator's stake was already credited to escrow when the battle was opened.
+    # The creator's stake was already debited from their wallet and credited to escrow
+    # by the create journal entry. Only the joining player's stake is newly debited here.
+    if joiner_real_used:
+        lines.append(dict(account_code='liability.user_coin_balance', user_id=int(joiner_id),
+                          debit=int(joiner_real_used), credit=0, memo='P2P joiner purchased stake settled'))
+    if joiner_promo:
+        lines.append(dict(account_code='liability.promo_coin_balance', user_id=int(joiner_id),
+                          debit=joiner_promo, credit=0, memo='P2P joiner promo stake settled'))
+    # Add the joiner's stake to escrow and release the full two-player escrow below.
     lines.append(dict(account_code='liability.p2p_escrow', debit=bet * 2, credit=0,
                       memo=f'P2P battle #{battle_id} escrow settled'))
     if prize:
