@@ -414,8 +414,15 @@ function bind(d){
   $('#t-list').innerHTML=r.users.length?r.users.map(u=>'<div class="row" style="padding:6px 0"><div class="sp">'+esc(u.name)+' <span class="mut">#'+u.id+'</span></div><button class="btn sm ghost" data-pick="'+u.id+'">Pick</button></div>').join(''):'<div class="mut">Not found</div>';
   document.querySelectorAll('[data-pick]').forEach(b=>b.onclick=()=>{$('#t-to').value=b.dataset.pick;toast('Buyer selected')})});
  const ta=$('#t-amt');if(ta)ta.oninput=()=>{const v=+ta.value||0;const fee=Math.floor(v*d.fee);$('#t-calc').innerHTML='Buyer receives <b class="gold">'+fmt(v-fee)+'</b> (fee '+fmt(fee)+')'};
- const tg=$('#t-go');if(tg)tg.onclick=e=>run(e.target,async()=>{if(!confirm('Send '+$('#t-amt').value+' coins?'))return;
-  const r=await api('/api/seller/transfer',{to:+$('#t-to').value,amount:+$('#t-amt').value});toast('✅ Sent! Buyer got '+fmt(r.received));TAB='hist';load()})}
+ const tg=$('#t-go');if(tg)tg.onclick=e=>run(e.target,async()=>{const to=+$('#t-to').value,amount=+$('#t-amt').value;
+  if(!confirm('Send '+amount+' coins?'))return;
+  const storageKey='seller-transfer-pending:'+CACHE.seller.user_id;
+  let pending=null;try{pending=JSON.parse(localStorage.getItem(storageKey)||'null')}catch(_){}
+  if(pending&&(pending.to!==to||pending.amount!==amount))throw new Error('A previous transfer may still be processing. Retry the same buyer and amount first.');
+  if(!pending){const requestId=(typeof crypto!=='undefined'&&crypto.randomUUID)?crypto.randomUUID().replace(/-/g,''):Array.from({length:32},()=>Math.floor(Math.random()*16).toString(16)).join('');
+   pending={request_id:requestId,to,amount};localStorage.setItem(storageKey,JSON.stringify(pending))}
+  const r=await api('/api/seller/transfer',pending);
+  localStorage.removeItem(storageKey);toast((r.replayed?'↻ Already processed. ':'✅ Sent! ')+'Buyer got '+fmt(r.received));TAB='hist';load()})}
 function render(){const d=CACHE;const root=$('#root');
  if(!d.seller){root.innerHTML=applyView(d.tiers)}
  else if(d.seller.status!=='approved'){root.innerHTML='<div class="card"><h2 style="margin-top:0">Status: '+d.seller.status+'</h2><div class="mut">Your application is '+d.seller.status+'. You will be notified by Telegram.</div></div>'+applyView(d.tiers)}
