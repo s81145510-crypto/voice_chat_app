@@ -1384,7 +1384,8 @@ def adm_purchase():
         if u and u.referrer_id:
             bonus = p.coins // 10; add_coins(u.referrer_id, bonus); tx(u.referrer_id, 'referral', bonus, f'from {u.id}')
             ru = db.session.get(User, u.referrer_id); notify(ru.tg_id if ru else None, f'🎁 Referral +{bonus} coins')
-        if u and u.agent_id and not Tx.query.filter_by(user_id=p.user_id, kind='invite_reward').count():
+        invite_awarded = bool(u and u.agent_id and not Tx.query.filter_by(user_id=p.user_id, kind='invite_reward').count())
+        if invite_awarded:
             add_coins(u.agent_id, INVITE_REWARD); tx(u.agent_id, 'invite', INVITE_REWARD, f'invite {u.id}'); tx(p.user_id, 'invite_reward', 0, f'agent {u.agent_id}')
             FIN['referral_qualify'](p.user_id, 'first_purchase', INVITE_REWARD)
 
@@ -1405,7 +1406,7 @@ def adm_purchase():
                 if referral_bonus > 0:
                     coin_credits.append(dict(account_code='liability.user_coin_balance', user_id=u.referrer_id,
                                              debit=0, credit=referral_bonus, memo='Purchase referral bonus'))
-            if u and u.agent_id and not Tx.query.filter_by(user_id=p.user_id, kind='invite_reward').count():
+            if invite_awarded:
                 if int(INVITE_REWARD) > 0:
                     coin_credits.append(dict(account_code='liability.user_coin_balance', user_id=u.agent_id,
                                              debit=0, credit=int(INVITE_REWARD), memo='First purchase invite reward'))
