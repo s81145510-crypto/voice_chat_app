@@ -313,6 +313,26 @@ def ensure_columns():
             db.session.commit()
     except Exception as e:
         db.session.rollback(); print('ensure_columns: payout reference unique index', e)
+    # Case-insensitive uniqueness prevents the same payment identifier being
+    # claimed by multiple purchase requests. Historical duplicates are reported.
+    for column, index_name in (('ref', 'uq_purchase_ref_ci'), ('txhash', 'uq_purchase_txhash_ci')):
+        try:
+            duplicate = db.session.execute(sa_text(
+                f"SELECT lower({column}), count(*) FROM purchase "
+                f"WHERE {column} IS NOT NULL AND {column} <> '' "
+                f"GROUP BY lower({column}) HAVING count(*) > 1 LIMIT 1"
+            )).first()
+            if duplicate:
+                print(f'ensure_columns: duplicate historical purchase {column}; unique index not created')
+            else:
+                db.session.execute(sa_text(
+                    f"CREATE UNIQUE INDEX IF NOT EXISTS {index_name} "
+                    f"ON purchase (lower({column})) "
+                    f"WHERE {column} IS NOT NULL AND {column} <> ''"
+                ))
+                db.session.commit()
+        except Exception as e:
+            db.session.rollback(); print(f'ensure_columns: {column} unique index', e)
 
 
 _init_lock = threading.Lock()
@@ -1165,26 +1185,41 @@ def wallet():
 @app.post('/api/coins/buy')
 @auth
 def coins_buy():
-    pkg = num(request.form.get('coins')); ref_in = (request.form.get('ref') or '').strip()
-    method = (request.form.get('method') or 'telebirr').strip()
-    if method not in ('telebirr', 'usdt'): method = 'telebirr'
+    pkg = num(request.form.get('coins'))
+    ref_in = (request.form.get('ref') or '').strip()
+    method = (request.form.get('method') or 'telebirr').strip().lower()
+    if method != 'telebirr':
+        return err('Only Telebirr purchases are currently supported')
     price = dict(PACKAGES).get(pkg)
     if not price: return err('Choose a package')
-    if method == 'usdt':
-        if len(ref_in) < 10: return err('Enter USDT TX hash')
-        ref = 'U' + secrets.token_hex(12); txhash = ref_in[:80]
-    else:
-        if len(ref_in) < 6: return err('Enter Telebirr transaction ID')
-        ref = ref_in.upper()[:40]; txhash = ''
-    f = request.files.get('file'); data = f.read() if f else b''; mime = sniff_image(data)
+    if not 6 <= len(ref_in) <= 40:
+        return err('Enter a valid Telebirr transaction ID (6–40 characters)')
+    ref = ref_in.upper()
+    existing = Purchase.query.filter(func.lower(Purchase.ref) == ref.lower()).first()
+    if existing:
+        if existing.user_id == g.user.id and existing.method == 'telebirr' and existing.coins == pkg:
+            return jsonify(ok=1, duplicate=1, status=existing.status)
+        return err('This Telebirr transaction ID has already been submitted', 409)
+    f = request.files.get('file'); data = f.read() if f else b''
+    mime = sniff_image(data)
     if not mime: return err('Attach payment screenshot')
-    if Purchase.query.filter_by(user_id=g.user.id, status='pending').count() >= 3: return err('3 pending requests')
-    p = Purchase(user_id=g.user.id, username=g.user.username, coins=pkg, birr=price, ref=ref, method=method, txhash=txhash); db.session.add(p)
+    if Purchase.query.filter_by(user_id=g.user.id, status='pending').count() >= 3:
+        return err('3 pending requests')
+    p = Purchase(user_id=g.user.id, username=g.user.username, coins=pkg,
+                 birr=price, ref=ref, method='telebirr', txhash='')
+    db.session.add(p)
     try:
-        db.session.flush(); db.session.add(Shot(purchase_id=p.id, data=data, mime=mime)); db.session.commit()
+        db.session.flush()
+        db.session.add(Shot(purchase_id=p.id, data=data, mime=mime))
+        db.session.commit()
     except IntegrityError:
-        db.session.rollback(); return err('Transaction ID already used')
-    notify_admins(f'🛒 {method.upper()} Purchase: {g.user.username} — {pkg} coins / {price} Birr / {round(price/USDT_BIRR,2)} USDT\nRef: {txhash or ref}'); return jsonify(ok=1)
+        db.session.rollback()
+        existing = Purchase.query.filter(func.lower(Purchase.ref) == ref.lower()).first()
+        if existing and existing.user_id == g.user.id and existing.method == 'telebirr' and existing.coins == pkg:
+            return jsonify(ok=1, duplicate=1, status=existing.status)
+        return err('This Telebirr transaction ID has already been submitted', 409)
+    notify_admins(f'🛒 TELEBIRR Purchase: {g.user.username} — {pkg} coins / {price} Birr\\nRef: {ref}')
+    return jsonify(ok=1, duplicate=0, status='pending')
 @app.post('/api/withdraw')
 @auth
 def withdraw():
@@ -1664,8 +1699,18 @@ def adm_shot(pid):
 @app.post('/api/admin/purchase')
 @admin_only
 def adm_purchase():
-    b = body(); pid, act = num(b.get('id')), b.get('action'); p = db.session.get(Purchase, pid)
+    b = body(); pid, act = num(b.get('id')), str(b.get('action') or '').strip().lower()
+    if act not in ('approve', 'reject'):
+        return err('Invalid purchase action')
+    p = db.session.get(Purchase, pid)
     if not p: return err('not found', 404)
+    if act == 'approve':
+        if p.method != 'telebirr':
+            return err('Legacy non-Telebirr purchase requires separate manual review', 409)
+        if not p.ref or not (6 <= len(p.ref) <= 40):
+            return err('Purchase has no valid Telebirr transaction ID', 409)
+        if not Shot.query.filter_by(purchase_id=pid).first():
+            return err('Payment screenshot is missing; cannot approve', 409)
     new = 'approved' if act == 'approve' else 'rejected'
     r = db.session.execute(update(Purchase).where(Purchase.id == pid, Purchase.status == 'pending').values(status=new), execution_options={'synchronize_session': False})
     if r.rowcount != 1:
