@@ -166,6 +166,45 @@ def test_admin_telebirr_approval_records_audit_and_credits_once(purchase_api, mo
     assert m.PurchaseReview.query.filter_by(purchase_id=purchase.id).count() == 1
 
 
+def test_purchase_approval_journals_referral_and_invite_as_promo_coins(purchase_api, monkeypatch):
+    m, client, admin, customer, _, headers, _ = purchase_api
+    agent = m.User(tg_id="review-agent", username="review-agent", coins=0, real_coins=0)
+    m.db.session.add(agent)
+    m.db.session.flush()
+    customer.referrer_id = admin.id
+    customer.agent_id = agent.id
+    m.db.session.commit()
+    purchase = _new_purchase(m, customer)
+    monkeypatch.setitem(m.FIN, "ledger", lambda *args, **kwargs: None)
+    monkeypatch.setitem(m.FIN, "wallet_sync", lambda *args, **kwargs: None)
+
+    try:
+        response = client.post("/api/admin/purchase", json={
+            "id": purchase.id, "action": "approve", "manual_verified": True
+        }, headers=headers)
+        assert response.status_code == 200
+        entry = m.JOURNAL["JournalEntry"].query.filter_by(
+            idempotency_key=f"purchase:{purchase.id}:COIN"
+        ).one()
+        lines = m.JOURNAL["JournalLine"].query.filter_by(entry_id=entry.id).all()
+        credits = {(line.account_code, line.user_id): line.credit for line in lines if line.credit}
+        assert credits[("liability.user_coin_balance", customer.id)] == 100
+        assert credits[("liability.promo_coin_balance", admin.id)] == 10
+        assert credits[("liability.promo_coin_balance", agent.id)] == m.INVITE_REWARD
+        assert m.db.session.get(m.User, customer.id).coins == 100
+        assert m.db.session.get(m.User, admin.id).coins == 10
+        assert m.db.session.get(m.User, agent.id).coins == m.INVITE_REWARD
+    finally:
+        entry = m.JOURNAL["JournalEntry"].query.filter_by(
+            idempotency_key=f"purchase:{purchase.id}:COIN"
+        ).first()
+        if entry:
+            m.JOURNAL["JournalLine"].query.filter_by(entry_id=entry.id).delete()
+            m.db.session.delete(entry)
+        m.db.session.query(m.User).filter_by(id=agent.id).delete()
+        m.db.session.commit()
+
+
 def test_admin_rejection_requires_reason_and_preserves_reason_in_audit(purchase_api):
     m, client, admin, customer, _, headers, _ = purchase_api
     purchase = _new_purchase(m, customer)
