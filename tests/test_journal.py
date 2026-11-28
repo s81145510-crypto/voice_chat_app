@@ -127,7 +127,7 @@ class JournalValidationTests(unittest.TestCase):
 
     def test_lucky_gift_journal_balances_gross_spend_and_multiplier_payout(self):
         lines = JOURNAL["gift_lines"](sender_id=12, total=50, real_used=40,
-                                      host_earning=0, lucky_refund=100)
+                                      host_earning=0, lucky_refund=100, is_lucky=True)
         self.assertEqual(sum(x["debit"] for x in lines), 150)
         self.assertEqual(sum(x["credit"] for x in lines), 150)
         self.assertIn("expense.lucky_payout", {x["account_code"] for x in lines})
@@ -144,10 +144,10 @@ class JournalValidationTests(unittest.TestCase):
     def test_commission_carry_release_can_exceed_current_gift_pool(self):
         lines = JOURNAL["gift_lines"](sender_id=14, total=1, real_used=1,
                                       host_earning=0, commission_total=3)
-        self.assertEqual(sum(x["debit"] for x in lines), 4)
-        self.assertEqual(sum(x["credit"] for x in lines), 4)
-        self.assertIn("expense.commission_carry_release",
-                      {x["account_code"] for x in lines})
+        self.assertEqual(sum(x["debit"] for x in lines), 3)
+        self.assertEqual(sum(x["credit"] for x in lines), 3)
+        carry = next(x for x in lines if x["account_code"] == "expense.commission_carry_release")
+        self.assertEqual(carry["debit"], 2)
 
     def test_gift_journal_rejects_overallocated_or_invalid_amounts(self):
         with self.assertRaisesRegex(ValueError, "allocation exceeds"):
