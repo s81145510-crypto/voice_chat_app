@@ -544,6 +544,15 @@ FIN = init_finance(app, db, dict(
     jsonify=jsonify, request=request))
 
 try:
+    from .journal import init_journal
+except ImportError:
+    from journal import init_journal
+
+JOURNAL = init_journal(app, db, dict(
+    now=now, admin_only=admin_only, jsonify=jsonify, request=request, body=body))
+
+
+try:
     from .seller import init_seller
 except ImportError:
     from seller import init_seller
