@@ -552,6 +552,9 @@ def register():
             db.session.commit()
         except IntegrityError:
             db.session.rollback(); u = User.query.filter_by(tg_id=tgid).first()
+        except Exception:
+            db.session.rollback()
+            return err('Account creation accounting failed; please retry', 500)
     elif photo and u.tg_photo != photo:
         u.tg_photo = photo; db.session.commit()
     if u.banned: return err('Your account is banned', 403)
