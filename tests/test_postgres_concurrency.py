@@ -8,14 +8,10 @@ import pytest
 from backend import main as m
 
 
-pytestmark = pytest.mark.skipif(
-    m.db.engine.dialect.name != "postgresql",
-    reason="requires PostgreSQL row-level locking",
-)
-
-
 def test_two_simultaneous_withdrawals_cannot_overdraw_earnings(monkeypatch):
-    assert m.db.engine.dialect.name == "postgresql"
+    with m.app.app_context():
+        if m.db.engine.dialect.name != "postgresql":
+            pytest.skip("requires PostgreSQL row-level locking")
     monkeypatch.setattr(m, "notify_admins", lambda *args, **kwargs: None)
 
     marker = uuid4().hex[:16]
