@@ -550,6 +550,34 @@ def journal_p2p_join(creator_id, creator_real_used, joiner_id, joiner_real_used,
         description=f'P2P battle #{battle_id} settled', lines=lines)
 
 
+def journal_admin_grant(uid, amount, purchased_removed, promo_removed, tx_id, reason):
+    amount = int(amount)
+    if amount > 0:
+        lines = [
+            dict(account_code='expense.coin_issuance', debit=amount, credit=0,
+                 memo='Admin promotional coin grant'),
+            dict(account_code='liability.promo_coin_balance', user_id=int(uid),
+                 debit=0, credit=amount, memo='Admin promotional coin grant'),
+        ]
+        description = f'Admin promo coin grant to user #{uid}: {reason or "admin grant"}'
+    else:
+        removed = -amount
+        lines = []
+        if promo_removed:
+            lines.append(dict(account_code='liability.promo_coin_balance', user_id=int(uid),
+                              debit=int(promo_removed), credit=0, memo='Admin promo coin adjustment'))
+        if purchased_removed:
+            lines.append(dict(account_code='liability.user_coin_balance', user_id=int(uid),
+                              debit=int(purchased_removed), credit=0, memo='Admin purchased coin adjustment'))
+        lines.append(dict(account_code='equity.admin_wallet_adjustment', debit=0, credit=removed,
+                          memo='Approved admin wallet balance adjustment'))
+        description = f'Admin wallet reduction for user #{uid}: {reason}'
+    JOURNAL['post_internal'](
+        source='admin_wallet_grant', reference=str(tx_id),
+        idempotency_key=f'admin-grant:{tx_id}:COIN', currency='COIN',
+        description=description, lines=lines)
+
+
 def journal_promo_credit(uid, amount, source, reference, idempotency_key, description):
     """Record a promo-coin liability increase in the same transaction as the wallet mutation."""
     amount = int(amount)
@@ -1947,7 +1975,41 @@ def adm_user():
     elif act == 'grant':
         n = num(b.get('amount'))
         if not -1000000 <= n <= 1000000 or n == 0: return err('bad amount')
-        add_coins(uid, n); tx(uid, 'grant', n, 'admin')
+        reason = str(b.get('reason') or '').strip()[:240]
+        if n < 0 and len(reason) < 5:
+            return err('A reason of at least 5 characters is required for a negative wallet adjustment')
+        try:
+            target = db.session.query(User).filter(User.id == uid).with_for_update().populate_existing().first()
+            if not target:
+                db.session.rollback(); return err('not found', 404)
+            if n > 0:
+                add_coins(uid, n)
+                grant_tx = Tx(user_id=uid, kind='grant', amount=n, note=(reason or 'admin promo grant')[:120])
+                db.session.add(grant_tx); db.session.flush()
+                journal_admin_grant(uid, n, 0, 0, grant_tx.id, reason)
+            else:
+                remove = -n
+                current_coins, current_real = int(target.coins or 0), int(target.real_coins or 0)
+                if current_coins < 0 or current_real < 0 or current_real > current_coins:
+                    db.session.rollback(); return err('Wallet purchased/promo balances are inconsistent; adjustment blocked', 409)
+                if remove > current_coins:
+                    db.session.rollback(); return err('Adjustment exceeds the available wallet balance', 409)
+                promo_removed = min(remove, current_coins - current_real)
+                purchased_removed = remove - promo_removed
+                changed = db.session.execute(update(User).where(
+                    User.id == uid, User.coins >= remove, User.real_coins >= purchased_removed
+                ).values(coins=User.coins-remove, real_coins=User.real_coins-purchased_removed),
+                    execution_options={'synchronize_session': False})
+                if changed.rowcount != 1:
+                    db.session.rollback(); return err('Wallet changed during adjustment; please retry', 409)
+                grant_tx = Tx(user_id=uid, kind='grant', amount=n, note=f'admin adjustment: {reason}'[:120])
+                db.session.add(grant_tx); db.session.flush()
+                journal_admin_grant(uid, n, purchased_removed, promo_removed, grant_tx.id, reason)
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
+            return err('Wallet adjustment failed; no balance changes were saved', 500)
+        return jsonify(ok=1)
     elif act == 'vip':
         d = num(b.get('amount'))
         if not 1 <= d <= 365: return err('bad days')
