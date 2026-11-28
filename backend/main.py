@@ -250,6 +250,12 @@ with app.app_context():
         except Exception as e: print('create_all:', e)
         try: ensure_columns()
         except Exception as e: print('ensure_columns:', e)
+        try:
+            db.session.execute(sa_text("CREATE UNIQUE INDEX IF NOT EXISTS uq_purchase_txhash_nonempty ON purchase (txhash) WHERE txhash IS NOT NULL AND txhash <> ''"))
+            db.session.commit()
+        except Exception as e:
+            db.session.rollback()
+            print('purchase txhash unique index not ready; resolve historical duplicates:', e)
 
 
 def err(m, c=400): return jsonify(error=m), c
@@ -1004,11 +1010,18 @@ def coins_buy():
     price = dict(PACKAGES).get(pkg)
     if not price: return err('Choose a package')
     if method == 'usdt':
-        if len(ref_in) < 10: return err('Enter USDT TX hash')
-        ref = 'U' + secrets.token_hex(12); txhash = ref_in[:80]
+        txhash = ref_in.lower()
+        if not re.fullmatch(r'[0-9a-f]{64}', txhash): return err('Enter a valid 64-character TRC20 transaction hash')
+        if Purchase.query.filter(Purchase.method == 'usdt', Purchase.txhash == txhash).first():
+            return err('This USDT transaction hash has already been submitted', 409)
+        ref = 'U' + secrets.token_hex(12)
     else:
-        if len(ref_in) < 6: return err('Enter Telebirr transaction ID')
-        ref = ref_in.upper()[:40]; txhash = ''
+        ref = ref_in.strip().upper()
+        if len(ref) < 6 or len(ref) > 40 or not re.fullmatch(r'[A-Z0-9_-]+', ref):
+            return err('Enter a valid Telebirr transaction ID (6-40 letters, numbers, _ or -)')
+        if Purchase.query.filter(Purchase.method == 'telebirr', Purchase.ref == ref).first():
+            return err('This Telebirr transaction ID has already been submitted', 409)
+        txhash = ''
     f = request.files.get('file'); data = f.read() if f else b''; mime = sniff_image(data)
     if not mime: return err('Attach payment screenshot')
     if Purchase.query.filter_by(user_id=g.user.id, status='pending').count() >= 3: return err('3 pending requests')
@@ -1016,7 +1029,7 @@ def coins_buy():
     try:
         db.session.flush(); db.session.add(Shot(purchase_id=p.id, data=data, mime=mime)); db.session.commit()
     except IntegrityError:
-        db.session.rollback(); return err('Transaction ID already used')
+        db.session.rollback(); return err('Transaction ID already used', 409)
     notify_admins(f'🛒 {method.upper()} Purchase: {g.user.username} — {pkg} coins / {price} Birr / {round(price/USDT_BIRR,2)} USDT\nRef: {txhash or ref}'); return jsonify(ok=1)
 @app.post('/api/withdraw')
 @auth
@@ -1394,7 +1407,23 @@ def adm_overview():
 @admin_only
 def adm_purchases():
     ps = Purchase.query.filter_by(status=request.args.get('status', 'pending')).order_by(Purchase.id.desc()).limit(50).all()
-    return jsonify(items=[dict(id=p.id, user_id=p.user_id, name=p.username, coins=p.coins, birr=p.birr, ref=(p.txhash or p.ref), ts=p.ts, method=p.method, usdt=round(p.birr/USDT_BIRR, 2)) for p in ps])
+    return jsonify(items=[dict(id=p.id, user_id=p.user_id, name=p.username, coins=p.coins, birr=p.birr, ref=(p.txhash or p.ref), txhash=p.txhash or '', ts=p.ts, method=p.method, usdt=round(p.birr/USDT_BIRR, 2), screenshot_url=f'/api/admin/shot/{p.id}') for p in ps])
+@app.get('/api/admin/payment-reference-audit')
+@admin_only
+def adm_payment_reference_audit():
+    duplicate_hashes = db.session.query(Purchase.txhash, func.count(Purchase.id)).filter(
+        Purchase.method == 'usdt', Purchase.txhash != '').group_by(Purchase.txhash).having(func.count(Purchase.id) > 1).all()
+    duplicate_telebirr = db.session.query(Purchase.ref, func.count(Purchase.id)).filter(
+        Purchase.method == 'telebirr').group_by(Purchase.ref).having(func.count(Purchase.id) > 1).all()
+    missing = Purchase.query.filter(Purchase.status == 'pending').filter(
+        or_(Purchase.ref == '', Purchase.ref.is_(None))).count()
+    return jsonify(ok=not duplicate_hashes and not duplicate_telebirr and missing == 0,
+                   duplicate_usdt_hashes=[dict(reference=x, count=n) for x, n in duplicate_hashes],
+                   duplicate_telebirr_ids=[dict(reference=x, count=n) for x, n in duplicate_telebirr],
+                   pending_missing_reference=missing,
+                   note='Duplicate reference audit only. It does not verify payment on Telebirr or the TRON blockchain.')
+
+
 @app.get('/api/admin/withdraws')
 @admin_only
 def adm_withdraws():
