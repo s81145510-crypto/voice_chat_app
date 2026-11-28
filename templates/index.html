@@ -847,12 +847,14 @@ async function renderMe(){
   <button class="btn ghost" onclick="openInvite()">🔗 Invite · ${fmt(m.inv||0)}</button>
   <button class="btn gold" onclick="openShop()">✨ VIP & Frames${m.vip?' · '+vipLeft(m)+'d':''}</button>
   <button class="btn ghost" onclick="editProfile()">✏️ Edit profile</button>
+  <button class="btn ghost" onclick="openBlocks()">🚫 Blocked users</button>
   <button class="btn ghost" onclick="openPolicy()">📜 Policy</button>
   ${String(m.tg_id).startsWith('p_')?`<button class="btn ghost" onclick="changePassword()">🔑 Change password</button>`:''}
   <button class="btn ghost" onclick="copyTxt('${esc(m.tg_id)}')">🆔 My ID: ${esc(m.tg_id)}</button>
   ${tgInit()?'':`<button class="btn ghost" onclick="confirm('${String(m.tg_id).startsWith('g_')?'Leave guest mode?':'Log out?'}')&&logout()">🚪 Log out</button>`}
   ${m.is_admin?`<button class="btn gold" onclick="openAdmin()">🛡 Admin</button>`:''}
   </div>${footbar()}`;loadMyStats()}
+async function openBlocks(){const o=modal('<h3>🚫 Blocked users</h3><div class="empty">…</div>');try{const d=await api('/api/blocks');o.firstChild.innerHTML='<h3>🚫 Blocked users</h3>'+(d.users.length?d.users.map(u=>`<div class="row" style="padding:8px 0">${av(u,'s')}<b class="sp">${esc(u.name)}</b><button class="btn sm ghost" data-unblock="${u.id}">Unblock</button></div>`).join(''):'<div class="empty">No blocked users</div>');$('[data-unblock]',o).forEach(b=>b.onclick=()=>run(b,async()=>{await api('/api/users/'+b.dataset.unblock+'/block',{blocked:false});b.parentElement.remove();toast('User unblocked')}))}catch(e){o.firstChild.innerHTML='<div class="empty">'+esc(e.message)+'</div>'}}
 function editProfile(){const m=S.me;const o=modal(`<h3>✏️ Edit profile</h3><div class="col"><input id="e-p" type="file" accept="image/*"><input id="e-n" value="${esc(m.name)}" maxlength="30"><input id="e-b" value="${esc(m.bio)}" maxlength="160"><input id="e-t" value="${esc(m.phone)}" maxlength="10" placeholder="09xxxxxxxx"><button class="btn" id="e-go">Save</button></div>`);
   $('#e-go',o).onclick=e=>run(e.target,async()=>{const f=$('#e-p',o).files[0];if(f){const fd=new FormData();fd.append('file',await shrink(f,320,.85),'p.jpg');setMe((await api('/api/profile/photo',fd)).me)}
    setMe((await api('/api/profile',{name:$('#e-n',o).value,bio:$('#e-b',o).value,phone:$('#e-t',o).value})).me);o.close();renderMe()})}
