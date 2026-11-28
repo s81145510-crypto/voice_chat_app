@@ -59,6 +59,7 @@ def _entry(key):
 def test_single_player_loss_posts_stake_and_house_margin(game_api, monkeypatch):
     client, users, headers = game_api
     user = users[0]
+    monkeypatch.setattr(m, "limited", lambda *args: False)
     monkeypatch.setattr(m.rnd, "random", lambda: 0.99)
     response = client.post("/api/games/flip", json={"bet": 10, "pick": 1}, headers=headers[user.tg_id])
     assert response.status_code == 200
@@ -69,6 +70,25 @@ def test_single_player_loss_posts_stake_and_house_margin(game_api, monkeypatch):
     lines = _entry(f"game:{tx.id}:COIN")
     assert lines["liability.user_coin_balance"].debit == 10
     assert lines["revenue.platform_game"].credit == 10
+
+
+def test_single_player_mixed_stake_debits_purchased_and_promo_liabilities(game_api, monkeypatch):
+    client, users, headers = game_api
+    user = users[0]
+    user.real_coins = 80
+    m.db.session.commit()
+    monkeypatch.setattr(m, "limited", lambda *args: False)
+    monkeypatch.setattr(m.rnd, "random", lambda: 0.99)
+    response = client.post("/api/games/flip", json={"bet": 30, "pick": 1}, headers=headers[user.tg_id])
+    assert response.status_code == 200
+    assert response.json["payout"] == 0
+    m.db.session.refresh(user)
+    assert user.coins == 70 and user.real_coins == 70
+    tx = m.Tx.query.filter_by(user_id=user.id, kind="game").order_by(m.Tx.id.desc()).first()
+    lines = _entry(f"game:{tx.id}:COIN")
+    assert lines["liability.user_coin_balance"].debit == 10
+    assert lines["liability.promo_coin_balance"].debit == 20
+    assert lines["revenue.platform_game"].credit == 30
 
 
 def test_single_player_win_journals_payout_above_stake(game_api, monkeypatch):
@@ -103,22 +123,26 @@ def test_game_journal_failure_rolls_back_wager_and_payout(game_api, monkeypatch)
 def test_p2p_create_and_cancel_refunds_original_purchased_split(game_api):
     client, users, headers = game_api
     creator = users[0]
-    created = client.post("/api/games/p2p/create", json={"bet": 20}, headers=headers[creator.tg_id])
+    creator.real_coins = 80
+    m.db.session.commit()
+    created = client.post("/api/games/p2p/create", json={"bet": 30}, headers=headers[creator.tg_id])
     assert created.status_code == 200
     battle_id = created.json["id"]
     m.db.session.refresh(creator)
-    assert creator.coins == 80 and creator.real_coins == 80
+    assert creator.coins == 70 and creator.real_coins == 70
     create_lines = _entry(f"p2p:{battle_id}:create:COIN")
-    assert create_lines["liability.user_coin_balance"].debit == 20
-    assert create_lines["liability.p2p_escrow"].credit == 20
+    assert create_lines["liability.user_coin_balance"].debit == 10
+    assert create_lines["liability.promo_coin_balance"].debit == 20
+    assert create_lines["liability.p2p_escrow"].credit == 30
 
     canceled = client.post("/api/games/p2p/cancel", json={"id": battle_id}, headers=headers[creator.tg_id])
     assert canceled.status_code == 200
     m.db.session.refresh(creator)
-    assert creator.coins == 100 and creator.real_coins == 100
+    assert creator.coins == 100 and creator.real_coins == 80
     cancel_lines = _entry(f"p2p:{battle_id}:cancel:COIN")
-    assert cancel_lines["liability.p2p_escrow"].debit == 20
-    assert cancel_lines["liability.user_coin_balance"].credit == 20
+    assert cancel_lines["liability.p2p_escrow"].debit == 30
+    assert cancel_lines["liability.user_coin_balance"].credit == 10
+    assert cancel_lines["liability.promo_coin_balance"].credit == 20
 
 
 def test_p2p_join_settles_both_stakes_and_platform_margin(game_api, monkeypatch):
