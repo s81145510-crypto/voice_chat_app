@@ -44,6 +44,28 @@ class AppSmokeTests(unittest.TestCase):
             self.assertIn("gift_earnings", {c["name"] for c in inspect(db.engine).get_columns("user")})
             self.assertIn("payout_reference", {c["name"] for c in inspect(db.engine).get_columns("withdraw")})
 
+    def test_room_gift_idempotency_key_is_unique_and_lookupable(self):
+        from sqlalchemy.exc import IntegrityError
+        with app.app_context():
+            idem = "room:991:smoke-test-req-001"
+            try:
+                gid, _ = FIN["record_gift"](991, 992, "rose", 1, 10, 10, 5,
+                                            "smoke-room", "common", idem)
+                found = FIN["find_gift_idem"](idem)
+                self.assertIsNotNone(found)
+                self.assertEqual(found["sender_id"], 991)
+                self.assertEqual(found["receiver_id"], 992)
+                self.assertEqual(found["gift_key"], "rose")
+                self.assertEqual(found["qty"], 1)
+                self.assertEqual(found["room_id"], "smoke-room")
+                self.assertEqual(found["total"], 10)
+                with self.assertRaises(IntegrityError):
+                    FIN["record_gift"](991, 992, "rose", 1, 10, 10, 5,
+                                       "smoke-room", "common", idem)
+                db.session.rollback()
+            finally:
+                db.session.rollback()
+
     def test_financial_reconciliation_runs_on_empty_database(self):
         with app.app_context():
             result = FIN["reconcile"]()
