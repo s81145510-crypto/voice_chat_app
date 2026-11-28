@@ -19,6 +19,24 @@ def init_feed(app, db, d):
         target_id = db.Column(db.Integer, primary_key=True, index=True)
         ts = db.Column(db.Integer, default=now)
 
+    class AppNotification(db.Model):
+        __tablename__ = 'app_notification'
+        id = db.Column(db.Integer, primary_key=True)
+        user_id = db.Column(db.Integer, index=True, nullable=False)
+        actor_id = db.Column(db.Integer, nullable=True)
+        kind = db.Column(db.String(32), nullable=False)
+        title = db.Column(db.String(100), nullable=False)
+        body = db.Column(db.String(240), default='')
+        target = db.Column(db.String(120), default='')
+        read_at = db.Column(db.Integer, nullable=True)
+        ts = db.Column(db.Integer, default=now, index=True)
+
+    def notify_user(user_id, actor_id, kind, title, message='', target=''):
+        if not db.session.get(User, user_id): return False
+        db.session.add(AppNotification(user_id=user_id, actor_id=actor_id, kind=str(kind)[:32], title=str(title)[:100], body=str(message)[:240], target=str(target)[:120]))
+        db.session.commit()
+        return True
+
     with app.app_context():
         try: db.create_all()
         except Exception as e: print('feed create_all:', e)
@@ -75,6 +93,23 @@ def init_feed(app, db, d):
                        is_following=bool(db.session.get(Follow, (g.user.id, uid))), me=uid == g.user.id,
                        room=dict(id=r.id, kind=r.kind or 'voice', name=r.name) if r else None)
 
+    @app.get('/api/notifications')
+    @auth
+    def notifications_list():
+        rows = AppNotification.query.filter_by(user_id=g.user.id).order_by(AppNotification.id.desc()).limit(30).all()
+        unread = AppNotification.query.filter_by(user_id=g.user.id, read_at=None).count()
+        return jsonify(unread=unread, items=[dict(id=x.id, actor_id=x.actor_id, kind=x.kind, title=x.title, body=x.body, target=x.target, ts=x.ts, read=bool(x.read_at)) for x in rows])
+
+    @app.post('/api/notifications/read')
+    @auth
+    def notifications_read():
+        b = body(); q = AppNotification.query.filter_by(user_id=g.user.id, read_at=None)
+        nid = num(b.get('id'))
+        if nid > 0: q = q.filter_by(id=nid)
+        count = q.update({AppNotification.read_at: now()}, synchronize_session=False)
+        db.session.commit()
+        return jsonify(ok=1, updated=count)
+
     @app.post('/api/follow/<int:uid>')
     @auth
     def follow_set(uid):
@@ -83,15 +118,18 @@ def init_feed(app, db, d):
         if limited('follow', 0.5): return err('Slow down', 429)
         want = bool(body().get('follow'))
         row = db.session.get(Follow, (g.user.id, uid))
+        created = False
         try:
             if want and not row:
                 if Follow.query.filter_by(follower_id=g.user.id).count() >= MAX_FOLLOWING: return err('You follow too many people')
-                db.session.add(Follow(follower_id=g.user.id, target_id=uid))
+                db.session.add(Follow(follower_id=g.user.id, target_id=uid)); created = True
             elif not want and row:
                 db.session.delete(row)
             db.session.commit()
         except IntegrityError:
-            db.session.rollback()
+            db.session.rollback(); created = False
+        if created:
+            notify_user(uid, g.user.id, 'follow', 'New follower', f'{g.user.username} started following you', f'profile:{g.user.id}')
         return jsonify(following=want, followers=counts(uid)[0])
 
     @app.get('/api/users/<int:uid>/follows')
@@ -141,4 +179,4 @@ def init_feed(app, db, d):
     def delete_follows(uid):
         Follow.query.filter(or_(Follow.follower_id == uid, Follow.target_id == uid)).delete(synchronize_session=False)
 
-    return dict(delete_follows=delete_follows)
+    return dict(delete_follows=delete_follows, notify_user=notify_user)
