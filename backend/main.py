@@ -1066,12 +1066,26 @@ def withdraw():
     else:
         phone = str(b.get('phone') or g.user.phone or '').strip()
         if not (phone.isdigit() and len(phone) == 10): return err('Enter valid phone number')
-    commission_used = min(max(0, int(g.user.commission or 0)), coins)
+    # Lock and read the authoritative balances before calculating the split.
+    # The conditional UPDATE also checks each bucket, so SQLite (which ignores
+    # SELECT FOR UPDATE) fails safely rather than recording a stale split.
+    locked_user = db.session.query(User).filter(User.id == g.user.id).with_for_update().first()
+    if not locked_user:
+        db.session.rollback(); return err('User not found', 404)
+    commission_used = min(max(0, int(locked_user.commission or 0)), coins)
     earnings_used = coins - commission_used
-    min_c = case((User.commission <= coins, User.commission), else_=coins)
-    r = db.session.execute(update(User).where(User.id == g.user.id, User.earnings + User.commission >= coins).values(commission=User.commission - min_c, earnings=User.earnings - (coins - min_c)), execution_options={'synchronize_session': False})
+    r = db.session.execute(
+        update(User).where(
+            User.id == locked_user.id,
+            User.commission >= commission_used,
+            User.earnings >= earnings_used,
+        ).values(
+            commission=User.commission - commission_used,
+            earnings=User.earnings - earnings_used,
+        ),
+        execution_options={'synchronize_session': False})
     if r.rowcount != 1:
-        db.session.rollback(); return err('Not enough income')
+        db.session.rollback(); return err('Not enough income; refresh your wallet and try again', 409)
     w = Withdraw(user_id=g.user.id, username=g.user.username, coins=coins, birr=int(coins * COIN_BIRR), phone=phone, method=method, usdt_address=address,
                  commission_coins=commission_used, earnings_coins=earnings_used)
     db.session.add(w); db.session.flush()
