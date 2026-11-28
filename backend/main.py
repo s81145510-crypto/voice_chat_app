@@ -634,6 +634,8 @@ def room_join(rid):
     r = get_room(rid)
     if not r: return err('ROOM_GONE', 404)
     uid = g.user.id
+    if 'FEED' in globals() and r.host_id in FEED['hidden_user_ids'](uid):
+        return err('ROOM_GONE', 404)
     Seat.query.filter(Seat.user_id == uid, Seat.room_id != rid).delete(synchronize_session=False)
     Presence.query.filter(Presence.user_id == uid, Presence.room_id != rid).delete(synchronize_session=False)
     LiveGuest.query.filter(LiveGuest.user_id == uid, LiveGuest.room_id != rid, LiveGuest.status == 'live').delete(synchronize_session=False)
@@ -650,6 +652,8 @@ def room_join(rid):
 def room_state(rid):
     r = get_room(rid)
     if not r: return err('ROOM_GONE', 404)
+    if 'FEED' in globals() and r.host_id in FEED['hidden_user_ids'](g.user.id):
+        return err('ROOM_GONE', 404)
     touch(rid, g.user.id); clean_room(rid)
     r = db.session.get(Room, rid)
     if not r: return err('ROOM_GONE', 404)
@@ -809,7 +813,10 @@ def guest_action(rid):
 @app.post('/api/rooms/<rid>/chat')
 @auth
 def room_chat(rid):
-    if not get_room(rid): return err('ROOM_GONE', 404)
+    room = get_room(rid)
+    if not room: return err('ROOM_GONE', 404)
+    if 'FEED' in globals() and room.host_id in FEED['hidden_user_ids'](g.user.id):
+        return err('ROOM_GONE', 404)
     t = str(body().get('text', '')).strip()[:200]
     if not t: return err('empty')
     if limited('chat', 0.8): return err('Slow down', 429)
