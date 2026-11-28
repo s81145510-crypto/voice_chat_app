@@ -21,6 +21,7 @@ Do not merge or deploy on the strength of this document. Before historical migra
 | Mission rewards | `POST /api/missions/claim` | Adds coins; `real_coins` unchanged (promo) | **Journal-integrated:** promo issuance entry commits atomically with claim, wallet credit and `Tx`; stable per-user/day/mission idempotency key |
 | Single-player games | `POST /api/games/<name>` | Bet is spent; payout is added as promo coins | No journal entry; game revenue, prize expense and promo-liability treatment need an approved policy |
 | P2P create/cancel/join | `POST /api/games/p2p/*` | Stakes are spent; cancellation and winner prize are credited as promo coins | No journal entry; escrow, rake/platform share, refund and winner payout treatment need a defined policy |
+| Admin wallet grant | `POST /api/admin/user` with `action=grant` | Positive grants increase `coins` only (promo); negative grants subtract total `coins` through `add_coins()` without adjusting `real_coins` | **Not journaled.** Negative grants can make `real_coins > coins`; needs a guarded purchased/promo allocation and approved adjustment account before enabling negative adjustments |
 | Wallet / seller operations | finance module and related admin routes | Legacy wallet/ledger tables are maintained separately | Must be traced end-to-end before migration; do not infer journal coverage from `FinLedger` rows alone |
 
 ## Important implementation details
@@ -29,6 +30,7 @@ Do not merge or deploy on the strength of this document. Before historical migra
 - `add_coins()` increases `User.coins` only. Credits made through it are therefore promo balance unless the caller separately increases `real_coins` (purchase approval does so explicitly).
 - Daily wallet credit, claim marker, `Tx`, and COIN journal posting now share one transaction. The legacy reward-budget spend and `FinLedger` are still recorded afterward in a separate commit; that operational budget trail is not yet fully atomic with the wallet/journal transaction.
 - `FinLedger`, `FinWallet`, and `FinGiftTx` are legacy operational finance records. They are not substitutes for a balanced journal entry.
+- The admin `grant` action is still a financial gap: positive amounts are promo credits but have no journal entry; negative amounts call `add_coins()` and can reduce the total below `real_coins`. Do not use negative grants as a production correction until the purchased/promo split and contra-account policy are implemented and tested.
 
 ## Required next steps before implementation
 1. **Completed for reward issuance:** welcome, daily and mission promo coin credits now post balanced COIN journal entries in the same transaction as their wallet mutations; tests cover daily/mission posting and rollback.
