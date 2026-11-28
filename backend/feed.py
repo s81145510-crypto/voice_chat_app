@@ -2,7 +2,7 @@
 """Phase 2: follow, public profiles, home feed and rankings."""
 from datetime import datetime
 from flask import request, jsonify, g
-from sqlalchemy import func, select, or_, and_
+from sqlalchemy import func, select, or_, and_, inspect, text as sa_text
 from sqlalchemy.exc import IntegrityError
 
 MAX_FOLLOWING = 2000
@@ -61,6 +61,19 @@ def init_feed(app, db, d):
     with app.app_context():
         try: db.create_all()
         except Exception as e: print('feed create_all:', e)
+        # create_all does not add columns to tables that already exist.
+        try:
+            have = {col['name'] for col in inspect(db.engine).get_columns('user_report')}
+            for name, ddl in (
+                ('reviewed_by', 'INTEGER'),
+                ('reviewed_ts', 'INTEGER'),
+                ('resolution', "VARCHAR(32) DEFAULT ''"),
+            ):
+                if name not in have:
+                    with db.engine.begin() as conn:
+                        conn.execute(sa_text(f'ALTER TABLE user_report ADD COLUMN {name} {ddl}'))
+        except Exception as e:
+            print('feed user_report migration:', e)
 
     def active_rooms():
         t = now()
