@@ -31,6 +31,8 @@ class AppSmokeTests(unittest.TestCase):
             self.assertTrue(inspect(db.engine).has_table("app_notification"))
             self.assertTrue(inspect(db.engine).has_table("user_block"))
             self.assertTrue(inspect(db.engine).has_table("user_report"))
+            self.assertIn("gift_earnings", {c["name"] for c in inspect(db.engine).get_columns("user")})
+            self.assertIn("payout_reference", {c["name"] for c in inspect(db.engine).get_columns("withdraw")})
 
     def test_new_private_endpoints_require_authentication(self):
         client = app.test_client()
