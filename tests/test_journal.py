@@ -262,5 +262,24 @@ class JournalValidationTests(unittest.TestCase):
             JOURNAL["withdrawal_release_lines"](43, 0, 0)
 
 
+    def test_seller_transfer_journal_moves_purchased_coins_and_records_fee(self):
+        lines = JOURNAL["seller_transfer_lines"](
+            seller_id=61, buyer_id=62, gross=100, fee=2, net=98)
+        self.assertEqual(sum(x["debit"] for x in lines), 100)
+        self.assertEqual(sum(x["credit"] for x in lines), 100)
+        seller = next(x for x in lines if x.get("user_id") == 61)
+        buyer = next(x for x in lines if x.get("user_id") == 62)
+        fee = next(x for x in lines if x["account_code"] == "revenue.seller_transfer_fee")
+        self.assertEqual((seller["account_code"], seller["debit"]), ("liability.user_coin_balance", 100))
+        self.assertEqual((buyer["account_code"], buyer["credit"]), ("liability.user_coin_balance", 98))
+        self.assertEqual(fee["credit"], 2)
+
+    def test_seller_transfer_journal_rejects_invalid_split(self):
+        with self.assertRaisesRegex(ValueError, "does not balance"):
+            JOURNAL["seller_transfer_lines"](61, 62, 100, 2, 97)
+        with self.assertRaisesRegex(ValueError, "invalid seller transfer users"):
+            JOURNAL["seller_transfer_lines"](61, 61, 100, 2, 98)
+
+
 if __name__ == "__main__":
     unittest.main()
