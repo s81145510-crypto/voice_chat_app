@@ -118,13 +118,20 @@ def init_host_rewards(app, db, deps):
         row = db.session.get(HostActivityDay, (g.user.id, day))
         rewards = HostActivityReward.query.filter_by(user_id=g.user.id, day=day).order_by(
             HostActivityReward.block.asc()).all()
-        return jsonify(day=day, verified_seconds=int(row.seconds if row else 0),
-                       eligible_blocks=min(rules.MAX_REWARDS_PER_DAY,
-                                           int((row.seconds if row else 0) // rules.BLOCK_SECONDS)),
+        seconds = int(row.seconds if row else 0)
+        day_number = int(row.day_number if row else 0)
+        blocks = rules.rewards_earned(seconds)
+        earned = sum(r.amount for r in rewards)
+        next_reward = None
+        if blocks < rules.MAX_REWARDS_PER_DAY and day_number and day_number <= len(rules.WELCOME_REWARDS):
+            next_reward = rules.reward_per_block(day_number, 1)
+        return jsonify(day=day, day_number=day_number, verified_seconds=seconds,
+                       verified_minutes=seconds // 60, eligible_blocks=blocks,
+                       daily_limit=rules.MAX_REWARDS_PER_DAY,
+                       next_reward_coins=next_reward,
                        rewards=[dict(block=r.block, coins=r.amount, ts=r.ts) for r in rewards],
-                       reward_coins=sum(r.amount for r in rewards),
-                       withdrawable=False,
-                       note='Only verified host heartbeats count. First seven active hosting days use the welcome schedule; later rewards wait for an authoritative host-level system.')
+                       reward_coins=earned, withdrawable=False,
+                       note='Only server-verified host room presence counts. Activity rewards are promotional coins and cannot be withdrawn. Later-day level rewards remain disabled until host-level progression is formally defined.')
 
     return dict(heartbeat=heartbeat)
 
