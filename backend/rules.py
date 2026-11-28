@@ -104,20 +104,26 @@ def withdrawal_quote(coins):
     return dict(coins=coins, birr=birr, rate=str(WITHDRAW_ETB_PER_COIN))
 
 
-def withdrawal_source_split(coins, gift_earnings, commission):
+def withdrawal_source_split(coins, gift_earnings, pk_earnings, commission):
     coins = _int_amount(coins)
     gift_earnings = _int_amount(gift_earnings)
+    pk_earnings = _int_amount(pk_earnings)
     commission = _int_amount(commission)
     min_gift = (coins + 1) // 2
     if gift_earnings < min_gift:
         raise ValueError('at least 50% of the withdrawal must come from genuine gift earnings')
-    if gift_earnings + commission < coins:
+    if gift_earnings + pk_earnings + commission < coins:
         raise ValueError('not enough withdrawable income')
-    commission_part = min(commission, coins - min_gift)
-    earnings_part = coins - commission_part
-    if earnings_part > gift_earnings:
+    gift_part = max(min_gift, coins - pk_earnings - commission)
+    if gift_part > gift_earnings:
         raise ValueError('not enough genuine gift earnings')
-    return dict(earnings=earnings_part, commission=commission_part)
+    remainder = coins - gift_part
+    commission_part = min(commission, remainder)
+    pk_part = remainder - commission_part
+    if pk_part > pk_earnings:
+        raise ValueError('not enough withdrawable income')
+    return dict(gift_earnings=gift_part, pk_earnings=pk_part,
+                earnings=gift_part + pk_part, commission=commission_part)
 
 
 def merge_intervals(intervals):
