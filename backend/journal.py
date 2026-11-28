@@ -4,7 +4,7 @@
 Additive foundation only: existing money flows are not migrated automatically.
 """
 import re
-from sqlalchemy import func
+from sqlalchemy import func, or_
 from flask import g
 
 
@@ -192,6 +192,40 @@ def init_journal(app, db, deps):
         credit_total = sum(x['credit'] for x in accounts)
         return jsonify(currency=currency, accounts=accounts, total_debit=debit_total,
                        total_credit=credit_total, balanced=(debit_total == credit_total))
+
+    def reconcile_journal():
+        totals = db.session.query(
+            JournalLine.entry_id.label('entry_id'),
+            func.coalesce(func.sum(JournalLine.debit), 0).label('debit_total'),
+            func.coalesce(func.sum(JournalLine.credit), 0).label('credit_total'),
+            func.count(JournalLine.id).label('line_count'),
+        ).group_by(JournalLine.entry_id).subquery()
+        bad_rows = db.session.query(
+            JournalEntry.id, JournalEntry.source, JournalEntry.reference, JournalEntry.currency,
+            func.coalesce(totals.c.debit_total, 0), func.coalesce(totals.c.credit_total, 0),
+            func.coalesce(totals.c.line_count, 0),
+        ).outerjoin(totals, totals.c.entry_id == JournalEntry.id).filter(
+            or_(totals.c.entry_id.is_(None), totals.c.debit_total != totals.c.credit_total,
+                totals.c.line_count < 2)
+        ).order_by(JournalEntry.id.desc()).limit(100).all()
+        currency_mismatches = db.session.query(func.count(JournalLine.id)).join(
+            JournalEntry, JournalEntry.id == JournalLine.entry_id
+        ).filter(JournalLine.currency != JournalEntry.currency).scalar() or 0
+        return dict(
+            ok=not bad_rows and not currency_mismatches,
+            entries=JournalEntry.query.count(),
+            unbalanced_or_incomplete_count=len(bad_rows),
+            unbalanced_or_incomplete=[dict(entry_id=row[0], source=row[1], reference=row[2],
+                                            currency=row[3], debit=int(row[4]), credit=int(row[5]),
+                                            line_count=int(row[6])) for row in bad_rows],
+            currency_mismatch_lines=int(currency_mismatches),
+            note='Checks posted journal entry balance and line currency consistency. It does not reconcile legacy or non-journaled wallet activity.'
+        )
+
+    @app.get('/api/fin/journal/reconcile')
+    @admin_only
+    def journal_reconciliation():
+        return jsonify(reconcile_journal())
 
     def gift_lines(sender_id, total, real_used, host_earning, commission_total=0, lucky_refund=0, is_lucky=False):
         """Build balanced COIN journal lines for a normal or Lucky gift.
@@ -392,4 +426,4 @@ def init_journal(app, db, deps):
                               debit=0, credit=commission_coins, memo='Restore agent commission'))
         return lines
 
-    return dict(JournalEntry=JournalEntry, JournalLine=JournalLine, serialize=serialize, post_internal=post_internal, gift_lines=gift_lines, purchase_coin_lines=purchase_coin_lines, pk_gift_lines=pk_gift_lines, pk_payout_lines=pk_payout_lines, withdrawal_reserve_lines=withdrawal_reserve_lines, withdrawal_release_lines=withdrawal_release_lines)
+    return dict(JournalEntry=JournalEntry, JournalLine=JournalLine, serialize=serialize, post_internal=post_internal, reconcile=reconcile_journal, gift_lines=gift_lines, purchase_coin_lines=purchase_coin_lines, pk_gift_lines=pk_gift_lines, pk_payout_lines=pk_payout_lines, withdrawal_reserve_lines=withdrawal_reserve_lines, withdrawal_release_lines=withdrawal_release_lines)
