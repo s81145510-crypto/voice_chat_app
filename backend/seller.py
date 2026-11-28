@@ -27,6 +27,12 @@ def init_seller(app, db, deps):
     auth = deps['auth']; admin_only = deps['admin_only']; notify = deps['notify']
     notify_admins = deps['notify_admins']; sniff_image = deps['sniff_image']
     coin_birr = deps['coin_birr']
+    normalize_payment_reference = deps['normalize_payment_reference']
+    verify_usdt_trc20_payment = deps['verify_usdt_trc20_payment']
+    TronVerificationError = deps['TronVerificationError']
+    TronVerificationPending = deps['TronVerificationPending']
+    usdt_address = deps['usdt_address']
+    usdt_birr = deps['usdt_birr']
 
     class Seller(db.Model):
         user_id = db.Column(db.Integer, primary_key=True)
@@ -49,7 +55,7 @@ def init_seller(app, db, deps):
         coins = db.Column(db.Integer)
         bonus = db.Column(db.Integer, default=0)
         tier = db.Column(db.String(10), default='starter')
-        ref = db.Column(db.String(60), unique=True)
+        ref = db.Column(db.String(64), unique=True)
         method = db.Column(db.String(10), default='telebirr')
         status = db.Column(db.String(10), default='pending', index=True)
         ts = db.Column(db.Integer, default=now)
@@ -57,6 +63,14 @@ def init_seller(app, db, deps):
     class SellerShot(db.Model):
         order_id = db.Column(db.Integer, primary_key=True)
         data = db.Column(db.LargeBinary); mime = db.Column(db.String(30))
+
+    class SellerOrderReview(db.Model):
+        order_id = db.Column(db.Integer, db.ForeignKey('seller_order.id'), primary_key=True)
+        action = db.Column(db.String(10), nullable=False)
+        reviewer_tg_id = db.Column(db.String(32), nullable=False)
+        reviewed_at = db.Column(db.Integer, nullable=False, default=now)
+        reference_snapshot = db.Column(db.String(64), nullable=False, default='')
+        note = db.Column(db.String(240), nullable=False, default='')
 
     class SellerTransfer(db.Model):
         id = db.Column(db.Integer, primary_key=True)
@@ -74,7 +88,8 @@ def init_seller(app, db, deps):
             # db.create_all() does not add columns to an existing production table.
             # Apply this additive, backwards-compatible migration before serving requests.
             inspector = inspect(db.engine)
-            if 'seller_transfer' in inspector.get_table_names():
+            tables = set(inspector.get_table_names())
+            if 'seller_transfer' in tables:
                 columns = {c['name'] for c in inspector.get_columns('seller_transfer')}
                 if 'request_id' not in columns:
                     db.session.execute(text(
@@ -84,6 +99,11 @@ def init_seller(app, db, deps):
                 db.session.execute(text(
                     'CREATE UNIQUE INDEX IF NOT EXISTS ix_seller_transfer_request_id '
                     'ON seller_transfer (request_id)'
+                ))
+                db.session.commit()
+            if 'seller_order' in tables and db.engine.dialect.name == 'postgresql':
+                db.session.execute(text(
+                    'ALTER TABLE seller_order ALTER COLUMN ref TYPE VARCHAR(64)'
                 ))
                 db.session.commit()
         except Exception as e:
@@ -150,9 +170,11 @@ def init_seller(app, db, deps):
         u = g.user; s = db.session.get(Seller, u.id)
         if not s or s.status != 'approved': return err('Not an approved seller', 403)
         birr = num(request.form.get('birr'))
-        ref = (request.form.get('ref') or '').strip().upper()[:60]
-        method = (request.form.get('method') or 'telebirr').strip()
-        if method not in ('telebirr', 'usdt'): method = 'telebirr'
+        method = (request.form.get('method') or 'telebirr').strip().lower()
+        try:
+            ref = normalize_payment_reference(method, request.form.get('ref'))
+        except ValueError as e:
+            return err(str(e))
         t = TIER_MAP[s.tier]
         if birr < t['min_birr']: return err(f"Minimum for {s.tier}: {t['min_birr']} Birr")
         if birr > 5000000: return err('Amount too large')
