@@ -115,6 +115,30 @@ class JournalValidationTests(unittest.TestCase):
         self.assertIsNone(db.session.get(JOURNAL["JournalEntry"], entry_id))
         self.assertEqual(JOURNAL["JournalLine"].query.count(), 0)
 
+    def test_normal_gift_journal_allocation_balances_purchased_and_promo_coins(self):
+        lines = JOURNAL["gift_lines"](sender_id=11, total=100, real_used=60,
+                                      host_earning=30, commission_total=6)
+        self.assertEqual(sum(x["debit"] for x in lines), 100)
+        self.assertEqual(sum(x["credit"] for x in lines), 100)
+        self.assertEqual({x["account_code"] for x in lines},
+                         {"liability.user_coin_balance", "liability.promo_coin_balance",
+                          "liability.host_earnings", "liability.agent_commission",
+                          "revenue.platform_gift"})
+
+    def test_lucky_gift_journal_balances_gross_spend_and_multiplier_payout(self):
+        lines = JOURNAL["gift_lines"](sender_id=12, total=50, real_used=40,
+                                      host_earning=0, lucky_refund=100)
+        self.assertEqual(sum(x["debit"] for x in lines), 150)
+        self.assertEqual(sum(x["credit"] for x in lines), 150)
+        self.assertIn("expense.lucky_payout", {x["account_code"] for x in lines})
+        self.assertNotIn("liability.host_earnings", {x["account_code"] for x in lines})
+
+    def test_gift_journal_rejects_overallocated_or_invalid_amounts(self):
+        with self.assertRaisesRegex(ValueError, "allocation exceeds"):
+            JOURNAL["gift_lines"](1, 10, 10, 8, commission_total=3)
+        with self.assertRaisesRegex(ValueError, "whole integers"):
+            JOURNAL["gift_lines"](1, 10, True, 0)
+
     def test_invalid_account_and_invalid_idempotency_key_are_rejected(self):
         lines = self.lines()
         lines[0]["account_code"] = "bad account!"
