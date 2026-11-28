@@ -935,9 +935,12 @@ async function openCreatorDashboard(){
   const m=modal('<div class="empty">Loading creator dashboard…</div>');
   const statusLabel={pending:'Pending',under_review:'Under review',approved:'Approved',processing:'Processing',paid:'Paid',rejected:'Rejected',failed:'Failed',reversed:'Reversed'};
   try{
-    const d=await api('/api/creator/dashboard');
+    const [d,a]=await Promise.all([api('/api/creator/dashboard'),api('/api/creator/activity')]);
     const b=d.balances||{},s=d.last_30_days||{};
     const money=n=>fmt(Number(n||0));
+    const activityPct=Math.min(100,Math.round((Number(a.verified_seconds||0)/3600)*100));
+    const activityTime=Math.floor(Number(a.verified_seconds||0)/3600)+'h '+Math.floor((Number(a.verified_seconds||0)%3600)/60)+'m';
+    const activityRewards=(a.rewards||[]).map(r=>'<div class="cd-row"><span>Verified hosting reward · Block '+r.block+'</span><b>'+money(r.coins)+' Coins</b></div>').join('');
     const withdrawRows=(d.withdrawals||[]).map(w=>`<div class="cd-row"><div class="sp"><b>${money(w.birr)} Birr</b><div class="mut">${money(w.coins)} Coins · ${ago(w.ts)}</div></div><span class="badge">${esc(statusLabel[w.status]||w.status||'Unknown')}</span></div>`).join('');
     m.firstChild.innerHTML=`<div class="cd-head"><div><div class="mut">CREATOR STUDIO</div><h3 style="margin:3px 0 0;font-size:20px">📊 Creator Dashboard</h3></div><span class="pill">30 days</span></div>
     <div class="cd-balance"><div class="mut">Withdrawable earnings</div><div class="cd-total">${money(b.earnings_coins)} <small>Coins</small></div><div class="mut">Commission balance · ${money(b.commission_coins)} Coins</div></div>
@@ -947,6 +950,7 @@ async function openCreatorDashboard(){
       <div class="cd-stat"><span>🤝 Commission</span><b>${money(s.commission_earned_coins)}</b><small>Earned · Coins</small></div>
       <div class="cd-stat"><span>⭐ Activity rewards</span><b>${money(s.activity_reward_coins)}</b><small>Non-withdrawable · Coins</small></div>
     </div>
+    <div class="card" style="margin-top:10px"><div class="row"><b class="sp">🎤 Today's verified hosting</b><span class="pill">${a.day||''}</span></div><div style="font-size:20px;font-weight:800;margin:8px 0">${activityTime}</div><div class="bar2"><i style="width:${activityPct}%"></i></div><div class="mut" style="margin-top:6px">${money(a.eligible_blocks||0)} / ${money(a.daily_limit||2)} reward blocks · 60 minutes each</div><div class="cd-row"><span>Today's activity rewards</span><b>${money(a.reward_coins)} Coins</b></div>${a.next_reward_coins?'<div class="mut">Next eligible reward: '+money(a.next_reward_coins)+' Coins</div>':''}${activityRewards}<div class="mut cd-note">${esc(a.note||'Verified hosting only. Activity rewards cannot be withdrawn.')}</div></div>
     <div class="cd-follow">${d.follower_tracking_enabled?`👥 Followers <b>${money(d.followers)}</b>`:'👥 Follower statistics are not available yet'}</div>
     <h3>💸 Withdrawal history</h3>${withdrawRows||'<div class="empty">No withdrawal requests yet</div>'}
     <p class="mut cd-note">${esc(d.note||'Balances shown are recorded coin balances and do not guarantee cash redemption.')}</p>${footbar()}`;
