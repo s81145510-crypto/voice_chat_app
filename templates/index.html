@@ -833,7 +833,8 @@ function openPKGift(side){
    <div class="gg">${S.cfg.gifts.filter(x=>x.tier!=='lucky').map(x=>`<div class="gi tier-${x.tier} ${gift===x.key?'on':''}" data-k="${x.key}"><b>${x.emoji}</b>${esc(x.name)}<div class="gold">🪙${fmt(x.price)}</div></div>`).join('')}</div>
    <div class="row" style="margin-top:12px"><div class="chips sp">${[1,5,10,20,50].map(q=>`<div class="chip ${qty===q?'on':''}" data-q="${q}">×${q}</div>`).join('')}</div><button class="btn gold" id="pk-send">Send · ${fmt(g.price*qty)}</button></div>`;
    $$('.gi',m).forEach(e=>e.onclick=()=>{gift=e.dataset.k;draw()});$$('[data-q]',m).forEach(e=>e.onclick=()=>{qty=+e.dataset.q;draw()});
-   $('#pk-send',m).onclick=e=>run(e.target,async()=>{const d=await api('/api/pk/gift',{pk_id:P.pid,to_host:side,gift,qty});S.me.coins=d.coins;setMe(S.me);toast('✅ Sent');hap('medium');m.close();clearTimeout(P.t);pkPoll()})};
+   let requestId=Array.from(crypto.getRandomValues(new Uint8Array(16)),b=>b.toString(16).padStart(2,'0')).join('');
+   $('#pk-send',m).onclick=e=>run(e.target,async()=>{const d=await api('/api/pk/gift',{pk_id:P.pid,to_host:side,gift,qty,request_id:requestId});S.me.coins=d.coins;setMe(S.me);toast(d.duplicate?'Already sent · no extra charge':'✅ Sent');hap('medium');m.close();clearTimeout(P.t);pkPoll()})};
   draw()}
 async function renderWallet(){
   const el=$('#p-wallet');el.innerHTML=topbar()+`<div class="empty">…</div>`;
