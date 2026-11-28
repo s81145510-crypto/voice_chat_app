@@ -427,6 +427,46 @@ def init_finance(app, db, deps):
         rows = FinAudit.query.order_by(FinAudit.id.desc()).limit(120).all()
         return jsonify(items=[dict(id=r.id, ts=r.ts, admin=r.admin_id, action=r.action, target=r.target, details=r.details) for r in rows])
 
+    @app.get('/api/creator/dashboard')
+    @auth
+    def creator_dashboard():
+        uid = g.user.id
+        since_30 = now() - 30 * 86400
+        gifts = db.session.query(
+            func.count(FinGiftTx.id),
+            func.coalesce(func.sum(FinGiftTx.total), 0),
+            func.coalesce(func.sum(FinGiftTx.host_earning), 0)
+        ).filter(FinGiftTx.receiver_id == uid, FinGiftTx.ts >= since_30).one()
+        commission_30 = db.session.query(func.coalesce(func.sum(FinCommission.amount), 0)).filter(
+            FinCommission.agent_id == uid, FinCommission.ts >= since_30
+        ).scalar() or 0
+        activity_30 = db.session.query(func.coalesce(func.sum(Tx.amount), 0)).filter(
+            Tx.user_id == uid, Tx.kind == 'host_activity', Tx.amount > 0, Tx.ts >= since_30
+        ).scalar() or 0
+        follow_table = db.metadata.tables.get('user_follow')
+        followers = 0
+        if follow_table is not None:
+            followers = db.session.query(func.count()).select_from(follow_table).filter(
+                follow_table.c.target_id == uid
+            ).scalar() or 0
+        withdrawals = Withdraw.query.filter_by(user_id=uid).order_by(Withdraw.id.desc()).limit(20).all()
+        return jsonify(
+            balances=dict(earnings_coins=int(g.user.earnings or 0),
+                          commission_coins=int(g.user.commission or 0)),
+            last_30_days=dict(gift_count=int(gifts[0] or 0),
+                              gift_volume_coins=int(gifts[1] or 0),
+                              host_earned_coins=int(gifts[2] or 0),
+                              commission_earned_coins=int(commission_30),
+                              activity_reward_coins=int(activity_30)),
+            followers=int(followers),
+            withdrawals=[dict(id=w.id, coins=int(w.coins or 0), birr=int(w.birr or 0),
+                               status=w.status, method=w.method, ts=w.ts,
+                               earnings_coins=int(w.earnings_coins or 0),
+                               commission_coins=int(w.commission_coins or 0))
+                         for w in withdrawals],
+            note='Balances are recorded coin balances, not a guarantee of cash redemption. Activity rewards are reported separately and are not included in withdrawable earnings.'
+        )
+
     return dict(record_gift=record_gift, pay_commissions=pay_commissions, wallet_sync=wallet_sync,
                 referral_register=referral_register, referral_qualify=referral_qualify,
                 reward_allowed=reward_allowed, reward_spend=reward_spend, ledger=ledger,
