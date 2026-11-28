@@ -897,47 +897,92 @@ def room_chat(rid):
 @app.post('/api/rooms/<rid>/gift')
 @auth
 def room_gift(rid):
+    b = body()
+    gift = GIFT_MAP.get(b.get('gift'))
+    qty = strict_num(b.get('qty'), 1)
+    to = strict_num(b.get('to'))
+    request_id = str(b.get('request_id') or '').strip()
+    if not (8 <= len(request_id) <= 64) or not all(ch.isalnum() or ch in '-_' for ch in request_id):
+        return err('A valid gift request ID is required')
+    if qty is None or not 1 <= qty <= 99 or to is None or to <= 0:
+        return err('Invalid gift quantity or recipient')
+    if not gift or to == g.user.id:
+        return err('bad request')
+    idem = f"room:{g.user.id}:{request_id}"
+    existing = FIN['find_gift_idem'](idem)
+    if existing:
+        same = (existing['sender_id'] == g.user.id and existing['receiver_id'] == to
+                and existing['gift_key'] == gift['key'] and existing['qty'] == qty
+                and existing['room_id'] == str(rid)[:16])
+        if not same:
+            return err('Request ID already used for a different gift', 409)
+        return jsonify(coins=coins_of(g.user.id), lucky=0, refund=0, duplicate=1)
+
     r = get_room(rid)
-    if not r: return err('ROOM_GONE', 404)
-    b = body(); gift = GIFT_MAP.get(b.get('gift')); qty = strict_num(b.get('qty'), 1); to = strict_num(b.get('to'))
-    if qty is None or not 1 <= qty <= 99 or to is None or to <= 0: return err('Invalid gift quantity or recipient')
-    if not gift or to == g.user.id: return err('bad request')
+    if not r:
+        return err('ROOM_GONE', 404)
+    if 'FEED' in globals() and r.host_id in FEED['hidden_user_ids'](g.user.id):
+        return err('ROOM_GONE', 404)
     on_stage = to == r.host_id or Seat.query.filter_by(room_id=rid, user_id=to).first() or LiveGuest.query.filter_by(room_id=rid, user_id=to, status='live').first()
-    if not on_stage: return err('Recipient must be on stage')
+    if not on_stage:
+        return err('Recipient must be on stage')
     target = db.session.get(User, to)
-    if not target: return err('user not found')
+    if not target:
+        return err('user not found')
     if 'FEED' in globals() and to in FEED['hidden_user_ids'](g.user.id):
         return err('This interaction is unavailable', 403)
-    if limited('gift', 0.4): return err('Slow down', 429)
+    if limited('gift', 0.4):
+        return err('Slow down', 429)
+
     total = gift['price'] * qty
-    bought_used = spend_split(g.user.id, total)
-    if bought_used is None:
-        db.session.rollback(); return err('Not enough coins', 402)
-    lucky_m, refund = 0, 0; earn = 0; real_used = 0
-    if gift['tier'] == 'lucky':
-        lucky_m = pick_weighted(LUCKY_TABLE); refund = lucky_m * total
-        if refund: add_coins(g.user.id, refund); tx(g.user.id, 'lucky_win', refund, f'x{lucky_m} {gift["key"]}')
-        tx(g.user.id, 'lucky', -total, gift['key'])
-        db.session.execute(update(User).where(User.id == to).values(gifts_recv=User.gifts_recv + total), execution_options={'synchronize_session': False})
-        st = db.session.get(LuckyStats, today())
-        if not st: st = LuckyStats(day=today()); db.session.add(st)
-        st.volume = (st.volume or 0) + total; st.returned = (st.returned or 0) + refund; st.house = (st.house or 0) + (total - refund)
-    else:
-        real_used = bought_used
-        rate = HOST_SHARE if target.host_status == 'host' else SHARE.get(gift['tier'], DEFAULT_SHARE)
-        earn = int(real_used * rate)
-        db.session.execute(update(User).where(User.id == to).values(earnings=User.earnings + earn, gift_earnings=User.gift_earnings + earn, gifts_recv=User.gifts_recv + total), execution_options={'synchronize_session': False})
-        if earn: tx(to, 'earn', earn, f'gift from {g.user.id}')
-        tx(g.user.id, 'gift', -total, f'{gift["key"]}x{qty} -> {to}')
-    db.session.execute(update(User).where(User.id == g.user.id).values(spent=User.spent + total, gifts_sent=User.gifts_sent + total), execution_options={'synchronize_session': False})
-    gid, pool = FIN['record_gift'](g.user.id, to, gift['key'], qty, total, real_used, earn, rid, gift['tier'],
-                                   f"{rid}:{g.user.id}:{to}:{gift['key']}:{qty}:{time.time()}:{secrets.token_hex(4)}")
-    if gift['tier'] != 'lucky' and gid:
-        FIN['pay_commissions'](to, real_used, g.user.id, gid)
-    meta = dict(gift=gift['key'], emoji=gift['emoji'], qty=qty, tier=gift['tier'], to=to, to_name=target.username, price=total, lucky=lucky_m, refund=refund)
-    db.session.add(Message(room_id=rid, user_id=g.user.id, name=g.user.username, kind='gift', meta=json.dumps(meta, ensure_ascii=False)))
-    db.session.commit(); mission_inc(g.user.id, 'gift')
-    FIN['wallet_sync'](g.user.id); FIN['wallet_sync'](to)
+    try:
+        bought_used = spend_split(g.user.id, total)
+        if bought_used is None:
+            db.session.rollback()
+            return err('Not enough coins', 402)
+        lucky_m, refund = 0, 0
+        earn = 0
+        real_used = 0
+        if gift['tier'] == 'lucky':
+            lucky_m = pick_weighted(LUCKY_TABLE)
+            refund = lucky_m * total
+            if refund:
+                add_coins(g.user.id, refund)
+                tx(g.user.id, 'lucky_win', refund, f'x{lucky_m} {gift["key"]}')
+            tx(g.user.id, 'lucky', -total, gift['key'])
+            db.session.execute(update(User).where(User.id == to).values(gifts_recv=User.gifts_recv + total), execution_options={'synchronize_session': False})
+            st = db.session.get(LuckyStats, today())
+            if not st:
+                st = LuckyStats(day=today())
+                db.session.add(st)
+            st.volume = (st.volume or 0) + total
+            st.returned = (st.returned or 0) + refund
+            st.house = (st.house or 0) + (total - refund)
+        else:
+            real_used = bought_used
+            rate = HOST_SHARE if target.host_status == 'host' else SHARE.get(gift['tier'], DEFAULT_SHARE)
+            earn = int(real_used * rate)
+            db.session.execute(update(User).where(User.id == to).values(earnings=User.earnings + earn, gift_earnings=User.gift_earnings + earn, gifts_recv=User.gifts_recv + total), execution_options={'synchronize_session': False})
+            if earn:
+                tx(to, 'earn', earn, f'gift from {g.user.id}')
+            tx(g.user.id, 'gift', -total, f'{gift["key"]}x{qty} -> {to}')
+        db.session.execute(update(User).where(User.id == g.user.id).values(spent=User.spent + total, gifts_sent=User.gifts_sent + total), execution_options={'synchronize_session': False})
+        gid, pool = FIN['record_gift'](g.user.id, to, gift['key'], qty, total, real_used, earn, rid, gift['tier'], idem)
+        if gift['tier'] != 'lucky' and gid:
+            FIN['pay_commissions'](to, real_used, g.user.id, gid)
+        meta = dict(gift=gift['key'], emoji=gift['emoji'], qty=qty, tier=gift['tier'], to=to, to_name=target.username, price=total, lucky=lucky_m, refund=refund)
+        db.session.add(Message(room_id=rid, user_id=g.user.id, name=g.user.username, kind='gift', meta=json.dumps(meta, ensure_ascii=False)))
+        db.session.commit()
+    except IntegrityError:
+        db.session.rollback()
+        existing = FIN['find_gift_idem'](idem)
+        if existing and existing['sender_id'] == g.user.id and existing['receiver_id'] == to and existing['gift_key'] == gift['key'] and existing['qty'] == qty and existing['room_id'] == str(rid)[:16]:
+            return jsonify(coins=coins_of(g.user.id), lucky=0, refund=0, duplicate=1)
+        return err('Gift could not be safely processed. Please retry with the same request.', 409)
+
+    mission_inc(g.user.id, 'gift')
+    FIN['wallet_sync'](g.user.id)
+    FIN['wallet_sync'](to)
     return jsonify(coins=coins_of(g.user.id), lucky=lucky_m, refund=refund)
 @app.post('/api/agora-token')
 @auth
