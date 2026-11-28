@@ -232,6 +232,69 @@ def test_two_simultaneous_purchase_approvals_credit_only_once(monkeypatch):
 
 
 
+def test_parallel_approvals_for_different_purchases_award_invite_once(monkeypatch):
+    """Two purchases for one customer must not trigger the first-purchase reward twice."""
+    with m.app.app_context():
+        if m.db.engine.dialect.name != "postgresql":
+            pytest.skip("requires PostgreSQL row-level locking")
+    monkeypatch.setitem(m.FIN, "ledger", lambda *args, **kwargs: None)
+    monkeypatch.setitem(m.FIN, "wallet_sync", lambda *args, **kwargs: None)
+    monkeypatch.setitem(m.JOURNAL, "post_internal", lambda **kwargs: (None, False))
+    marker = uuid4().hex[:10]
+    with m.app.app_context():
+        admin = m.User(tg_id="6746329545", username="invite-race-admin", coins=0, real_coins=0)
+        agent = m.User(tg_id="invite-agent-" + marker, username="invite-agent", coins=0, real_coins=0)
+        customer = m.User(tg_id="invite-customer-" + marker, username="invite-customer",
+                          coins=0, real_coins=0)
+        m.db.session.add_all([admin, agent, customer])
+        m.db.session.flush()
+        customer.agent_id = agent.id
+        purchases = []
+        for suffix in ("A", "B"):
+            purchase = m.Purchase(
+                user_id=customer.id, username=customer.username, coins=100, birr=50,
+                ref="TB-" + marker.upper() + suffix, status="pending", method="telebirr", txhash=""
+            )
+            m.db.session.add(purchase)
+            m.db.session.flush()
+            m.db.session.add(m.Shot(purchase_id=purchase.id, data=b"\\xff\\xd8\\xfftest", mime="image/jpeg"))
+            purchases.append(purchase.id)
+        m.db.session.commit()
+        admin_id, agent_id, customer_id = admin.id, agent.id, customer.id
+        token = m.sign(admin_id)
+
+    barrier = Barrier(2)
+
+    def approve(purchase_id):
+        client = m.app.test_client()
+        barrier.wait(timeout=10)
+        return client.post("/api/admin/purchase",
+                           json={"id": purchase_id, "action": "approve", "manual_verified": True},
+                           headers={"Authorization": "Bearer " + token})
+
+    try:
+        with ThreadPoolExecutor(max_workers=2) as pool:
+            futures = [pool.submit(approve, pid) for pid in purchases]
+            responses = [future.result(timeout=30) for future in futures]
+        assert [response.status_code for response in responses] == [200, 200]
+        with m.app.app_context():
+            saved_customer = m.db.session.get(m.User, customer_id)
+            saved_agent = m.db.session.get(m.User, agent_id)
+            assert saved_customer.coins == 200
+            assert saved_agent.coins == m.INVITE_REWARD
+            assert m.Tx.query.filter_by(user_id=customer_id, kind="invite_reward").count() == 1
+            assert m.Tx.query.filter_by(user_id=agent_id, kind="invite").count() == 1
+            assert m.PurchaseReview.query.filter(m.PurchaseReview.purchase_id.in_(purchases)).count() == 2
+    finally:
+        with m.app.app_context():
+            m.db.session.query(m.PurchaseReview).filter(m.PurchaseReview.purchase_id.in_(purchases)).delete(synchronize_session=False)
+            m.db.session.query(m.Shot).filter(m.Shot.purchase_id.in_(purchases)).delete(synchronize_session=False)
+            m.db.session.query(m.Purchase).filter(m.Purchase.id.in_(purchases)).delete(synchronize_session=False)
+            m.db.session.query(m.Tx).filter(m.Tx.user_id.in_([admin_id, agent_id, customer_id])).delete(synchronize_session=False)
+            m.db.session.query(m.User).filter(m.User.id.in_([admin_id, agent_id, customer_id])).delete(synchronize_session=False)
+            m.db.session.commit()
+
+
 def test_concurrent_room_gifts_cannot_overspend_purchased_coins(monkeypatch):
     """Two simultaneous gifts share one sender balance; only affordable spend commits."""
     with m.app.app_context():
