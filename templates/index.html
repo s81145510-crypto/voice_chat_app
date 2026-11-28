@@ -940,7 +940,7 @@ async function openCreatorDashboard(){
     const activityRewards=(a.rewards||[]).map(r=>'<div class="cd-row"><span>Verified hosting reward · Block '+r.block+'</span><b>'+money(r.coins)+' Coins</b></div>').join('');
     const withdrawRows=(d.withdrawals||[]).map(w=>`<div class="cd-row"><div class="sp"><b>${money(w.birr)} Birr</b><div class="mut">${money(w.coins)} Coins · ${ago(w.ts)}</div></div><span class="badge">${esc(statusLabel[w.status]||w.status||'Unknown')}</span></div>`).join('');
     m.firstChild.innerHTML=`<div class="cd-head"><div><div class="mut">CREATOR STUDIO</div><h3 style="margin:3px 0 0;font-size:20px">📊 Creator Dashboard</h3></div><span class="pill">30 days</span></div>
-    <div class="cd-balance"><div class="mut">Withdrawable earnings</div><div class="cd-total">${money(b.earnings_coins)} <small>Coins</small></div><div class="mut">Commission balance · ${money(b.commission_coins)} Coins</div></div>
+    <div class="cd-balance"><div class="mut">Withdrawable earnings</div><div class="cd-total">${money(b.earnings_coins)} <small>Coins</small></div><div class="mut">Gift earnings (50% eligibility source) · ${money(b.gift_earnings_coins)} Coins</div><div class="mut">PK earnings · ${money(b.pk_earnings_coins)} Coins</div><div class="mut">Commission balance · ${money(b.commission_coins)} Coins</div></div>
     <div class="cd-grid">
       <div class="cd-stat"><span>🎁 Gifts received</span><b>${money(s.gift_count)}</b><small>${money(s.gift_volume_coins)} Coins volume</small></div>
       <div class="cd-stat"><span>💜 Host earnings</span><b>${money(s.host_earned_coins)}</b><small>From gifts · Coins</small></div>
