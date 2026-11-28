@@ -114,6 +114,7 @@ def init_feed(app, db, d):
         # only public fields: never phone, login ID or balance
         return jsonify(user=pub(u), followers=followers, following=following, sent=u.gifts_sent, recv=u.gifts_recv,
                        is_following=bool(db.session.get(Follow, (g.user.id, uid))), me=uid == g.user.id,
+                       is_blocked=bool(db.session.get(UserBlock, (g.user.id, uid))),
                        room=dict(id=r.id, kind=r.kind or 'voice', name=r.name) if r else None)
 
     @app.get('/api/notifications')
@@ -255,4 +256,9 @@ def init_feed(app, db, d):
     def delete_follows(uid):
         Follow.query.filter(or_(Follow.follower_id == uid, Follow.target_id == uid)).delete(synchronize_session=False)
 
-    return dict(delete_follows=delete_follows, notify_user=notify_user)
+    def hidden_user_ids(uid):
+        blocked = {x for (x,) in db.session.query(UserBlock.blocked_id).filter(UserBlock.blocker_id == uid)}
+        blockers = {x for (x,) in db.session.query(UserBlock.blocker_id).filter(UserBlock.blocked_id == uid)}
+        return blocked | blockers
+
+    return dict(delete_follows=delete_follows, notify_user=notify_user, hidden_user_ids=hidden_user_ids)
