@@ -661,6 +661,25 @@ def room_state(rid):
     vips = {i for (i,) in db.session.query(User.id).filter(User.id.in_({m.user_id for m in ms} or {0}), User.vip_until > now())} if ms else set()
     out['msgs'] = [dict(id=m.id, u=m.user_id, n=m.name, t=m.text, k=m.kind, v=m.user_id in vips, meta=json.loads(m.meta) if m.meta else None) for m in ms]
     return jsonify(out)
+@app.get('/api/rooms/<rid>/audience')
+@auth
+def room_audience(rid):
+    r = get_room(rid)
+    if not r: return err('ROOM_GONE', 404)
+    touch(rid, g.user.id); clean_room(rid)
+    t = now()
+    q = db.session.query(Presence, User).join(User, User.id == Presence.user_id).filter(
+        Presence.room_id == rid, Presence.seen > t - 20
+    ).order_by(Presence.seen.desc())
+    total = q.count()
+    rows = q.limit(100).all()
+    seat_ids = {x.user_id for x in Seat.query.filter_by(room_id=rid).all()}
+    guest_ids = {x.user_id for x in LiveGuest.query.filter_by(room_id=rid, status='live').all()}
+    users = []
+    for presence, user in rows:
+        role = 'Host' if user.id == r.host_id else 'Guest' if user.id in guest_ids else 'Speaker' if user.id in seat_ids else 'Listener'
+        users.append(dict(pub(user), role=role, seen=presence.seen))
+    return jsonify(users=users, total=total, truncated=total > len(users))
 @app.post('/api/rooms/<rid>/seat')
 @auth
 def take_seat(rid):
@@ -1285,6 +1304,33 @@ def pk_active():
         h1 = db.session.get(User, pk.host1_id); h2 = db.session.get(User, pk.host2_id) if pk.host2_id else None
         out.append(dict(id=pk.id, host1=pub(h1) if h1 else None, host2=pub(h2) if h2 else None, host1_gifts=pk.host1_gifts or 0, host2_gifts=pk.host2_gifts or 0, time_left=max(0, pk.started_at + pk.duration - now())))
     return jsonify(pks=out)
+@app.get('/api/pk/history')
+@auth
+def pk_history():
+    limit = max(1, min(50, num(request.args.get('limit'), 20)))
+    before = num(request.args.get('before'))
+    q = PKBattle.query.filter(
+        PKBattle.status == 'ended',
+        or_(PKBattle.host1_id == g.user.id, PKBattle.host2_id == g.user.id)
+    )
+    if before > 0: q = q.filter(PKBattle.id < before)
+    rows = q.order_by(PKBattle.ended_at.desc(), PKBattle.id.desc()).limit(limit).all()
+    ids = {x.host1_id for x in rows} | {x.host2_id for x in rows if x.host2_id}
+    users = {x.id: x for x in User.query.filter(User.id.in_(ids or {0})).all()}
+    items = []
+    for pk in rows:
+        mine_first = pk.host1_id == g.user.id
+        mine = pk.host1_gifts or 0 if mine_first else pk.host2_gifts or 0
+        other = pk.host2_gifts or 0 if mine_first else pk.host1_gifts or 0
+        opponent_id = pk.host2_id if mine_first else pk.host1_id
+        outcome = 'win' if pk.winner_id == g.user.id else 'draw' if pk.winner_id is None and pk.host2_id and mine == other else 'no_winner' if pk.winner_id is None else 'loss'
+        items.append(dict(
+            id=pk.id, opponent=pub(users[opponent_id]) if opponent_id in users else None,
+            my_gifts=mine, opponent_gifts=other, outcome=outcome,
+            winner_id=pk.winner_id, started_at=pk.started_at, ended_at=pk.ended_at,
+            duration=pk.duration
+        ))
+    return jsonify(items=items, next_before=items[-1]['id'] if len(items) == limit else None)
 _pk_cache = {}
 
 
