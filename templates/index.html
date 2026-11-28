@@ -859,6 +859,8 @@ function buyModal(){let pk=S.cfg.packages[0];
    const d=await api('/api/coins/buy',fd);m.close();toast(d.duplicate?'This request was already submitted':'✅ Sent — credited after admin verification');renderWallet()})};
   draw()}
 function withModal(){const m=modal('');
+   const makeRequestId=()=>{const b=new Uint8Array(16);crypto.getRandomValues(b);return Array.from(b,x=>x.toString(16).padStart(2,'0')).join('')};
+   let requestId=makeRequestId();
    const draw=()=>{const rate=S.cfg.withdraw_rate||0.1;const avail=(S.me.earnings||0)+(S.me.comm||0);
     const coins=Math.max(0,+($('#w-c',m)?$('#w-c',m).value:avail)||0);
     m.firstChild.innerHTML=`<h3>💰 Withdraw to Telebirr</h3>
@@ -868,8 +870,8 @@ function withModal(){const m=modal('');
    <input id="w-p" placeholder="Telebirr 09xxxxxxxx" value="${esc(S.me.phone)}" maxlength="10">
    <button class="btn" id="w-go">Request</button></div>`;
     $('#w-c',m).oninput=()=>{const v=Math.max(0,+$('#w-c',m).value||0);const b=$('.ratebar b',m);if(b)b.textContent=fmt(Math.floor(v*rate))+' Birr'};
-    $('#w-go',m).onclick=e=>run(e.target,async()=>{const bd={coins:+$('#w-c',m).value,method:'telebirr',phone:$('#w-p',m).value};
-      await api('/api/withdraw',bd);m.close();toast('✅ Request sent');renderWallet()})};
+    $('#w-go',m).onclick=e=>run(e.target,async()=>{const bd={coins:+$('#w-c',m).value,method:'telebirr',phone:$('#w-p',m).value,request_id:requestId};
+      const d=await api('/api/withdraw',bd);requestId=makeRequestId();m.close();toast(d.duplicate?'This withdrawal request was already submitted':'✅ Request sent');renderWallet()})};
    draw()}
 function genTable(){const r=(S.cfg.agent&&S.cfg.agent.rates)||[];
   return `<div class="card" style="margin-top:10px"><b>💰 7 Generation Commission</b><div class="mut" style="margin:4px 0 8px">የጋበዝካቸው ሰዎች ስጦታ ሲቀበሉ (በተገዛ coin) ኮሚሽን ታገኛለህ።<br>Earn when people you invited receive gifts bought with purchased coins.</div>${r.map((x,i)=>`<div class="row" style="padding:3px 0"><span class="sp">Generation ${i+1}${i?'':' · የጋበዝካቸው'}</span><b class="gold">${+(x*100).toFixed(2)}%</b></div>`).join('')}</div>`}

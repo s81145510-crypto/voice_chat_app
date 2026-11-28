@@ -66,6 +66,27 @@ class AppSmokeTests(unittest.TestCase):
             finally:
                 db.session.rollback()
 
+    def test_withdraw_request_table_and_unique_idempotency_constraint(self):
+        from backend.main import WithdrawRequest
+        from sqlalchemy.exc import IntegrityError
+        with app.app_context():
+            from sqlalchemy import inspect
+            self.assertTrue(inspect(db.engine).has_table('withdraw_request'))
+            db.session.add(WithdrawRequest(sender_id=7101, request_id="wd-smoke-req-001",
+                                           coins=10000, phone="0912345678", method="telebirr",
+                                           withdraw_id=90001))
+            db.session.commit()
+            try:
+                db.session.add(WithdrawRequest(sender_id=7101, request_id="wd-smoke-req-001",
+                                               coins=10000, phone="0912345678", method="telebirr",
+                                               withdraw_id=90002))
+                with self.assertRaises(IntegrityError):
+                    db.session.commit()
+            finally:
+                db.session.rollback()
+                WithdrawRequest.query.filter_by(sender_id=7101, request_id="wd-smoke-req-001").delete()
+                db.session.commit()
+
     def test_pk_gift_request_table_and_unique_idempotency_constraint(self):
         from backend.main import PKGiftRequest
         from sqlalchemy.exc import IntegrityError

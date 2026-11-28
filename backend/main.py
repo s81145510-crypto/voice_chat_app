@@ -237,6 +237,19 @@ class PKBattle(db.Model):
 class LuckyStats(db.Model):
     day = db.Column(db.String(10), primary_key=True); volume = db.Column(db.Integer, default=0); returned = db.Column(db.Integer, default=0); house = db.Column(db.Integer, default=0)
 
+class WithdrawRequest(db.Model):
+    """Durable idempotency record for one user's withdrawal submission."""
+    id = db.Column(db.Integer, primary_key=True)
+    sender_id = db.Column(db.Integer, nullable=False, index=True)
+    request_id = db.Column(db.String(64), nullable=False)
+    coins = db.Column(db.Integer, nullable=False)
+    phone = db.Column(db.String(20), nullable=False)
+    method = db.Column(db.String(10), nullable=False, default='telebirr')
+    withdraw_id = db.Column(db.Integer, nullable=False, unique=True)
+    created_at = db.Column(db.Integer, default=now, nullable=False)
+    __table_args__ = (db.UniqueConstraint('sender_id', 'request_id', name='uq_withdraw_sender_request'),)
+
+
 class PKGiftRequest(db.Model):
     """Durable idempotency record for one sender's PK gift action."""
     id = db.Column(db.Integer, primary_key=True)
@@ -1224,6 +1237,9 @@ def coins_buy():
 @auth
 def withdraw():
     b = body(); coins = strict_num(b.get('coins')); method = (b.get('method') or 'telebirr').strip()
+    request_id = str(b.get('request_id') or '').strip()
+    if not (8 <= len(request_id) <= 64 and all(c.isalnum() or c in '-_' for c in request_id)):
+        return err('A valid withdrawal request ID is required')
     if method != 'telebirr': return err('Only Telebirr withdrawals are currently supported')
     try:
         quote = rules.withdrawal_quote(coins)
@@ -1231,8 +1247,20 @@ def withdraw():
         return err(str(e))
     phone = str(b.get('phone') or g.user.phone or '').strip()
     if not (phone.isdigit() and len(phone) == 10): return err('Enter valid Telebirr phone number')
-    # Lock and validate the two withdrawable buckets. Activity and promo coins
-    # are intentionally not considered as cash-out sources.
+
+    # A retry of the same user action returns its original request, never a
+    # second debit. A reused key with changed details is a conflict.
+    existing = WithdrawRequest.query.filter_by(sender_id=g.user.id, request_id=request_id).first()
+    if existing:
+        if existing.coins != coins or existing.phone != phone or existing.method != method:
+            return err('Withdrawal request ID was already used with different details', 409)
+        prior = db.session.get(Withdraw, existing.withdraw_id)
+        if not prior: return err('Withdrawal request record needs administrator review', 409)
+        return jsonify(ok=1, duplicate=1, id=prior.id, coins=prior.coins, birr=prior.birr,
+                       method=prior.method, status=prior.status)
+
+    # Lock and validate withdrawable buckets. Debit, withdrawal, idempotency
+    # record and event are committed atomically.
     balances = db.session.query(User.earnings, User.gift_earnings, User.commission).filter(User.id == g.user.id).with_for_update().first()
     if not balances:
         db.session.rollback(); return err('User wallet not found', 404)
@@ -1249,11 +1277,27 @@ def withdraw():
         db.session.rollback(); return err('Balances changed; please retry')
     w = Withdraw(user_id=g.user.id, username=g.user.username, coins=coins, birr=quote['birr'], phone=phone, method='telebirr', usdt_address='',
                  earnings_coins=earnings_part, commission_coins=commission_part,
-                 gift_earnings_coins=gift_earnings_part, pk_earnings_coins=pk_earnings_part); db.session.add(w)
-    tx(g.user.id, 'withdraw', -coins, 'telebirr withdraw'); db.session.commit()
+                 gift_earnings_coins=gift_earnings_part, pk_earnings_coins=pk_earnings_part)
+    db.session.add(w)
+    try:
+        db.session.flush()
+        db.session.add(WithdrawRequest(sender_id=g.user.id, request_id=request_id, coins=coins,
+                                       phone=phone, method=method, withdraw_id=w.id))
+        tx(g.user.id, 'withdraw', -coins, 'telebirr withdraw')
+        db.session.commit()
+    except IntegrityError:
+        db.session.rollback()
+        existing = WithdrawRequest.query.filter_by(sender_id=g.user.id, request_id=request_id).first()
+        if existing and existing.coins == coins and existing.phone == phone and existing.method == method:
+            prior = db.session.get(Withdraw, existing.withdraw_id)
+            if prior:
+                return jsonify(ok=1, duplicate=1, id=prior.id, coins=prior.coins, birr=prior.birr,
+                               method=prior.method, status=prior.status)
+        if existing:
+            return err('Withdrawal request ID was already used with different details', 409)
+        return err('Withdrawal request could not be saved; please retry', 409)
     notify_admins(f'💸 TELEBIRR Withdraw: {g.user.username} — {coins} coins = {w.birr} Birr → {phone}')
-    return jsonify(ok=1, coins=coins, birr=w.birr, method='telebirr')
-
+    return jsonify(ok=1, duplicate=0, id=w.id, coins=coins, birr=w.birr, method='telebirr', status='pending')
 
 @app.get('/api/posts')
 @auth
@@ -1741,7 +1785,17 @@ def adm_withdraw():
     if not w: return err('not found', 404)
     old = w.status
     new = rules.withdrawal_next_status(old, act)
-    if not new: return err(f'Invalid withdrawal transition: {old} -> {act}')
+    if not new:
+        # Safe replay after an uncertain admin response: never repeat a refund,
+        # status event or notification for an already-completed transition.
+        already = {'under_review': 'under_review', 'approve': 'approved',
+                   'processing': 'processing', 'paid': 'paid', 'reject': 'rejected'}.get(act)
+        if already and old == already:
+            supplied_ref = str(b.get('payout_reference') or '').strip()
+            if old == 'paid' and supplied_ref and supplied_ref.lower() != str(w.payout_reference or '').lower():
+                return err('Withdrawal was paid with a different Telebirr reference', 409)
+            return jsonify(ok=1, duplicate=1, status=old, payout_reference=w.payout_reference or '')
+        return err(f'Invalid withdrawal transition: {old} -> {act}')
     # Older installations may contain USDT withdrawal rows. They must not be
     # approved or settled through the new Telebirr-only payout workflow.
     if new in ('approved', 'processing', 'paid') and w.method != 'telebirr':
