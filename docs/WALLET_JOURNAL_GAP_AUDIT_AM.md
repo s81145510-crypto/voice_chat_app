@@ -11,6 +11,8 @@ Do not merge or deploy on the strength of this document. Before historical migra
 - PK gifts and PK prize settlement.
 - Withdrawal reserve and rejection reversal.
 - Journal integrity and withdrawal reconciliation endpoints.
+- Single-player game settlement: purchased/promo stake liability reduction, promo payout liability, net platform game margin or excess-payout expense.
+- New P2P battles: creator stake moved into escrow, joiner stake added at settlement, escrow released to winner promo liability and platform margin; cancellation restores the original purchased/promo split.
 
 ## Remaining wallet-changing paths identified
 
@@ -19,13 +21,15 @@ Do not merge or deploy on the strength of this document. Before historical migra
 | Welcome bonus | login/register around `User(... coins=bonus)` | Adds welcome coins; `real_coins` remains zero, so bonus is promo | **Journal-integrated:** promo issuance debit / user promo-liability credit in the account-creation transaction; guests receive no bonus |
 | Daily reward | `POST /api/daily` | Adds coins; `real_coins` unchanged (promo) | **Journal-integrated:** promo liability entry and wallet claim commit atomically; legacy reward-budget spend and `FinLedger` are still recorded afterward in a separate commit |
 | Mission rewards | `POST /api/missions/claim` | Adds coins; `real_coins` unchanged (promo) | **Journal-integrated:** promo issuance entry commits atomically with claim, wallet credit and `Tx`; stable per-user/day/mission idempotency key |
-| Single-player games | `POST /api/games/<name>` | Bet is spent; payout is added as promo coins | No journal entry; game revenue, prize expense and promo-liability treatment need an approved policy |
-| P2P create/cancel/join | `POST /api/games/p2p/*` | Stakes are spent; cancellation and winner prize are credited as promo coins | No journal entry; escrow, rake/platform share, refund and winner payout treatment need a defined policy |
+| Single-player games | `POST /api/games/<name>` | Bet is spent; payout is added as promo coins | **Journal-integrated:** purchased/promo stake liabilities are debited; payout is credited to promo liability; stake retained is platform game revenue, and payout above stake is game-payout expense. Wallet, `Tx` and journal commit atomically |
+| P2P create/cancel/join | `POST /api/games/p2p/*` | Stakes are spent; cancellation and winner prize are credited as promo coins | **Journal-integrated for new battles:** creator stake enters escrow; cancel returns the exact purchased/promo split; join settles both stakes, winner promo prize and platform margin atomically. Legacy open battles created before this field was added retain the old unjournaled settlement path and must be cleared before historical migration |
 | Admin wallet grant | `POST /api/admin/user` with `action=grant` | Positive grants increase `coins` only (promo); negative grants subtract total `coins` through `add_coins()` without adjusting `real_coins` | **Not journaled.** Negative grants can make `real_coins > coins`; needs a guarded purchased/promo allocation and approved adjustment account before enabling negative adjustments |
 | Wallet / seller operations | finance module and related admin routes | Legacy wallet/ledger tables are maintained separately | Must be traced end-to-end before migration; do not infer journal coverage from `FinLedger` rows alone |
 
 ## Important implementation details
-- `spend_split()` identifies the purchased-coin portion of a spend; it is used by room gifts and PK gifts.
+- `spend_split()` identifies the purchased-coin portion of a spend; it is used by room gifts, PK gifts, single-player games and new P2P battles.
+- Single-player game journal keys are tied to the flushed `Tx` row; game wallet mutation, transaction row and journal posting share one DB transaction. The endpoint does not yet have client-request replay/idempotency keys, so a client retry can start a second game rather than replaying the first response.
+- New P2P battles store the creator's purchased-coin stake split. Creator stake, cancellation refund, joiner stake and winner settlement are journaled. Pre-existing open P2P rows have `creator_real_used=NULL`; they intentionally follow the legacy no-journal path because no reliable purchased/promo split exists for their historical stake.
 - `spend()` caps `real_coins` at the new total balance, effectively consuming promo coins before purchased coins.
 - `add_coins()` increases `User.coins` only. Credits made through it are therefore promo balance unless the caller separately increases `real_coins` (purchase approval does so explicitly).
 - Daily wallet credit, claim marker, `Tx`, and COIN journal posting now share one transaction. The legacy reward-budget spend and `FinLedger` are still recorded afterward in a separate commit; that operational budget trail is not yet fully atomic with the wallet/journal transaction.
@@ -35,9 +39,9 @@ Do not merge or deploy on the strength of this document. Before historical migra
 ## Required next steps before implementation
 1. **Completed for reward issuance:** welcome, daily and mission promo coin credits now post balanced COIN journal entries in the same transaction as their wallet mutations; tests cover daily/mission posting and rollback.
 2. Trace remaining seller/admin wallet routes and identify all balance mutations, including commission and referral qualification paths.
-3. Approve account mapping for game stakes/payouts, P2P escrow/refunds, seller balances, commissions and platform revenue.
-4. Decide whether games and P2P remain enabled and obtain appropriate legal/payment-policy review for the relevant jurisdictions. Do not silently classify betting proceeds as ordinary revenue.
-5. Implement remaining flows with journal posts in the same database transaction as balance mutations; use stable idempotency keys and concurrency-safe claims.
+3. Complete client-request idempotency for single-player game submissions so a network retry replays the original result rather than starting another game.
+4. Decide whether games and P2P remain enabled and obtain appropriate legal/payment-policy review for the relevant jurisdictions. The current journal mapping classifies net game/P2P margin as platform revenue and winner payouts as promo liabilities; this is a technical accounting model, not legal approval.
+5. Resolve or explicitly migrate pre-existing open P2P battles before enabling the new escrow journal path in production.
 6. Only after a production snapshot and signed-off opening-balance mapping, design a dry-run historical migration report. Do not write historical journal entries until the owner reviews and approves that report.
 
 
