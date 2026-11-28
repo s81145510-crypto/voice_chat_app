@@ -66,6 +66,26 @@ class AppSmokeTests(unittest.TestCase):
             finally:
                 db.session.rollback()
 
+    def test_pk_gift_request_table_and_unique_idempotency_constraint(self):
+        from backend.main import PKGiftRequest
+        from sqlalchemy.exc import IntegrityError
+        with app.app_context():
+            self.assertTrue(PKGiftRequest.__table__.exists(db.engine))
+            db.session.add(PKGiftRequest(sender_id=7001, request_id="pk-smoke-req-001",
+                                         pk_id=81, to_host=1, gift_key="rose",
+                                         qty=2, total=20, real_used=20))
+            db.session.commit()
+            try:
+                db.session.add(PKGiftRequest(sender_id=7001, request_id="pk-smoke-req-001",
+                                             pk_id=81, to_host=1, gift_key="rose",
+                                             qty=2, total=20, real_used=20))
+                with self.assertRaises(IntegrityError):
+                    db.session.commit()
+            finally:
+                db.session.rollback()
+                PKGiftRequest.query.filter_by(sender_id=7001, request_id="pk-smoke-req-001").delete()
+                db.session.commit()
+
     def test_financial_reconciliation_runs_on_empty_database(self):
         with app.app_context():
             result = FIN["reconcile"]()
