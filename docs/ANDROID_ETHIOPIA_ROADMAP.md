@@ -2,7 +2,7 @@
 
 **Decision recorded:** 2026-11-28  
 **Initial market:** Ethiopia  
-**First client platform:** Android  
+**Primary client experience:** Installable Android PWA (Chrome Add to Home Screen; standalone display, app icon, no Chrome toolbar)  
 **Long-term direction:** iOS and international markets
 
 This document records the launch decisions and implementation sequence. It is a product/engineering plan, not a claim that the Android client or production infrastructure already exists.
@@ -24,19 +24,19 @@ The first release should be optimized for users in Ethiopia, with architecture a
 - Device support: test budget Android devices, limited memory, older supported Android versions, background/foreground transitions, permissions, and battery use.
 - Safety: age policy, reporting, blocking, moderation escalation, and creator/agency verification must be defined before public launch.
 
-## 3. Android client direction
+## 3. Android client direction — keep the installed PWA
 
-The repository currently contains a Flask backend and a responsive web/PWA client under `templates/`; it does **not** yet contain a native Android application.
+The owner explicitly uses and wants to keep the current Chrome-installed Progressive Web App (PWA): it is added to the Android home screen, opens in standalone app mode, uses the TWENTY ONE PARTY launcher icon, and does not show Chrome browser controls. **Do not replace this with a native Kotlin/Compose app.**
 
-Preferred Android direction:
-1. Keep the existing Flask API and web client working while auditing API contracts.
-2. Build a dedicated Android client in Kotlin with Jetpack Compose after the API contract is documented.
-3. Reuse backend authentication, profile, room, gift, PK, feed, and moderation rules through versioned API endpoints.
-4. Use the Android Agora SDK for live audio/video only after reviewing the current Agora account, pricing, regional reach, token permissions, and expected concurrency. Do not assume the web SDK can simply be embedded as a production-grade native client.
-5. Add push notifications with a provider that is available and operational for the target devices/region; verify delivery and privacy before relying on it.
-6. Keep the PWA available as a fallback and lightweight onboarding path until the Android app is stable.
+The existing client is `templates/index.html`, with `templates/manifest.json` and `templates/sw.js`; Flask serves `/manifest.json` and `/sw.js`. The HTML registers the service worker at the root scope. This is the primary Android product.
 
-The Android app should not duplicate financial business logic. Coin purchases, gift splits, commission accrual, withdrawal eligibility, and payout status must be decided and recorded server-side.
+Implementation priorities:
+1. Preserve the PWA install identity: stable app name, correct 192×192 and 512×512 launcher icons, `display: standalone`, root scope, and HTTPS deployment.
+2. Test the real Android Chrome installation flow: install prompt / Add to Home Screen, launch from home screen, splash/icon, standalone display, updates, and uninstall/reinstall.
+3. Improve service-worker update behavior and offline fallback without caching authenticated API responses or private user data.
+4. Optimize the current responsive UI for Android touch, safe areas, smaller screens, memory, battery, and unstable mobile networks.
+5. Keep backend business rules server-side. The PWA must not calculate trusted coin purchases, gift splits, commissions, withdrawal eligibility, or payout status.
+6. Consider native Android only if a later, clearly identified requirement cannot be delivered reliably through the PWA, and only after the owner approves that change.
 
 ## 4. First Android release scope
 
