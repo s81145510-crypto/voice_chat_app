@@ -66,6 +66,7 @@ def init_seller(app, db, deps):
         amount = db.Column(db.Integer)
         fee = db.Column(db.Integer, default=0)
         net = db.Column(db.Integer, default=0)
+        request_id = db.Column(db.String(64), unique=True, nullable=True, index=True)
 
     with app.app_context():
         try: db.create_all()
@@ -173,6 +174,15 @@ def init_seller(app, db, deps):
         u = g.user; s = db.session.get(Seller, u.id)
         if not s or s.status != 'approved': return err('Not an approved seller', 403)
         b = body(); to = num(b.get('to')); amt = num(b.get('amount'))
+        request_id = str(b.get('request_id') or '').strip()
+        if not (16 <= len(request_id) <= 64 and all(ch.isalnum() or ch in '_-' for ch in request_id)):
+            return err('A valid transfer request ID is required')
+        prior = SellerTransfer.query.filter_by(request_id=request_id).first()
+        if prior:
+            if (prior.from_id, prior.to_id, prior.amount) != (u.id, to, amt):
+                return err('Request ID was already used for a different transfer', 409)
+            return jsonify(ok=1, sent=prior.amount, fee=prior.fee, received=prior.net,
+                           transfer_id=prior.id, replayed=True)
         if amt < MIN_TRANSFER: return err(f'Minimum transfer {MIN_TRANSFER} coins')
         if to == u.id: return err('Cannot transfer to yourself')
         target = db.session.get(User, to)
@@ -191,7 +201,7 @@ def init_seller(app, db, deps):
             db.session.rollback(); return err('Not enough TRADE coins (promo coins cannot be transferred)', 402)
         db.session.execute(update(User).where(User.id == to).values(coins=User.coins + net, real_coins=User.real_coins + net),
                            execution_options={'synchronize_session': False})
-        transfer = SellerTransfer(from_id=u.id, to_id=to, amount=amt, fee=fee, net=net)
+        transfer = SellerTransfer(from_id=u.id, to_id=to, amount=amt, fee=fee, net=net, request_id=request_id)
         db.session.add(transfer)
         try:
             db.session.flush()
@@ -208,11 +218,18 @@ def init_seller(app, db, deps):
             tx(u.id, 'sell', -amt, f'to {to} fee {fee}')
             tx(to, 'buy_from_seller', net, f'from {u.id}')
             db.session.commit()
+        except IntegrityError:
+            db.session.rollback()
+            prior = SellerTransfer.query.filter_by(request_id=request_id).first()
+            if prior and (prior.from_id, prior.to_id, prior.amount) == (u.id, to, amt):
+                return jsonify(ok=1, sent=prior.amount, fee=prior.fee, received=prior.net,
+                               transfer_id=prior.id, replayed=True)
+            return err('Transfer request ID conflict; refresh and verify transfer history', 409)
         except Exception:
             db.session.rollback()
             return err('Seller transfer accounting failed; no transfer was applied', 500)
         notify(target.tg_id, f'🪙 You received {net} coins from {s.shop_name or u.username}!')
-        return jsonify(ok=1, sent=amt, fee=fee, received=net)
+        return jsonify(ok=1, sent=amt, fee=fee, received=net, transfer_id=transfer.id, replayed=False)
 
     @app.get('/api/seller/admin/list')
     @admin_only
