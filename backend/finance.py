@@ -159,7 +159,7 @@ def init_finance(app, db, deps):
         if not u: return
         coins = int(u.coins or 0); real = int(u.real_coins or 0)
         vals = {'coins': coins, 'real': real, 'promo': max(0, coins - real),
-                'earnings': int(u.earnings or 0), 'commission': int(u.commission or 0)}
+                'earnings': int(u.earnings or 0), 'gift_earnings': int(u.gift_earnings or 0), 'commission': int(u.commission or 0)}
         for k, v in vals.items():
             row = db.session.get(FinWallet, (user_id, k))
             if row: row.balance = v; row.updated = now()
