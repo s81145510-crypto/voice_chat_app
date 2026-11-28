@@ -193,4 +193,4 @@ def init_journal(app, db, deps):
         return jsonify(currency=currency, accounts=accounts, total_debit=debit_total,
                        total_credit=credit_total, balanced=(debit_total == credit_total))
 
-    return dict(JournalEntry=JournalEntry, JournalLine=JournalLine, serialize=serialize)
+    return dict(JournalEntry=JournalEntry, JournalLine=JournalLine, serialize=serialize, post_internal=post_internal)
