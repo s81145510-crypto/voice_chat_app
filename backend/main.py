@@ -174,6 +174,7 @@ class Withdraw(db.Model):
     id = db.Column(db.Integer, primary_key=True); user_id = db.Column(db.Integer, index=True); username = db.Column(db.String(60)); coins = db.Column(db.Integer); birr = db.Column(db.Integer)
     phone = db.Column(db.String(20)); status = db.Column(db.String(10), default='pending', index=True); ts = db.Column(db.Integer, default=now)
     method = db.Column(db.String(10), default='telebirr'); usdt_address = db.Column(db.String(64), default='')
+    commission_coins = db.Column(db.Integer, default=0, nullable=False); earnings_coins = db.Column(db.Integer, default=0, nullable=False)
 
 
 class Post(db.Model):
@@ -221,7 +222,8 @@ def ensure_columns():
             Room: [('kind', "VARCHAR(8) DEFAULT 'voice'")], Post: [('has_image', 'BOOLEAN DEFAULT FALSE')], Job: [('has_image', 'BOOLEAN DEFAULT FALSE')],
             PKBattle: [('winner_id', 'INTEGER'), ('host1_real', 'INTEGER DEFAULT 0'), ('host2_real', 'INTEGER DEFAULT 0')],
             Purchase: [('method', "VARCHAR(10) DEFAULT 'telebirr'"), ('txhash', "VARCHAR(80) DEFAULT ''")],
-            Withdraw: [('method', "VARCHAR(10) DEFAULT 'telebirr'"), ('usdt_address', "VARCHAR(64) DEFAULT ''")]}
+            Withdraw: [('method', "VARCHAR(10) DEFAULT 'telebirr'"), ('usdt_address', "VARCHAR(64) DEFAULT ''"),
+                       ('commission_coins', 'INTEGER DEFAULT 0 NOT NULL'), ('earnings_coins', 'INTEGER DEFAULT 0 NOT NULL')]}
     insp = inspect(db.engine)
     for M, cols in want.items():
         tbl = M.__tablename__; have = {c['name'] for c in insp.get_columns(tbl)}
@@ -1021,11 +1023,21 @@ def withdraw():
     else:
         phone = str(b.get('phone') or g.user.phone or '').strip()
         if not (phone.isdigit() and len(phone) == 10): return err('Enter valid phone number')
+    commission_used = min(max(0, int(g.user.commission or 0)), coins)
+    earnings_used = coins - commission_used
     min_c = case((User.commission <= coins, User.commission), else_=coins)
     r = db.session.execute(update(User).where(User.id == g.user.id, User.earnings + User.commission >= coins).values(commission=User.commission - min_c, earnings=User.earnings - (coins - min_c)), execution_options={'synchronize_session': False})
     if r.rowcount != 1:
         db.session.rollback(); return err('Not enough income')
-    w = Withdraw(user_id=g.user.id, username=g.user.username, coins=coins, birr=int(coins * COIN_BIRR), phone=phone, method=method, usdt_address=address); db.session.add(w)
+    w = Withdraw(user_id=g.user.id, username=g.user.username, coins=coins, birr=int(coins * COIN_BIRR), phone=phone, method=method, usdt_address=address,
+                 commission_coins=commission_used, earnings_coins=earnings_used)
+    db.session.add(w); db.session.flush()
+    try:
+        lines = JOURNAL['withdrawal_reserve_lines'](g.user.id, earnings_used, commission_used)
+        JOURNAL['post_internal']('withdrawal_reserve', str(w.id), f'withdrawal:{w.id}:reserve:COIN',
+                                 'COIN', f'Withdrawal #{w.id} reserved', lines)
+    except Exception:
+        db.session.rollback(); return err('Withdrawal accounting failed; no withdrawal was created', 500)
     tx(g.user.id, 'withdraw', -coins, f'{method} withdraw'); db.session.commit()
     dest = address if method == 'usdt' else phone
     notify_admins(f'💸 {method.upper()} Withdraw: {g.user.username} — {coins} coins = {w.birr} Birr / {round(coins*COIN_USDT,4)} USDT → {dest}'); return jsonify(ok=1)
@@ -1460,13 +1472,31 @@ def adm_purchase():
 def adm_withdraw():
     b = body(); wid, act = num(b.get('id')), b.get('action'); w = db.session.get(Withdraw, wid)
     if not w: return err('not found', 404)
+    if act not in ('paid', 'rejected'):
+        return err('action must be paid or rejected')
     new = 'paid' if act == 'paid' else 'rejected'
     r = db.session.execute(update(Withdraw).where(Withdraw.id == wid, Withdraw.status == 'pending').values(status=new), execution_options={'synchronize_session': False})
     if r.rowcount != 1:
         db.session.rollback(); return err('Already processed')
     u = db.session.get(User, w.user_id)
-    if act != 'paid':
-        db.session.execute(update(User).where(User.id == w.user_id).values(earnings=User.earnings + w.coins), execution_options={'synchronize_session': False}); tx(w.user_id, 'refund', w.coins, f'withdraw #{w.id} rejected')
+    if act == 'rejected':
+        # Legacy withdrawals did not store the original earnings/commission split.
+        commission_back = max(0, int(w.commission_coins or 0))
+        earnings_back = max(0, int(w.earnings_coins or 0))
+        if commission_back + earnings_back != int(w.coins or 0):
+            commission_back, earnings_back = 0, int(w.coins or 0)
+        db.session.execute(update(User).where(User.id == w.user_id).values(
+            earnings=User.earnings + earnings_back, commission=User.commission + commission_back),
+            execution_options={'synchronize_session': False})
+        try:
+            lines = JOURNAL['withdrawal_release_lines'](w.user_id, earnings_back, commission_back)
+            JOURNAL['post_internal']('withdrawal_rejection', str(w.id), f'withdrawal:{w.id}:reject:COIN',
+                                     'COIN', f'Withdrawal #{w.id} rejected and refunded', lines)
+        except Exception:
+            db.session.rollback(); return err('Withdrawal refund accounting failed; status was not changed', 500)
+        tx(w.user_id, 'refund', w.coins, f'withdraw #{w.id} rejected')
+    # Paid status does not assert a reconciled ETB/USDT settlement. The COIN reserve
+    # remains recorded until a separate cross-currency settlement model is implemented.
     db.session.commit()
     if u: notify(u.tg_id, '💰 Payment sent!' if act == 'paid' else f'❌ Rejected; {w.coins} refunded.')
     return jsonify(ok=1)
