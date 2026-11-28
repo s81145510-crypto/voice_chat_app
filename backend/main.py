@@ -563,11 +563,15 @@ def bump(rid):
     db.session.execute(update(Room).where(Room.id == rid).values(version=Room.version + 1), execution_options={'synchronize_session': False}); db.session.commit()
 def get_room(rid): return db.session.get(Room, rid)
 def touch(rid, uid):
-    t = now(); p = db.session.get(Presence, (rid, uid))
+    t = now(); p = db.session.get(Presence, (rid, uid)); previous_seen = p.seen if p else None
     try:
         if not p: db.session.add(Presence(room_id=rid, user_id=uid, seen=t)); db.session.commit()
         elif t - p.seen >= 8: p.seen = t; db.session.commit()
     except IntegrityError: db.session.rollback()
+    try:
+        if 'HOST_REWARDS' in globals(): HOST_REWARDS['heartbeat'](rid, uid, previous_seen, t)
+    except Exception as e:
+        db.session.rollback(); print('host activity heartbeat:', e)
 def online_count(rid): return db.session.query(func.count()).select_from(Presence).filter(Presence.room_id == rid, Presence.seen > now() - 20).scalar() or 0
 def guests_payload(rid):
     rows = db.session.query(LiveGuest, User).join(User, User.id == LiveGuest.user_id).filter(LiveGuest.room_id == rid, LiveGuest.status == 'live').order_by(LiveGuest.idx).all()
