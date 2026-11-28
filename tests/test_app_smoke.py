@@ -8,7 +8,7 @@ os.environ["DATA_DIR"] = _TEST_DATA
 os.environ["DATABASE_URL"] = "sqlite:///" + os.path.join(_TEST_DATA, "smoke.db")
 os.environ["SECRET_KEY"] = "test-only-secret"
 
-from backend.main import app, db
+from backend.main import app, db, FIN
 
 
 class AppSmokeTests(unittest.TestCase):
@@ -33,6 +33,14 @@ class AppSmokeTests(unittest.TestCase):
             self.assertTrue(inspect(db.engine).has_table("user_report"))
             self.assertIn("gift_earnings", {c["name"] for c in inspect(db.engine).get_columns("user")})
             self.assertIn("payout_reference", {c["name"] for c in inspect(db.engine).get_columns("withdraw")})
+
+    def test_financial_reconciliation_runs_on_empty_database(self):
+        with app.app_context():
+            result = FIN["reconcile"]()
+            self.assertTrue(result["ok"], result["issues"])
+            self.assertEqual(result["eligible_gift_base_coins"], 0)
+            self.assertEqual(result["commission_paid_coins"], 0)
+            self.assertEqual(result["commission_cap_coins"], 0)
 
     def test_new_private_endpoints_require_authentication(self):
         client = app.test_client()
