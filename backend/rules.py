@@ -161,6 +161,20 @@ def reward_per_block(day_number, host_level):
         return WELCOME_REWARDS[day_number - 1]
     return next((coins for top, coins in LEVEL_REWARDS if host_level <= top), TOP_LEVEL_REWARD)
 
+WITHDRAWAL_TRANSITIONS = {
+    ('pending', 'under_review'): 'under_review',
+    ('pending', 'reject'): 'rejected',
+    ('under_review', 'approve'): 'approved',
+    ('under_review', 'reject'): 'rejected',
+    ('approved', 'processing'): 'processing',
+    ('approved', 'reject'): 'rejected',
+    ('processing', 'paid'): 'paid',
+}
+
+
+def withdrawal_next_status(current, action):
+    return WITHDRAWAL_TRANSITIONS.get((str(current), str(action)))
+
 
 # ---------- income -> coins (spec 6). There is deliberately no reverse function ----------
 EXCHANGE_FEE_RATE = Decimal('0.05')
