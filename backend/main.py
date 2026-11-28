@@ -191,6 +191,11 @@ class Withdraw(db.Model):
     # Preserve the exact source buckets so a rejected withdrawal refunds correctly.
     earnings_coins = db.Column(db.Integer, default=0, nullable=False)
     commission_coins = db.Column(db.Integer, default=0, nullable=False)
+    reviewed_by = db.Column(db.String(32), default='')
+    reviewed_ts = db.Column(db.Integer, nullable=True)
+    processed_by = db.Column(db.String(32), default='')
+    processed_ts = db.Column(db.Integer, nullable=True)
+    payout_reference = db.Column(db.String(80), default='')
 
 
 class Post(db.Model):
@@ -238,7 +243,7 @@ def ensure_columns():
             Room: [('kind', "VARCHAR(8) DEFAULT 'voice'")], Post: [('has_image', 'BOOLEAN DEFAULT FALSE')], Job: [('has_image', 'BOOLEAN DEFAULT FALSE')],
             PKBattle: [('winner_id', 'INTEGER'), ('host1_real', 'INTEGER DEFAULT 0'), ('host2_real', 'INTEGER DEFAULT 0')],
             Purchase: [('method', "VARCHAR(10) DEFAULT 'telebirr'"), ('txhash', "VARCHAR(80) DEFAULT ''")],
-            Withdraw: [('method', "VARCHAR(10) DEFAULT 'telebirr'"), ('usdt_address', "VARCHAR(64) DEFAULT ''"), ('earnings_coins', 'INTEGER DEFAULT 0 NOT NULL'), ('commission_coins', 'INTEGER DEFAULT 0 NOT NULL')]}
+            Withdraw: [('method', "VARCHAR(10) DEFAULT 'telebirr'"), ('usdt_address', "VARCHAR(64) DEFAULT ''"), ('earnings_coins', 'INTEGER DEFAULT 0 NOT NULL'), ('commission_coins', 'INTEGER DEFAULT 0 NOT NULL'), ('reviewed_by', "VARCHAR(32) DEFAULT ''"), ('reviewed_ts', 'INTEGER'), ('processed_by', "VARCHAR(32) DEFAULT ''"), ('processed_ts', 'INTEGER'), ('payout_reference', "VARCHAR(80) DEFAULT ''") ]}
     insp = inspect(db.engine)
     for M, cols in want.items():
         tbl = M.__tablename__; have = {c['name'] for c in insp.get_columns(tbl)}
@@ -1470,8 +1475,18 @@ def adm_purchases():
 @app.get('/api/admin/withdraws')
 @admin_only
 def adm_withdraws():
-    ws = Withdraw.query.filter_by(status=request.args.get('status', 'pending')).order_by(Withdraw.id.desc()).limit(50).all()
-    return jsonify(items=[dict(id=w.id, user_id=w.user_id, name=w.username, coins=w.coins, birr=w.birr, phone=w.phone, ts=w.ts, method=w.method, address=(w.usdt_address or w.phone), usdt=round(w.coins*COIN_USDT, 4)) for w in ws])
+    status = (request.args.get('status') or '').strip()
+    q = Withdraw.query
+    if status:
+        q = q.filter_by(status=status)
+    else:
+        q = q.filter(Withdraw.status.in_(('pending', 'under_review', 'approved', 'processing')))
+    ws = q.order_by(Withdraw.id.desc()).limit(100).all()
+    return jsonify(items=[dict(id=w.id, user_id=w.user_id, name=w.username, coins=w.coins, birr=w.birr,
+                               phone=w.phone, ts=w.ts, method=w.method, address=w.phone,
+                               status=w.status, earnings_coins=int(w.earnings_coins or 0),
+                               commission_coins=int(w.commission_coins or 0),
+                               payout_reference=w.payout_reference or '') for w in ws])
 @app.get('/api/admin/users')
 @admin_only
 def adm_users():
@@ -1516,25 +1531,58 @@ def adm_purchase():
 @app.post('/api/admin/withdraw')
 @admin_only
 def adm_withdraw():
-    b = body(); wid, act = num(b.get('id')), b.get('action'); w = db.session.get(Withdraw, wid)
+    b = body(); wid, act = num(b.get('id')), str(b.get('action') or '').strip()
+    w = db.session.query(Withdraw).filter_by(id=wid).with_for_update().first()
     if not w: return err('not found', 404)
-    new = 'paid' if act == 'paid' else 'rejected'
-    r = db.session.execute(update(Withdraw).where(Withdraw.id == wid, Withdraw.status == 'pending').values(status=new), execution_options={'synchronize_session': False})
+    old = w.status
+    allowed = {
+        ('pending', 'under_review'): 'under_review',
+        ('pending', 'reject'): 'rejected',
+        ('under_review', 'approve'): 'approved',
+        ('under_review', 'reject'): 'rejected',
+        ('approved', 'processing'): 'processing',
+        ('approved', 'reject'): 'rejected',
+        ('processing', 'paid'): 'paid',
+    }
+    new = allowed.get((old, act))
+    if not new: return err(f'Invalid withdrawal transition: {old} -> {act}')
+    payout_reference = ''
+    if new == 'paid':
+        payout_reference = str(b.get('payout_reference') or '').strip()
+        if not (4 <= len(payout_reference) <= 80):
+            return err('A verified Telebirr payout transaction reference is required')
+    values = {'status': new}
+    if new == 'under_review':
+        values.update(reviewed_by=str(g.user.tg_id), reviewed_ts=now())
+    if new == 'paid':
+        values.update(payout_reference=payout_reference, processed_by=str(g.user.tg_id), processed_ts=now())
+    r = db.session.execute(update(Withdraw).where(Withdraw.id == wid, Withdraw.status == old).values(**values),
+                           execution_options={'synchronize_session': False})
     if r.rowcount != 1:
-        db.session.rollback(); return err('Already processed')
+        db.session.rollback(); return err('Withdrawal changed; reload and retry')
     u = db.session.get(User, w.user_id)
-    if act != 'paid':
-        # Legacy requests have zero source fields; refund those to earnings as before.
+    if new == 'rejected':
         refund_earnings = int(w.earnings_coins or 0)
         refund_commission = int(w.commission_coins or 0)
         if refund_earnings + refund_commission == 0:
-            refund_earnings = int(w.coins or 0)
+            refund_earnings = int(w.coins or 0)  # legacy request before source-bucket tracking
         db.session.execute(update(User).where(User.id == w.user_id).values(
-            earnings=User.earnings + refund_earnings, commission=User.commission + refund_commission), execution_options={'synchronize_session': False})
+            earnings=User.earnings + refund_earnings, commission=User.commission + refund_commission),
+            execution_options={'synchronize_session': False})
         tx(w.user_id, 'refund', w.coins, f'withdraw #{w.id} rejected (earnings {refund_earnings}, commission {refund_commission})')
+    tx(w.user_id, 'withdraw_status', 0, f'withdraw #{w.id}: {old}->{new}; admin {g.user.tg_id}' +
+       (f'; payout_ref {payout_reference}' if payout_reference else ''))
     db.session.commit()
-    if u: notify(u.tg_id, '💰 Payment sent!' if act == 'paid' else f'❌ Rejected; {w.coins} refunded.')
-    return jsonify(ok=1)
+    if u:
+        messages = {
+            'under_review': 'Your Telebirr withdrawal is under review.',
+            'approved': 'Your Telebirr withdrawal has been approved.',
+            'processing': 'Your Telebirr withdrawal is being processed.',
+            'paid': f'Payment sent. Reference: {payout_reference}',
+            'rejected': f'Withdrawal rejected; {w.coins} coins have been refunded to the original balances.',
+        }
+        notify(u.tg_id, messages[new])
+    return jsonify(ok=1, status=new)
 @app.post('/api/admin/user')
 @admin_only
 def adm_user():
