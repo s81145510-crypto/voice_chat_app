@@ -11,6 +11,11 @@ from sqlalchemy.engine import Engine
 from sqlalchemy.exc import IntegrityError
 import base64, struct, zlib
 
+try:
+    from .payment_refs import normalize_payment_reference
+except ImportError:
+    from payment_refs import normalize_payment_reference
+
 
 class RtcTokenBuilder:
     @staticmethod
@@ -1009,16 +1014,17 @@ def coins_buy():
     if method not in ('telebirr', 'usdt'): method = 'telebirr'
     price = dict(PACKAGES).get(pkg)
     if not price: return err('Choose a package')
+    try:
+        normalized_ref = normalize_payment_reference(method, ref_in)
+    except ValueError as e:
+        return err(str(e))
     if method == 'usdt':
-        txhash = ref_in.lower()
-        if not re.fullmatch(r'[0-9a-f]{64}', txhash): return err('Enter a valid 64-character TRC20 transaction hash')
+        txhash = normalized_ref
         if Purchase.query.filter(Purchase.method == 'usdt', Purchase.txhash == txhash).first():
             return err('This USDT transaction hash has already been submitted', 409)
         ref = 'U' + secrets.token_hex(12)
     else:
-        ref = ref_in.strip().upper()
-        if len(ref) < 6 or len(ref) > 40 or not re.fullmatch(r'[A-Z0-9_-]+', ref):
-            return err('Enter a valid Telebirr transaction ID (6-40 letters, numbers, _ or -)')
+        ref = normalized_ref
         if Purchase.query.filter(Purchase.method == 'telebirr', Purchase.ref == ref).first():
             return err('This Telebirr transaction ID has already been submitted', 409)
         txhash = ''
