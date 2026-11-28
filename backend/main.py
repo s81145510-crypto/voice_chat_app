@@ -1429,7 +1429,17 @@ def adm_overview():
 @admin_only
 def adm_purchases():
     ps = Purchase.query.filter_by(status=request.args.get('status', 'pending')).order_by(Purchase.id.desc()).limit(50).all()
-    return jsonify(items=[dict(id=p.id, user_id=p.user_id, name=p.username, coins=p.coins, birr=p.birr, ref=(p.txhash or p.ref), txhash=p.txhash or '', ts=p.ts, method=p.method, usdt=round(p.birr/USDT_BIRR, 2), screenshot_url=f'/api/admin/shot/{p.id}') for p in ps])
+    reviews = {r.purchase_id: r for r in PurchaseReview.query.filter(
+        PurchaseReview.purchase_id.in_([p.id for p in ps] or [0])).all()}
+    return jsonify(items=[dict(
+        id=p.id, user_id=p.user_id, name=p.username, coins=p.coins, birr=p.birr,
+        ref=(p.txhash or p.ref), txhash=p.txhash or '', ts=p.ts, method=p.method,
+        usdt=round(p.birr/USDT_BIRR, 2), screenshot_url=f'/api/admin/shot/{p.id}',
+        review_action=reviews[p.id].action if p.id in reviews else '',
+        reviewed_by=reviews[p.id].reviewer_tg_id if p.id in reviews else '',
+        reviewed_at=reviews[p.id].reviewed_at if p.id in reviews else 0,
+        review_note=reviews[p.id].note if p.id in reviews else '')
+        for p in ps])
 @app.get('/api/admin/payment-reference-audit')
 @admin_only
 def adm_payment_reference_audit():
@@ -1564,9 +1574,10 @@ def adm_purchase():
             db.session.rollback()
             return err('Purchase approval failed; all changes rolled back', 500)
 
+    reviewed_at = now()
     db.session.add(PurchaseReview(
         purchase_id=p.id, action=act, reviewer_tg_id=str(g.user.tg_id),
-        reviewed_at=now(), reference_snapshot=str(p.txhash or p.ref or ''),
+        reviewed_at=reviewed_at, reference_snapshot=str(p.txhash or p.ref or ''),
         note=review_note))
     try:
         db.session.commit()
@@ -1583,7 +1594,7 @@ def adm_purchase():
             notify(u.tg_id, f'✅ {p.coins} coins added!')
         else:
             notify(u.tg_id, f'❌ Purchase rejected. Reason: {review_note}')
-    return jsonify(ok=1, status=new_status, reviewed_by=str(g.user.tg_id), reviewed_at=now())
+    return jsonify(ok=1, status=new_status, reviewed_by=str(g.user.tg_id), reviewed_at=reviewed_at)
 
 
 @app.get('/api/admin/purchase-reviews')
