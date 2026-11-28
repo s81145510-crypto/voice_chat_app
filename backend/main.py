@@ -279,6 +279,26 @@ def ensure_columns():
                 db.session.commit()
         except Exception as e:
             db.session.rollback(); print('ensure_columns: withdraw status length', e)
+    # A Telebirr payout transaction reference must never settle two withdrawals.
+    # The partial index leaves legacy blank references untouched. If historical
+    # duplicate references exist, keep startup safe and report the migration issue.
+    try:
+        duplicate_refs = db.session.execute(sa_text(
+            "SELECT lower(payout_reference), count(*) FROM withdraw "
+            "WHERE payout_reference IS NOT NULL AND payout_reference <> '' "
+            "GROUP BY lower(payout_reference) HAVING count(*) > 1"
+        )).first()
+        if duplicate_refs:
+            print('ensure_columns: duplicate historical payout references; unique index not created')
+        else:
+            db.session.execute(sa_text(
+                "CREATE UNIQUE INDEX IF NOT EXISTS uq_withdraw_payout_reference "
+                "ON withdraw (lower(payout_reference)) "
+                "WHERE payout_reference IS NOT NULL AND payout_reference <> ''"
+            ))
+            db.session.commit()
+    except Exception as e:
+        db.session.rollback(); print('ensure_columns: payout reference unique index', e)
 
 
 _init_lock = threading.Lock()
@@ -1557,11 +1577,21 @@ def adm_withdraw():
     old = w.status
     new = rules.withdrawal_next_status(old, act)
     if not new: return err(f'Invalid withdrawal transition: {old} -> {act}')
+    # Older installations may contain USDT withdrawal rows. They must not be
+    # approved or settled through the new Telebirr-only payout workflow.
+    if new in ('approved', 'processing', 'paid') and w.method != 'telebirr':
+        return err('Legacy non-Telebirr withdrawal requires separate manual review', 409)
     payout_reference = ''
     if new == 'paid':
         payout_reference = str(b.get('payout_reference') or '').strip()
         if not (4 <= len(payout_reference) <= 80):
             return err('A verified Telebirr payout transaction reference is required')
+        duplicate = db.session.query(Withdraw.id).filter(
+            func.lower(Withdraw.payout_reference) == payout_reference.lower(),
+            Withdraw.id != wid
+        ).first()
+        if duplicate:
+            return err('This Telebirr payout reference has already been used', 409)
     values = {'status': new}
     if new == 'under_review':
         values.update(reviewed_by=str(g.user.tg_id), reviewed_ts=now())
@@ -1586,7 +1616,11 @@ def adm_withdraw():
         tx(w.user_id, 'refund', w.coins, f'withdraw #{w.id} rejected (earnings {refund_earnings}, commission {refund_commission})')
     tx(w.user_id, 'withdraw_status', 0, f'withdraw #{w.id}: {old}->{new}; admin {g.user.tg_id}' +
        (f'; payout_ref {payout_reference}' if payout_reference else ''))
-    db.session.commit()
+    try:
+        db.session.commit()
+    except IntegrityError:
+        db.session.rollback()
+        return err('This Telebirr payout reference has already been used', 409)
     if u:
         messages = {
             'under_review': 'Your Telebirr withdrawal is under review.',
