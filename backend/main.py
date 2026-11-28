@@ -227,6 +227,7 @@ class JobImage(db.Model):
 class P2P(db.Model):
     id = db.Column(db.Integer, primary_key=True); creator_id = db.Column(db.Integer, index=True); creator_name = db.Column(db.String(60)); bet = db.Column(db.Integer)
     status = db.Column(db.String(8), default='open', index=True); ts = db.Column(db.Integer, default=now)
+    creator_real_used = db.Column(db.Integer, nullable=True)
 
 
 class PKBattle(db.Model):
@@ -246,6 +247,7 @@ def ensure_columns():
                    ('host_status', "VARCHAR(8) DEFAULT 'none'"), ('is_agent', 'BOOLEAN DEFAULT FALSE'), ('agent_id', 'INTEGER'), ('parent_agent_id', 'INTEGER'), ('commission', 'INTEGER DEFAULT 0 NOT NULL')],
             Room: [('kind', "VARCHAR(8) DEFAULT 'voice'")], Post: [('has_image', 'BOOLEAN DEFAULT FALSE')], Job: [('has_image', 'BOOLEAN DEFAULT FALSE')],
             PKBattle: [('winner_id', 'INTEGER'), ('host1_real', 'INTEGER DEFAULT 0'), ('host2_real', 'INTEGER DEFAULT 0')],
+            P2P: [('creator_real_used', 'INTEGER')],
             Purchase: [('method', "VARCHAR(10) DEFAULT 'telebirr'"), ('txhash', "VARCHAR(80) DEFAULT ''")],
             Withdraw: [('method', "VARCHAR(10) DEFAULT 'telebirr'"), ('usdt_address', "VARCHAR(64) DEFAULT ''"),
                        ('commission_coins', 'INTEGER DEFAULT 0 NOT NULL'), ('earnings_coins', 'INTEGER DEFAULT 0 NOT NULL'),
@@ -452,6 +454,101 @@ except ImportError:
 
 JOURNAL = init_journal(app, db, dict(
     now=now, admin_only=admin_only, jsonify=jsonify, request=request, body=body, Withdraw=Withdraw))
+
+def journal_game_settlement(uid, purchased_used, bet, payout, reference, description):
+    """Settle a single-player game: consume purchased/promo liabilities and issue any payout as promo."""
+    bet, payout, purchased_used = int(bet), int(payout), int(purchased_used)
+    if bet <= 0 or payout < 0 or not 0 <= purchased_used <= bet:
+        raise ValueError('invalid game settlement amounts')
+    promo_used = bet - purchased_used
+    lines = []
+    if purchased_used:
+        lines.append(dict(account_code='liability.user_coin_balance', user_id=int(uid),
+                          debit=purchased_used, credit=0, memo='Purchased coins wagered'))
+    if promo_used:
+        lines.append(dict(account_code='liability.promo_coin_balance', user_id=int(uid),
+                          debit=promo_used, credit=0, memo='Promo coins wagered'))
+    if payout:
+        lines.append(dict(account_code='liability.promo_coin_balance', user_id=int(uid),
+                          debit=0, credit=payout, memo='Game payout credited as promo coins'))
+    if bet > payout:
+        lines.append(dict(account_code='revenue.platform_game', debit=0, credit=bet-payout,
+                          memo='Net game stake retained'))
+    elif payout > bet:
+        lines.append(dict(account_code='expense.game_payout', debit=payout-bet, credit=0,
+                          memo='Game payout above stake'))
+    JOURNAL['post_internal'](
+        source='single_player_game', reference=str(reference),
+        idempotency_key=f'game:{reference}:COIN', currency='COIN',
+        description=description, lines=lines)
+
+
+def journal_p2p_create(uid, purchased_used, bet, battle_id):
+    promo_used = int(bet) - int(purchased_used)
+    lines = []
+    if purchased_used:
+        lines.append(dict(account_code='liability.user_coin_balance', user_id=int(uid),
+                          debit=int(purchased_used), credit=0, memo='Purchased coins escrowed for P2P'))
+    if promo_used:
+        lines.append(dict(account_code='liability.promo_coin_balance', user_id=int(uid),
+                          debit=promo_used, credit=0, memo='Promo coins escrowed for P2P'))
+    lines.append(dict(account_code='liability.p2p_escrow', debit=0, credit=int(bet),
+                      memo=f'P2P battle #{battle_id} creator stake'))
+    JOURNAL['post_internal'](
+        source='p2p_escrow', reference=str(battle_id),
+        idempotency_key=f'p2p:{battle_id}:create:COIN', currency='COIN',
+        description=f'P2P battle #{battle_id} creator stake escrow', lines=lines)
+
+
+def journal_p2p_cancel(uid, purchased_used, bet, battle_id):
+    promo_used = int(bet) - int(purchased_used)
+    lines = [dict(account_code='liability.p2p_escrow', debit=int(bet), credit=0,
+                  memo=f'P2P battle #{battle_id} canceled')]
+    if purchased_used:
+        lines.append(dict(account_code='liability.user_coin_balance', user_id=int(uid),
+                          debit=0, credit=int(purchased_used), memo='Purchased coins returned from P2P escrow'))
+    if promo_used:
+        lines.append(dict(account_code='liability.promo_coin_balance', user_id=int(uid),
+                          debit=0, credit=promo_used, memo='Promo coins returned from P2P escrow'))
+    JOURNAL['post_internal'](
+        source='p2p_escrow', reference=str(battle_id),
+        idempotency_key=f'p2p:{battle_id}:cancel:COIN', currency='COIN',
+        description=f'P2P battle #{battle_id} canceled and refunded', lines=lines)
+
+
+def journal_p2p_join(creator_id, creator_real_used, joiner_id, joiner_real_used,
+                     bet, prize, winner_id, battle_id):
+    bet, prize = int(bet), int(prize)
+    creator_promo = bet - int(creator_real_used)
+    joiner_promo = bet - int(joiner_real_used)
+    lines = []
+    for uid, real_used, promo_used, label in (
+        (creator_id, int(creator_real_used), creator_promo, 'creator'),
+        (joiner_id, int(joiner_real_used), joiner_promo, 'joiner'),
+    ):
+        if real_used:
+            lines.append(dict(account_code='liability.user_coin_balance', user_id=int(uid),
+                              debit=real_used, credit=0, memo=f'P2P {label} purchased stake settled'))
+        if promo_used:
+            lines.append(dict(account_code='liability.promo_coin_balance', user_id=int(uid),
+                              debit=promo_used, credit=0, memo=f'P2P {label} promo stake settled'))
+    # The creator's stake was already credited to escrow when the battle was opened.
+    lines.append(dict(account_code='liability.p2p_escrow', debit=bet * 2, credit=0,
+                      memo=f'P2P battle #{battle_id} escrow settled'))
+    if prize:
+        lines.append(dict(account_code='liability.promo_coin_balance', user_id=int(winner_id),
+                          debit=0, credit=prize, memo='P2P winner prize credited as promo coins'))
+    house = bet * 2 - prize
+    if house < 0:
+        raise ValueError('P2P prize exceeds total stakes')
+    if house:
+        lines.append(dict(account_code='revenue.platform_p2p', debit=0, credit=house,
+                          memo='P2P platform margin'))
+    JOURNAL['post_internal'](
+        source='p2p_settlement', reference=str(battle_id),
+        idempotency_key=f'p2p:{battle_id}:settle:COIN', currency='COIN',
+        description=f'P2P battle #{battle_id} settled', lines=lines)
+
 
 def journal_promo_credit(uid, amount, source, reference, idempotency_key, description):
     """Record a promo-coin liability increase in the same transaction as the wallet mutation."""
@@ -1259,7 +1356,8 @@ def game_play(name):
     b = body(); bet = num(b.get('bet')); pick = num(b.get('pick'), 1)
     if not MIN_BET <= bet <= MAX_BET: return err(f'Bet {MIN_BET}–{MAX_BET}')
     if limited('game', 0.7): return err('Slow down', 429)
-    if not spend(g.user.id, bet):
+    purchased_used = spend_split(g.user.id, bet)
+    if purchased_used is None:
         db.session.rollback(); return err('Not enough coins', 402)
     res, mult = {}, 0
     if name == 'dice':
@@ -1275,7 +1373,16 @@ def game_play(name):
     else: mult = pick_weighted(BOX); res = dict(mult=mult, pick=pick)
     payout = int(bet * mult)
     if payout: add_coins(g.user.id, payout)
-    tx(g.user.id, 'game', payout - bet, name); db.session.commit(); mission_inc(g.user.id, 'game')
+    game_tx = Tx(user_id=g.user.id, kind='game', amount=payout - bet, note=name)
+    db.session.add(game_tx); db.session.flush()
+    try:
+        journal_game_settlement(g.user.id, purchased_used, bet, payout, game_tx.id,
+                                f'{name} game settled: stake {bet}, payout {payout}')
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        return err('Game accounting failed; wager and payout were rolled back', 500)
+    mission_inc(g.user.id, 'game')
     res.update(payout=payout, bet=bet, coins=coins_of(g.user.id)); return jsonify(res)
 @app.post('/api/games/p2p/create')
 @auth
@@ -1283,31 +1390,77 @@ def p2p_create():
     bet = num(body().get('bet'))
     if not MIN_BET <= bet <= MAX_BET: return err(f'Bet {MIN_BET}–{MAX_BET}')
     if P2P.query.filter_by(creator_id=g.user.id, status='open').count() >= 2: return err('You have an open battle')
-    if not spend(g.user.id, bet):
+    purchased_used = spend_split(g.user.id, bet)
+    if purchased_used is None:
         db.session.rollback(); return err('Not enough coins', 402)
-    db.session.add(P2P(creator_id=g.user.id, creator_name=g.user.username, bet=bet)); tx(g.user.id, 'p2p', -bet, 'create'); db.session.commit()
-    return jsonify(coins=coins_of(g.user.id))
+    battle = P2P(creator_id=g.user.id, creator_name=g.user.username, bet=bet,
+                 creator_real_used=purchased_used)
+    db.session.add(battle)
+    tx(g.user.id, 'p2p', -bet, 'create')
+    try:
+        db.session.flush()
+        journal_p2p_create(g.user.id, purchased_used, bet, battle.id)
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        return err('P2P escrow accounting failed; battle was not created', 500)
+    return jsonify(coins=coins_of(g.user.id), id=battle.id)
 @app.post('/api/games/p2p/cancel')
 @auth
 def p2p_cancel():
     gid = num(body().get('id'))
     r = db.session.execute(update(P2P).where(P2P.id == gid, P2P.creator_id == g.user.id, P2P.status == 'open').values(status='cancel'), execution_options={'synchronize_session': False})
     if r.rowcount == 1:
-        bet = db.session.get(P2P, gid).bet; add_coins(g.user.id, bet); tx(g.user.id, 'p2p', bet, 'cancel')
-    db.session.commit(); return jsonify(coins=coins_of(g.user.id))
+        battle = db.session.get(P2P, gid)
+        bet = int(battle.bet)
+        purchased_used = battle.creator_real_used
+        if purchased_used is None:
+            # Legacy open battles predate escrow journal tracking; preserve their old refund behavior.
+            add_coins(g.user.id, bet)
+            tx(g.user.id, 'p2p', bet, 'cancel legacy battle')
+            db.session.commit()
+        else:
+            add_coins(g.user.id, bet)
+            if purchased_used:
+                db.session.execute(update(User).where(User.id == g.user.id).values(
+                    real_coins=User.real_coins + int(purchased_used)),
+                    execution_options={'synchronize_session': False})
+            tx(g.user.id, 'p2p', bet, 'cancel')
+            try:
+                journal_p2p_cancel(g.user.id, purchased_used, bet, gid)
+                db.session.commit()
+            except Exception:
+                db.session.rollback()
+                return err('P2P refund accounting failed; cancellation was rolled back', 500)
+    else:
+        db.session.commit()
+    return jsonify(coins=coins_of(g.user.id))
 @app.post('/api/games/p2p/join')
 @auth
 def p2p_join():
     gid = num(body().get('id')); gm = db.session.get(P2P, gid)
     if not gm or gm.status != 'open' or gm.creator_id == g.user.id: return err('Battle not found')
-    if not spend(g.user.id, gm.bet):
+    joiner_real_used = spend_split(g.user.id, gm.bet)
+    if joiner_real_used is None:
         db.session.rollback(); return err('Not enough coins', 402)
     r = db.session.execute(update(P2P).where(P2P.id == gid, P2P.status == 'open').values(status='done'), execution_options={'synchronize_session': False})
     if r.rowcount != 1:
         db.session.rollback(); return err('Someone joined first')
     win_me = rnd.random() < 0.5; prize = int(gm.bet * P2P_MULT); winner = g.user.id if win_me else gm.creator_id
-    add_coins(winner, prize); tx(g.user.id, 'p2p', (prize - gm.bet) if win_me else -gm.bet, 'join'); tx(gm.creator_id, 'p2p', 0 if win_me else prize - gm.bet, 'result')
-    db.session.commit()
+    add_coins(winner, prize)
+    tx(g.user.id, 'p2p', (prize - gm.bet) if win_me else -gm.bet, 'join')
+    tx(gm.creator_id, 'p2p', 0 if win_me else prize - gm.bet, 'result')
+    try:
+        if gm.creator_real_used is None:
+            # Do not invent a journal history for a battle opened before escrow tracking existed.
+            db.session.commit()
+        else:
+            journal_p2p_join(gm.creator_id, gm.creator_real_used, g.user.id,
+                             joiner_real_used, gm.bet, prize, winner, gid)
+            db.session.commit()
+    except Exception:
+        db.session.rollback()
+        return err('P2P settlement accounting failed; battle and wallet changes were rolled back', 500)
     if not win_me: notify(db.session.get(User, gm.creator_id).tg_id, f'🏆 P2P win! +{prize} coins')
     mission_inc(g.user.id, 'game'); return jsonify(win=win_me, prize=prize, bet=gm.bet, coins=coins_of(g.user.id), vs=gm.creator_name)
 
