@@ -62,5 +62,7 @@ jobs:
           pip install -r requirements.txt pytest
       - name: Compile Python files
         run: python -m compileall -q backend tests
+      - name: Verify PostgreSQL is the active test database
+        run: python -c "from backend.main import db; assert db.engine.dialect.name == 'postgresql', f'Expected PostgreSQL, got {db.engine.dialect.name}'; print('Database dialect:', db.engine.dialect.name)"
       - name: Run regression tests on PostgreSQL
         run: python -m pytest -q
