@@ -4,9 +4,11 @@ import tempfile
 import unittest
 
 _TEST_DATA = tempfile.mkdtemp(prefix="twenty-one-journal-tests-")
-os.environ["DATA_DIR"] = _TEST_DATA
-os.environ["DATABASE_URL"] = "sqlite:///" + os.path.join(_TEST_DATA, "journal.db")
-os.environ["SECRET_KEY"] = "journal-test-only-secret"
+# Respect an explicitly configured CI database (including PostgreSQL). Only
+# provide an isolated SQLite fallback for local runs without DATABASE_URL.
+os.environ.setdefault("DATA_DIR", _TEST_DATA)
+os.environ.setdefault("DATABASE_URL", "sqlite:///" + os.path.join(_TEST_DATA, "journal.db"))
+os.environ.setdefault("SECRET_KEY", "journal-test-only-secret")
 
 from backend.main import app, db, JOURNAL
 
