@@ -462,7 +462,12 @@ except ImportError:
 SELLER = init_seller(app, db, dict(
     User=User, Tx=Tx, now=now, tx=tx, err=err, body=body, num=num,
     auth=auth, admin_only=admin_only, notify=notify, notify_admins=notify_admins,
-    sniff_image=sniff_image, coin_birr=lambda: COIN_BIRR, JOURNAL=JOURNAL))
+    sniff_image=sniff_image, coin_birr=lambda: COIN_BIRR, JOURNAL=JOURNAL,
+    normalize_payment_reference=normalize_payment_reference,
+    verify_usdt_trc20_payment=verify_usdt_trc20_payment,
+    TronVerificationError=TronVerificationError,
+    TronVerificationPending=TronVerificationPending,
+    usdt_address=USDT_ADDRESS, usdt_birr=lambda: USDT_BIRR))
 
 GIFTS_PUB = [GIFT_MAP[k] for k, *_ in GIFTS]
 FRAMES_PUB = list(FRAME_MAP.values())
