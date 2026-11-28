@@ -68,8 +68,6 @@ def init_host_rewards(app, db, deps):
                 # The first seven active hosting days have explicit welcome amounts.
                 # Later tiers require an authoritative host-level progression model;
                 # do not guess a level from spending or award the wrong amount.
-                while row.day_number <= len(rules.WELCOME_REWARDS) and row.rewarded_blocks if hasattr(row, 'rewarded_blocks') else False:
-                    break
                 current_blocks = HostActivityReward.query.filter_by(
                     user_id=user_id, day=day_key
                 ).count()
