@@ -193,4 +193,46 @@ def init_journal(app, db, deps):
         return jsonify(currency=currency, accounts=accounts, total_debit=debit_total,
                        total_credit=credit_total, balanced=(debit_total == credit_total))
 
-    return dict(JournalEntry=JournalEntry, JournalLine=JournalLine, serialize=serialize, post_internal=post_internal)
+    def gift_lines(sender_id, total, real_used, host_earning, commission_total=0, lucky_refund=0):
+        """Build balanced COIN journal lines for a normal or Lucky gift.
+
+        total is the full coin spend; real_used is the purchased-coin portion.
+        Promo coins are tracked separately. All inputs are whole non-negative coins.
+        """
+        values = (total, real_used, host_earning, commission_total, lucky_refund)
+        if any(isinstance(v, bool) or not isinstance(v, int) or v < 0 for v in values):
+            raise ValueError('gift amounts must be non-negative whole integers')
+        if real_used > total or host_earning + commission_total > real_used:
+            raise ValueError('gift allocation exceeds purchased coin value')
+        lines = []
+        purchased = real_used
+        promo = total - real_used
+        if purchased:
+            lines.append(dict(account_code='liability.user_coin_balance', user_id=sender_id,
+                              debit=purchased, credit=0, memo='Purchased coins spent on gift'))
+        if promo:
+            lines.append(dict(account_code='liability.promo_coin_balance', user_id=sender_id,
+                              debit=promo, credit=0, memo='Promotional coins spent on gift'))
+        if lucky_refund:
+            # Lucky payouts are funded from the prize reserve; the gift sale and
+            # the payout are shown gross so a multiplier payout remains balanced.
+            lines.append(dict(account_code='revenue.lucky_gift_sales', debit=0, credit=total,
+                              memo='Lucky gift coin spend'))
+            lines.append(dict(account_code='expense.lucky_payout', debit=lucky_refund, credit=0,
+                              memo='Lucky gift payout'))
+            lines.append(dict(account_code='liability.user_coin_balance', user_id=sender_id,
+                              debit=0, credit=lucky_refund, memo='Lucky payout credited to sender'))
+        else:
+            if host_earning:
+                lines.append(dict(account_code='liability.host_earnings', debit=0, credit=host_earning,
+                                  memo='Host gift earnings'))
+            if commission_total:
+                lines.append(dict(account_code='liability.agent_commission', debit=0, credit=commission_total,
+                                  memo='Referral commissions'))
+            retained = total - host_earning - commission_total
+            if retained:
+                lines.append(dict(account_code='revenue.platform_gift', debit=0, credit=retained,
+                                  memo='Platform retained gift value'))
+        return lines
+
+    return dict(JournalEntry=JournalEntry, JournalLine=JournalLine, serialize=serialize, post_internal=post_internal, gift_lines=gift_lines)
