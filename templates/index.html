@@ -375,6 +375,7 @@ async function openNotification(id,target,o){
   else if(kind==='room')enterRoom(String(key));
   else if(kind==='pk')enterPK(value);
 }
+setInterval(()=>{if(TOKEN&&!document.hidden)refreshNotificationBadge()},45000);
 const footbar=()=>`<div class="foot"><a href="${esc(S.cfg.channel)}" target="_blank">📢 Join Channel</a><a href="https://t.me/${esc((S.cfg.support||'').replace('@',''))}" target="_blank">🎧 Support</a></div>`;
 const LOAD={home:renderHome,rooms:renderRooms,games:renderGames,wallet:renderWallet,community:renderCommunity,me:renderMe,rank:renderRank};
 function go(p){PAGE=p;$$('.page').forEach(e=>e.classList.toggle('on',e.id==='p-'+p));$$('#nav button').forEach(b=>b.classList.toggle('on',b.dataset.p===p));hideRoom();LOAD[p]();hap()}
