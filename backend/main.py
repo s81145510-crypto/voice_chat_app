@@ -1552,8 +1552,7 @@ def adm_purchase():
             bonus = p.coins // 10
             add_coins(u.referrer_id, bonus)
             tx(u.referrer_id, 'referral', bonus, f'from {u.id}')
-            ru = db.session.get(User, u.referrer_id)
-            notify(ru.tg_id if ru else None, f'🎁 Referral +{bonus} coins')
+            # Send the referral notification only after the purchase transaction commits.
         invite_awarded = bool(u and u.agent_id and not Tx.query.filter_by(user_id=p.user_id, kind='invite_reward').count())
         if invite_awarded:
             add_coins(u.agent_id, INVITE_REWARD)
@@ -1607,6 +1606,9 @@ def adm_purchase():
         FIN['wallet_sync'](p.user_id)
         if u and u.agent_id:
             FIN['wallet_sync'](u.agent_id)
+        if u and u.referrer_id:
+            ru = db.session.get(User, u.referrer_id)
+            notify(ru.tg_id if ru else None, f'🎁 Referral +{p.coins // 10} coins')
     if u:
         if act == 'approve':
             notify(u.tg_id, f'✅ {p.coins} coins added!')
