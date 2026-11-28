@@ -6,10 +6,15 @@ from functools import wraps
 from urllib.parse import parse_qsl
 from flask import Flask, request, jsonify, Response, g, send_from_directory
 from flask_sqlalchemy import SQLAlchemy
+from werkzeug.middleware.proxy_fix import ProxyFix
 from sqlalchemy import update, func, event, or_, and_, case, text as sa_text
 from sqlalchemy.engine import Engine
 from sqlalchemy.exc import IntegrityError
 import base64, struct, zlib
+try:
+    from . import rules
+except ImportError:
+    import rules
 
 
 class RtcTokenBuilder:
@@ -47,6 +52,14 @@ IS_SQLITE = DB_URL.startswith('sqlite')
 SECRET = hashlib.sha256(('sess:' + (os.environ.get('SECRET_KEY') or BOT_TOKEN or 'dev-secret')).encode()).digest()
 
 app = Flask(__name__)
+# Trust forwarded client/protocol headers only when the deployment explicitly
+# declares its reverse-proxy hop count. Default is zero (no proxy trust).
+try:
+    TRUSTED_PROXY_HOPS = max(0, min(5, int(os.environ.get('TRUSTED_PROXY_HOPS', '0'))))
+except (TypeError, ValueError):
+    TRUSTED_PROXY_HOPS = 0
+if TRUSTED_PROXY_HOPS:
+    app.wsgi_app = ProxyFix(app.wsgi_app, x_for=TRUSTED_PROXY_HOPS, x_proto=TRUSTED_PROXY_HOPS)
 app.config.update(SQLALCHEMY_DATABASE_URI=DB_URL, SQLALCHEMY_TRACK_MODIFICATIONS=False, MAX_CONTENT_LENGTH=5 * 1024 * 1024, JSON_AS_ASCII=False,
                   SQLALCHEMY_ENGINE_OPTIONS={'pool_pre_ping': True, 'pool_recycle': 300, 'pool_size': 10, 'max_overflow': 20} if not IS_SQLITE else {'pool_pre_ping': True})
 app.json.ensure_ascii = False
@@ -61,8 +74,9 @@ def _sqlite_pragmas(con, rec):
 
 SEATS = 21
 MAX_LIVE_GUESTS = 3
-MIN_WITHDRAW = 500
-COIN_BIRR = 0.4
+MIN_WITHDRAW = rules.MIN_WITHDRAW_COINS
+WITHDRAW_ETB_PER_COIN = float(rules.WITHDRAW_ETB_PER_COIN)
+COIN_BIRR = 0.4  # internal/seller reference; cash-out uses the separate approved payout rate
 USDT_ADDRESS = os.environ.get('USDT_ADDRESS', 'TUTGyjoRFaqviTtejUnXe92BcU8z3BaTUE')
 USDT_BIRR = float(os.environ.get('USDT_BIRR', '161'))
 COIN_USDT = round(COIN_BIRR / USDT_BIRR, 6)
@@ -107,14 +121,14 @@ def now(): return int(time.time())
 
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True); tg_id = db.Column(db.String(32), unique=True, index=True); username = db.Column(db.String(60), default='User')
-    coins = db.Column(db.Integer, default=0, nullable=False); earnings = db.Column(db.Integer, default=0, nullable=False); spent = db.Column(db.Integer, default=0, nullable=False)
+    coins = db.Column(db.Integer, default=0, nullable=False); earnings = db.Column(db.Integer, default=0, nullable=False); gift_earnings = db.Column(db.Integer, default=0, nullable=False); spent = db.Column(db.Integer, default=0, nullable=False)
     gifts_sent = db.Column(db.Integer, default=0, nullable=False); gifts_recv = db.Column(db.Integer, default=0, nullable=False)
     bio = db.Column(db.String(160), default=''); phone = db.Column(db.String(20), default=''); tg_photo = db.Column(db.String(300), default='')
     has_photo = db.Column(db.Boolean, default=False); photo_v = db.Column(db.Integer, default=0); banned = db.Column(db.Boolean, default=False)
     referrer_id = db.Column(db.Integer, nullable=True); joined = db.Column(db.Integer, default=now); last_daily = db.Column(db.String(10), default=''); streak = db.Column(db.Integer, default=0)
     vip_until = db.Column(db.Integer, default=0); frame = db.Column(db.String(20), default=''); real_coins = db.Column(db.Integer, default=0, nullable=False)
     host_status = db.Column(db.String(8), default='none'); is_agent = db.Column(db.Boolean, default=False); agent_id = db.Column(db.Integer, nullable=True)
-    parent_agent_id = db.Column(db.Integer, nullable=True); commission = db.Column(db.Integer, default=0, nullable=False)
+    parent_agent_id = db.Column(db.Integer, nullable=True); commission = db.Column(db.Integer, default=0, nullable=False); auth_version = db.Column(db.Integer, default=0, nullable=False)
 
 
 class Photo(db.Model):
@@ -162,7 +176,7 @@ class Tx(db.Model):
 
 class Purchase(db.Model):
     id = db.Column(db.Integer, primary_key=True); user_id = db.Column(db.Integer, index=True); username = db.Column(db.String(60)); coins = db.Column(db.Integer); birr = db.Column(db.Integer)
-    ref = db.Column(db.String(40), unique=True); status = db.Column(db.String(10), default='pending', index=True); ts = db.Column(db.Integer, default=now)
+    ref = db.Column(db.String(40), unique=True); status = db.Column(db.String(20), default='pending', index=True); ts = db.Column(db.Integer, default=now)
     method = db.Column(db.String(10), default='telebirr'); txhash = db.Column(db.String(80), default='')
 
 
@@ -174,6 +188,16 @@ class Withdraw(db.Model):
     id = db.Column(db.Integer, primary_key=True); user_id = db.Column(db.Integer, index=True); username = db.Column(db.String(60)); coins = db.Column(db.Integer); birr = db.Column(db.Integer)
     phone = db.Column(db.String(20)); status = db.Column(db.String(10), default='pending', index=True); ts = db.Column(db.Integer, default=now)
     method = db.Column(db.String(10), default='telebirr'); usdt_address = db.Column(db.String(64), default='')
+    # Preserve the exact source buckets so a rejected withdrawal refunds correctly.
+    earnings_coins = db.Column(db.Integer, default=0, nullable=False)
+    commission_coins = db.Column(db.Integer, default=0, nullable=False)
+    gift_earnings_coins = db.Column(db.Integer, default=0, nullable=False)
+    pk_earnings_coins = db.Column(db.Integer, default=0, nullable=False)
+    reviewed_by = db.Column(db.String(32), default='')
+    reviewed_ts = db.Column(db.Integer, nullable=True)
+    processed_by = db.Column(db.String(32), default='')
+    processed_ts = db.Column(db.Integer, nullable=True)
+    payout_reference = db.Column(db.String(80), default='')
 
 
 class Post(db.Model):
@@ -213,24 +237,124 @@ class PKBattle(db.Model):
 class LuckyStats(db.Model):
     day = db.Column(db.String(10), primary_key=True); volume = db.Column(db.Integer, default=0); returned = db.Column(db.Integer, default=0); house = db.Column(db.Integer, default=0)
 
+class LuckyGiftOutcome(db.Model):
+    """Persist the random Lucky Gift result for exact idempotent replay."""
+    id = db.Column(db.Integer, primary_key=True)
+    gift_tx_id = db.Column(db.Integer, nullable=False, unique=True, index=True)
+    multiplier = db.Column(db.Integer, nullable=False)
+    refund = db.Column(db.Integer, nullable=False)
+    created_at = db.Column(db.Integer, default=now, nullable=False)
+
+
+class WithdrawRequest(db.Model):
+    """Durable idempotency record for one user's withdrawal submission."""
+    id = db.Column(db.Integer, primary_key=True)
+    sender_id = db.Column(db.Integer, nullable=False, index=True)
+    request_id = db.Column(db.String(64), nullable=False)
+    coins = db.Column(db.Integer, nullable=False)
+    phone = db.Column(db.String(20), nullable=False)
+    method = db.Column(db.String(10), nullable=False, default='telebirr')
+    withdraw_id = db.Column(db.Integer, nullable=False, unique=True)
+    created_at = db.Column(db.Integer, default=now, nullable=False)
+    __table_args__ = (db.UniqueConstraint('sender_id', 'request_id', name='uq_withdraw_sender_request'),)
+
+
+class PKGiftRequest(db.Model):
+    """Durable idempotency record for one sender's PK gift action."""
+    id = db.Column(db.Integer, primary_key=True)
+    sender_id = db.Column(db.Integer, nullable=False, index=True)
+    request_id = db.Column(db.String(64), nullable=False)
+    pk_id = db.Column(db.Integer, nullable=False, index=True)
+    to_host = db.Column(db.Integer, nullable=False)
+    gift_key = db.Column(db.String(24), nullable=False)
+    qty = db.Column(db.Integer, nullable=False)
+    total = db.Column(db.Integer, nullable=False)
+    real_used = db.Column(db.Integer, nullable=False)
+    created_at = db.Column(db.Integer, default=now, nullable=False)
+    __table_args__ = (db.UniqueConstraint('sender_id', 'request_id', name='uq_pk_gift_sender_request'),)
+
 
 def ensure_columns():
     from sqlalchemy import inspect
-    want = {User: [('vip_until', 'INTEGER DEFAULT 0'), ('frame', "VARCHAR(20) DEFAULT ''"), ('real_coins', 'INTEGER DEFAULT 0 NOT NULL'),
-                   ('host_status', "VARCHAR(8) DEFAULT 'none'"), ('is_agent', 'BOOLEAN DEFAULT FALSE'), ('agent_id', 'INTEGER'), ('parent_agent_id', 'INTEGER'), ('commission', 'INTEGER DEFAULT 0 NOT NULL')],
+    want = {User: [('gift_earnings', 'INTEGER DEFAULT 0 NOT NULL'), ('vip_until', 'INTEGER DEFAULT 0'), ('frame', "VARCHAR(20) DEFAULT ''"), ('real_coins', 'INTEGER DEFAULT 0 NOT NULL'),
+                   ('host_status', "VARCHAR(8) DEFAULT 'none'"), ('is_agent', 'BOOLEAN DEFAULT FALSE'), ('agent_id', 'INTEGER'), ('parent_agent_id', 'INTEGER'), ('commission', 'INTEGER DEFAULT 0 NOT NULL'), ('auth_version', 'INTEGER DEFAULT 0 NOT NULL')],
             Room: [('kind', "VARCHAR(8) DEFAULT 'voice'")], Post: [('has_image', 'BOOLEAN DEFAULT FALSE')], Job: [('has_image', 'BOOLEAN DEFAULT FALSE')],
             PKBattle: [('winner_id', 'INTEGER'), ('host1_real', 'INTEGER DEFAULT 0'), ('host2_real', 'INTEGER DEFAULT 0')],
             Purchase: [('method', "VARCHAR(10) DEFAULT 'telebirr'"), ('txhash', "VARCHAR(80) DEFAULT ''")],
-            Withdraw: [('method', "VARCHAR(10) DEFAULT 'telebirr'"), ('usdt_address', "VARCHAR(64) DEFAULT ''")]}
+            Withdraw: [('method', "VARCHAR(10) DEFAULT 'telebirr'"), ('usdt_address', "VARCHAR(64) DEFAULT ''"), ('earnings_coins', 'INTEGER DEFAULT 0 NOT NULL'), ('commission_coins', 'INTEGER DEFAULT 0 NOT NULL'), ('gift_earnings_coins', 'INTEGER DEFAULT 0 NOT NULL'), ('pk_earnings_coins', 'INTEGER DEFAULT 0 NOT NULL'), ('reviewed_by', "VARCHAR(32) DEFAULT ''"), ('reviewed_ts', 'INTEGER'), ('processed_by', "VARCHAR(32) DEFAULT ''"), ('processed_ts', 'INTEGER'), ('payout_reference', "VARCHAR(80) DEFAULT ''") ]}
     insp = inspect(db.engine)
+    gift_earnings_column_added = False
     for M, cols in want.items():
         tbl = M.__tablename__; have = {c['name'] for c in insp.get_columns(tbl)}
         for name, ddl in cols:
             if name in have: continue
             try:
                 db.session.execute(sa_text(f'ALTER TABLE "{tbl}" ADD COLUMN {name} {ddl}')); db.session.commit()
+                if M is User and name == 'gift_earnings': gift_earnings_column_added = True
             except Exception as e:
                 db.session.rollback(); print('ensure_columns:', tbl, name, e)
+    if gift_earnings_column_added:
+        # Legacy earnings included PK rewards. Conservatively remove all recorded
+        # PK payouts from the current balance; older users may see a lower eligible
+        # gift balance, but PK rewards are never misclassified as gift earnings.
+        try:
+            table = User.__tablename__
+            pk_sum = "(SELECT COALESCE(SUM(tx.amount), 0) FROM tx WHERE tx.user_id = u.id AND tx.kind IN ('pk_win','pk_lose','pk_draw') AND tx.amount > 0)"
+            db.session.execute(sa_text(f'UPDATE "{table}" AS u SET gift_earnings = CASE WHEN u.earnings > {pk_sum} THEN u.earnings - {pk_sum} ELSE 0 END'))
+            db.session.commit()
+        except Exception as e:
+            db.session.rollback(); print('ensure_columns: gift earnings backfill', e)
+    # Withdrawal workflow states include UNDER_REVIEW and PROCESSING (12+ chars).
+    # PostgreSQL enforces VARCHAR length, so widen existing installations safely.
+    if db.engine.dialect.name == 'postgresql':
+        try:
+            status_col = next((c for c in inspect(db.engine).get_columns(Withdraw.__tablename__)
+                               if c['name'] == 'status'), None)
+            if status_col and getattr(status_col['type'], 'length', None) and status_col['type'].length < 20:
+                db.session.execute(sa_text('ALTER TABLE withdraw ALTER COLUMN status TYPE VARCHAR(20)'))
+                db.session.commit()
+        except Exception as e:
+            db.session.rollback(); print('ensure_columns: withdraw status length', e)
+    # A Telebirr payout transaction reference must never settle two withdrawals.
+    # The partial index leaves legacy blank references untouched. If historical
+    # duplicate references exist, keep startup safe and report the migration issue.
+    try:
+        duplicate_refs = db.session.execute(sa_text(
+            "SELECT lower(payout_reference), count(*) FROM withdraw "
+            "WHERE payout_reference IS NOT NULL AND payout_reference <> '' "
+            "GROUP BY lower(payout_reference) HAVING count(*) > 1"
+        )).first()
+        if duplicate_refs:
+            print('ensure_columns: duplicate historical payout references; unique index not created')
+        else:
+            db.session.execute(sa_text(
+                "CREATE UNIQUE INDEX IF NOT EXISTS uq_withdraw_payout_reference "
+                "ON withdraw (lower(payout_reference)) "
+                "WHERE payout_reference IS NOT NULL AND payout_reference <> ''"
+            ))
+            db.session.commit()
+    except Exception as e:
+        db.session.rollback(); print('ensure_columns: payout reference unique index', e)
+    # Case-insensitive uniqueness prevents the same payment identifier being
+    # claimed by multiple purchase requests. Historical duplicates are reported.
+    for column, index_name in (('ref', 'uq_purchase_ref_ci'), ('txhash', 'uq_purchase_txhash_ci')):
+        try:
+            duplicate = db.session.execute(sa_text(
+                f"SELECT lower({column}), count(*) FROM purchase "
+                f"WHERE {column} IS NOT NULL AND {column} <> '' "
+                f"GROUP BY lower({column}) HAVING count(*) > 1 LIMIT 1"
+            )).first()
+            if duplicate:
+                print(f'ensure_columns: duplicate historical purchase {column}; unique index not created')
+            else:
+                db.session.execute(sa_text(
+                    f"CREATE UNIQUE INDEX IF NOT EXISTS {index_name} "
+                    f"ON purchase (lower({column})) "
+                    f"WHERE {column} IS NOT NULL AND {column} <> ''"
+                ))
+                db.session.commit()
+        except Exception as e:
+            db.session.rollback(); print(f'ensure_columns: {column} unique index', e)
 
 
 _init_lock = threading.Lock()
@@ -247,29 +371,61 @@ def body(): return request.get_json(silent=True) or {}
 def num(v, d=0):
     try: return int(v)
     except Exception: return d
+def strict_num(v, d=None):
+    """Parse whole-number API values without truncating floats or accepting booleans."""
+    if isinstance(v, bool):
+        return d
+    if isinstance(v, int):
+        return v
+    if isinstance(v, str):
+        s = v.strip()
+        digits = s[1:] if s.startswith('-') else s
+        if digits and digits.isdigit():
+            try: return int(s)
+            except (TypeError, ValueError, OverflowError): return d
+    return d
 def sign(uid, days=30):
-    p = f'{uid}.{now() + days * 86400}'; return p + '.' + hmac.new(SECRET, p.encode(), hashlib.sha256).hexdigest()[:32]
+    u = db.session.get(User, uid)
+    version = int(u.auth_version or 0) if u else 0
+    p = f'{uid}.{now() + days * 86400}.{version}'
+    return p + '.' + hmac.new(SECRET, p.encode(), hashlib.sha256).hexdigest()[:32]
 def parse_token(t):
     try:
-        uid, exp, sig = t.split('.')
-        ok = hmac.compare_digest(sig, hmac.new(SECRET, f'{uid}.{exp}'.encode(), hashlib.sha256).hexdigest()[:32])
-        return int(uid) if ok and int(exp) > now() else None
+        parts = t.split('.')
+        if len(parts) == 3:  # accept existing sessions until their normal expiry
+            uid, exp, sig = parts; version = 0; payload = f'{uid}.{exp}'
+        elif len(parts) == 4:
+            uid, exp, version, sig = parts; payload = f'{uid}.{exp}.{version}'
+        else: return None
+        ok = hmac.compare_digest(sig, hmac.new(SECRET, payload.encode(), hashlib.sha256).hexdigest()[:32])
+        if not ok or int(exp) <= now(): return None
+        return int(uid), int(version)
     except Exception: return None
 def verify_init(init):
-    data = dict(parse_qsl(init, keep_blank_values=True)); h = data.pop('hash', None)
+    # Reject duplicate fields: silently keeping the last copy can make the
+    # signed payload ambiguous to different parsers.
+    pairs = parse_qsl(init, keep_blank_values=True)
+    data = dict(pairs)
+    if len(data) != len(pairs): return None
+    h = data.pop('hash', None)
     if not h or not BOT_TOKEN: return None
     check = '\n'.join(f'{k}={v}' for k, v in sorted(data.items()))
     key = hmac.new(b'WebAppData', BOT_TOKEN.encode(), hashlib.sha256).digest()
     if not hmac.compare_digest(hmac.new(key, check.encode(), hashlib.sha256).hexdigest(), h): return None
-    if now() - num(data.get('auth_date')) > 86400 * 3: return None
+    auth_date = num(data.get('auth_date'), -1)
+    age = now() - auth_date
+    # Telegram init data is short-lived. Reject missing, stale, and
+    # implausibly future-dated payloads instead of accepting them for 3 days.
+    if auth_date <= 0 or age > 86400 or age < -60: return None
     try: return json.loads(data['user']), data
     except Exception: return None
 def auth(f):
     @wraps(f)
     def w(*a, **k):
-        h = request.headers.get('Authorization', ''); uid = parse_token(h[7:]) if h.startswith('Bearer ') else None
+        h = request.headers.get('Authorization', ''); claims = parse_token(h[7:]) if h.startswith('Bearer ') else None
+        uid, version = claims if claims else (None, None)
         u = db.session.get(User, uid) if uid else None
-        if not u: return err('unauthorized', 401)
+        if not u or int(u.auth_version or 0) != version: return err('unauthorized', 401)
         if u.banned: return err('Your account is banned', 403)
         g.user = u; return f(*a, **k)
     return w
@@ -401,7 +557,7 @@ GIFTS_PUB = [GIFT_MAP[k] for k, *_ in GIFTS]
 FRAMES_PUB = list(FRAME_MAP.values())
 def cfg():
     return dict(agora_app_id=AGORA_APP_ID, gifts=GIFTS_PUB, packages=[dict(coins=c, birr=b) for c, b in PACKAGES], levels=LEVELS, pay_number=PAY_NUMBER, bot=BOT_USERNAME,
-                min_withdraw=MIN_WITHDRAW, rate=COIN_BIRR, seats=SEATS, max_guests=MAX_LIVE_GUESTS, min_bet=MIN_BET, max_bet=MAX_BET, p2p_mult=P2P_MULT, frames=FRAMES_PUB,
+                min_withdraw=MIN_WITHDRAW, rate=COIN_BIRR, withdraw_rate=WITHDRAW_ETB_PER_COIN, min_withdraw_etb=rules.MIN_WITHDRAW_ETB, seats=SEATS, max_guests=MAX_LIVE_GUESTS, min_bet=MIN_BET, max_bet=MAX_BET, p2p_mult=P2P_MULT, frames=FRAMES_PUB,
                 channel=CHANNEL_URL, support=SUPPORT,
                 host=dict(share=HOST_SHARE), agent=dict(rates=[float(r) for r in rules.GENERATION_RATES], depth=len(rules.GENERATION_RATES)), invite=dict(reward=INVITE_REWARD),
                 vip=dict(price=VIP_PRICE, days=VIP_DAYS, bonus=VIP_DAILY_BONUS, rooms=VIP_ROOMS),
@@ -532,11 +688,15 @@ def bump(rid):
     db.session.execute(update(Room).where(Room.id == rid).values(version=Room.version + 1), execution_options={'synchronize_session': False}); db.session.commit()
 def get_room(rid): return db.session.get(Room, rid)
 def touch(rid, uid):
-    t = now(); p = db.session.get(Presence, (rid, uid))
+    t = now(); p = db.session.get(Presence, (rid, uid)); previous_seen = p.seen if p else None
     try:
         if not p: db.session.add(Presence(room_id=rid, user_id=uid, seen=t)); db.session.commit()
         elif t - p.seen >= 8: p.seen = t; db.session.commit()
     except IntegrityError: db.session.rollback()
+    try:
+        if 'HOST_REWARDS' in globals(): HOST_REWARDS['heartbeat'](rid, uid, previous_seen, t)
+    except Exception as e:
+        db.session.rollback(); print('host activity heartbeat:', e)
 def online_count(rid): return db.session.query(func.count()).select_from(Presence).filter(Presence.room_id == rid, Presence.seen > now() - 20).scalar() or 0
 def guests_payload(rid):
     rows = db.session.query(LiveGuest, User).join(User, User.id == LiveGuest.user_id).filter(LiveGuest.room_id == rid, LiveGuest.status == 'live').order_by(LiveGuest.idx).all()
@@ -603,6 +763,8 @@ def room_join(rid):
     r = get_room(rid)
     if not r: return err('ROOM_GONE', 404)
     uid = g.user.id
+    if 'FEED' in globals() and r.host_id in FEED['hidden_user_ids'](uid):
+        return err('ROOM_GONE', 404)
     Seat.query.filter(Seat.user_id == uid, Seat.room_id != rid).delete(synchronize_session=False)
     Presence.query.filter(Presence.user_id == uid, Presence.room_id != rid).delete(synchronize_session=False)
     LiveGuest.query.filter(LiveGuest.user_id == uid, LiveGuest.room_id != rid, LiveGuest.status == 'live').delete(synchronize_session=False)
@@ -619,6 +781,8 @@ def room_join(rid):
 def room_state(rid):
     r = get_room(rid)
     if not r: return err('ROOM_GONE', 404)
+    if 'FEED' in globals() and r.host_id in FEED['hidden_user_ids'](g.user.id):
+        return err('ROOM_GONE', 404)
     touch(rid, g.user.id); clean_room(rid)
     r = db.session.get(Room, rid)
     if not r: return err('ROOM_GONE', 404)
@@ -626,10 +790,34 @@ def room_state(rid):
     out = dict(v=r.version, online=online_count(rid), guests=guests_payload(rid))
     if cv != r.version: out['seats'] = seats_payload(rid)
     q = Message.query.filter(Message.room_id == rid)
+    hidden = FEED['hidden_user_ids'](g.user.id) if 'FEED' in globals() else set()
+    if hidden: q = q.filter(~Message.user_id.in_(hidden))
     ms = list(reversed(q.order_by(Message.id.desc()).limit(30).all())) if mid <= 0 else q.filter(Message.id > mid).order_by(Message.id).limit(60).all()
     vips = {i for (i,) in db.session.query(User.id).filter(User.id.in_({m.user_id for m in ms} or {0}), User.vip_until > now())} if ms else set()
     out['msgs'] = [dict(id=m.id, u=m.user_id, n=m.name, t=m.text, k=m.kind, v=m.user_id in vips, meta=json.loads(m.meta) if m.meta else None) for m in ms]
     return jsonify(out)
+@app.get('/api/rooms/<rid>/audience')
+@auth
+def room_audience(rid):
+    r = get_room(rid)
+    if not r: return err('ROOM_GONE', 404)
+    touch(rid, g.user.id); clean_room(rid)
+    t = now()
+    hidden = FEED['hidden_user_ids'](g.user.id) if 'FEED' in globals() else set()
+    q = db.session.query(Presence, User).join(User, User.id == Presence.user_id).filter(
+        Presence.room_id == rid, Presence.seen > t - 20
+    )
+    if hidden: q = q.filter(~User.id.in_(hidden))
+    q = q.order_by(Presence.seen.desc())
+    total = q.count()
+    rows = q.limit(100).all()
+    seat_ids = {x.user_id for x in Seat.query.filter_by(room_id=rid).all()}
+    guest_ids = {x.user_id for x in LiveGuest.query.filter_by(room_id=rid, status='live').all()}
+    users = []
+    for presence, user in rows:
+        role = 'Host' if user.id == r.host_id else 'Guest' if user.id in guest_ids else 'Speaker' if user.id in seat_ids else 'Listener'
+        users.append(dict(pub(user), role=role, seen=presence.seen))
+    return jsonify(users=users, total=total, truncated=total > len(users))
 @app.post('/api/rooms/<rid>/seat')
 @auth
 def take_seat(rid):
@@ -714,6 +902,8 @@ def live_invite(rid):
     try: db.session.commit()
     except IntegrityError:
         db.session.rollback(); return err('Already invited')
+    feed_notify = globals().get('FEED', {}).get('notify_user')
+    if feed_notify: feed_notify(uid, g.user.id, 'room_invite', 'Live stage invitation', f'{g.user.username} invited you to join {r.name}', f'room:{rid}')
     notify(t.tg_id, f'🎥 {g.user.username} invited you on stage in "{r.name}". Open the app to join!')
     bump(rid); return jsonify(ok=1)
 @app.get('/api/my-invites')
@@ -752,7 +942,10 @@ def guest_action(rid):
 @app.post('/api/rooms/<rid>/chat')
 @auth
 def room_chat(rid):
-    if not get_room(rid): return err('ROOM_GONE', 404)
+    room = get_room(rid)
+    if not room: return err('ROOM_GONE', 404)
+    if 'FEED' in globals() and room.host_id in FEED['hidden_user_ids'](g.user.id):
+        return err('ROOM_GONE', 404)
     t = str(body().get('text', '')).strip()[:200]
     if not t: return err('empty')
     if limited('chat', 0.8): return err('Slow down', 429)
@@ -760,44 +953,110 @@ def room_chat(rid):
 @app.post('/api/rooms/<rid>/gift')
 @auth
 def room_gift(rid):
+    b = body()
+    gift = GIFT_MAP.get(b.get('gift'))
+    qty = strict_num(b.get('qty'), 1)
+    to = strict_num(b.get('to'))
+    request_id = str(b.get('request_id') or '').strip()
+    if not (8 <= len(request_id) <= 64) or not all(ch.isalnum() or ch in '-_' for ch in request_id):
+        return err('A valid gift request ID is required')
+    if qty is None or not 1 <= qty <= 99 or to is None or to <= 0:
+        return err('Invalid gift quantity or recipient')
+    if not gift or to == g.user.id:
+        return err('bad request')
+    idem = f"room:{g.user.id}:{request_id}"
+    existing = FIN['find_gift_idem'](idem)
+    if existing:
+        same = (existing['sender_id'] == g.user.id and existing['receiver_id'] == to
+                and existing['gift_key'] == gift['key'] and existing['qty'] == qty
+                and existing['room_id'] == str(rid)[:16])
+        if not same:
+            return err('Request ID already used for a different gift', 409)
+        if existing['lucky']:
+            outcome = LuckyGiftOutcome.query.filter_by(gift_tx_id=existing['id']).first()
+            if outcome:
+                return jsonify(coins=coins_of(g.user.id), lucky=outcome.multiplier,
+                               refund=outcome.refund, duplicate=1)
+            # Legacy Lucky gifts predate durable outcome storage. Do not invent
+            # or misreport a random result that cannot be reconstructed.
+            return jsonify(coins=coins_of(g.user.id), lucky=None, refund=None,
+                           outcome_unavailable=1, duplicate=1)
+        return jsonify(coins=coins_of(g.user.id), lucky=0, refund=0, duplicate=1)
+
     r = get_room(rid)
-    if not r: return err('ROOM_GONE', 404)
-    b = body(); gift = GIFT_MAP.get(b.get('gift')); qty = max(1, min(99, num(b.get('qty'), 1))); to = num(b.get('to'))
-    if not gift or to == g.user.id: return err('bad request')
+    if not r:
+        return err('ROOM_GONE', 404)
+    if 'FEED' in globals() and r.host_id in FEED['hidden_user_ids'](g.user.id):
+        return err('ROOM_GONE', 404)
     on_stage = to == r.host_id or Seat.query.filter_by(room_id=rid, user_id=to).first() or LiveGuest.query.filter_by(room_id=rid, user_id=to, status='live').first()
-    if not on_stage: return err('Recipient must be on stage')
+    if not on_stage:
+        return err('Recipient must be on stage')
     target = db.session.get(User, to)
-    if not target: return err('user not found')
-    if limited('gift', 0.4): return err('Slow down', 429)
+    if not target:
+        return err('user not found')
+    if 'FEED' in globals() and to in FEED['hidden_user_ids'](g.user.id):
+        return err('This interaction is unavailable', 403)
+    if limited('gift', 0.4):
+        return err('Slow down', 429)
+
     total = gift['price'] * qty
-    bought_used = spend_split(g.user.id, total)
-    if bought_used is None:
-        db.session.rollback(); return err('Not enough coins', 402)
-    lucky_m, refund = 0, 0; earn = 0; real_used = 0
-    if gift['tier'] == 'lucky':
-        lucky_m = pick_weighted(LUCKY_TABLE); refund = lucky_m * total
-        if refund: add_coins(g.user.id, refund); tx(g.user.id, 'lucky_win', refund, f'x{lucky_m} {gift["key"]}')
-        tx(g.user.id, 'lucky', -total, gift['key'])
-        db.session.execute(update(User).where(User.id == to).values(gifts_recv=User.gifts_recv + total), execution_options={'synchronize_session': False})
-        st = db.session.get(LuckyStats, today())
-        if not st: st = LuckyStats(day=today()); db.session.add(st)
-        st.volume = (st.volume or 0) + total; st.returned = (st.returned or 0) + refund; st.house = (st.house or 0) + (total - refund)
-    else:
-        real_used = bought_used
-        rate = HOST_SHARE if target.host_status == 'host' else SHARE.get(gift['tier'], DEFAULT_SHARE)
-        earn = int(real_used * rate)
-        db.session.execute(update(User).where(User.id == to).values(earnings=User.earnings + earn, gifts_recv=User.gifts_recv + total), execution_options={'synchronize_session': False})
-        if earn: tx(to, 'earn', earn, f'gift from {g.user.id}')
-        tx(g.user.id, 'gift', -total, f'{gift["key"]}x{qty} -> {to}')
-    db.session.execute(update(User).where(User.id == g.user.id).values(spent=User.spent + total, gifts_sent=User.gifts_sent + total), execution_options={'synchronize_session': False})
-    gid, pool = FIN['record_gift'](g.user.id, to, gift['key'], qty, total, real_used, earn, rid, gift['tier'],
-                                   f"{rid}:{g.user.id}:{to}:{gift['key']}:{qty}:{time.time()}:{secrets.token_hex(4)}")
-    if gift['tier'] != 'lucky' and gid:
-        FIN['pay_commissions'](to, real_used, g.user.id, gid)
-    meta = dict(gift=gift['key'], emoji=gift['emoji'], qty=qty, tier=gift['tier'], to=to, to_name=target.username, price=total, lucky=lucky_m, refund=refund)
-    db.session.add(Message(room_id=rid, user_id=g.user.id, name=g.user.username, kind='gift', meta=json.dumps(meta, ensure_ascii=False)))
-    db.session.commit(); mission_inc(g.user.id, 'gift')
-    FIN['wallet_sync'](g.user.id); FIN['wallet_sync'](to)
+    try:
+        bought_used = spend_split(g.user.id, total)
+        if bought_used is None:
+            db.session.rollback()
+            return err('Not enough coins', 402)
+        lucky_m, refund = 0, 0
+        earn = 0
+        real_used = 0
+        if gift['tier'] == 'lucky':
+            lucky_m = pick_weighted(LUCKY_TABLE)
+            refund = lucky_m * total
+            if refund:
+                add_coins(g.user.id, refund)
+                tx(g.user.id, 'lucky_win', refund, f'x{lucky_m} {gift["key"]}')
+            tx(g.user.id, 'lucky', -total, gift['key'])
+            db.session.execute(update(User).where(User.id == to).values(gifts_recv=User.gifts_recv + total), execution_options={'synchronize_session': False})
+            st = db.session.get(LuckyStats, today())
+            if not st:
+                st = LuckyStats(day=today())
+                db.session.add(st)
+            st.volume = (st.volume or 0) + total
+            st.returned = (st.returned or 0) + refund
+            st.house = (st.house or 0) + (total - refund)
+        else:
+            real_used = bought_used
+            rate = HOST_SHARE if target.host_status == 'host' else SHARE.get(gift['tier'], DEFAULT_SHARE)
+            earn = int(real_used * rate)
+            db.session.execute(update(User).where(User.id == to).values(earnings=User.earnings + earn, gift_earnings=User.gift_earnings + earn, gifts_recv=User.gifts_recv + total), execution_options={'synchronize_session': False})
+            if earn:
+                tx(to, 'earn', earn, f'gift from {g.user.id}')
+            tx(g.user.id, 'gift', -total, f'{gift["key"]}x{qty} -> {to}')
+        db.session.execute(update(User).where(User.id == g.user.id).values(spent=User.spent + total, gifts_sent=User.gifts_sent + total), execution_options={'synchronize_session': False})
+        gid, pool = FIN['record_gift'](g.user.id, to, gift['key'], qty, total, real_used, earn, rid, gift['tier'], idem)
+        if gift['tier'] == 'lucky' and gid:
+            db.session.add(LuckyGiftOutcome(gift_tx_id=gid, multiplier=lucky_m, refund=refund))
+        if gift['tier'] != 'lucky' and gid:
+            FIN['pay_commissions'](to, real_used, g.user.id, gid)
+        meta = dict(gift=gift['key'], emoji=gift['emoji'], qty=qty, tier=gift['tier'], to=to, to_name=target.username, price=total, lucky=lucky_m, refund=refund)
+        db.session.add(Message(room_id=rid, user_id=g.user.id, name=g.user.username, kind='gift', meta=json.dumps(meta, ensure_ascii=False)))
+        db.session.commit()
+    except IntegrityError:
+        db.session.rollback()
+        existing = FIN['find_gift_idem'](idem)
+        if existing and existing['sender_id'] == g.user.id and existing['receiver_id'] == to and existing['gift_key'] == gift['key'] and existing['qty'] == qty and existing['room_id'] == str(rid)[:16]:
+            if existing['lucky']:
+                outcome = LuckyGiftOutcome.query.filter_by(gift_tx_id=existing['id']).first()
+                if outcome:
+                    return jsonify(coins=coins_of(g.user.id), lucky=outcome.multiplier,
+                                   refund=outcome.refund, duplicate=1)
+                return jsonify(coins=coins_of(g.user.id), lucky=None, refund=None,
+                               outcome_unavailable=1, duplicate=1)
+            return jsonify(coins=coins_of(g.user.id), lucky=0, refund=0, duplicate=1)
+        return err('Gift could not be safely processed. Please retry with the same request.', 409)
+
+    mission_inc(g.user.id, 'gift')
+    FIN['wallet_sync'](g.user.id)
+    FIN['wallet_sync'](to)
     return jsonify(coins=coins_of(g.user.id), lucky=lucky_m, refund=refund)
 @app.post('/api/agora-token')
 @auth
@@ -966,48 +1225,106 @@ def wallet():
 @app.post('/api/coins/buy')
 @auth
 def coins_buy():
-    pkg = num(request.form.get('coins')); ref_in = (request.form.get('ref') or '').strip()
-    method = (request.form.get('method') or 'telebirr').strip()
-    if method not in ('telebirr', 'usdt'): method = 'telebirr'
+    pkg = num(request.form.get('coins'))
+    ref_in = (request.form.get('ref') or '').strip()
+    method = (request.form.get('method') or 'telebirr').strip().lower()
+    if method != 'telebirr':
+        return err('Only Telebirr purchases are currently supported')
     price = dict(PACKAGES).get(pkg)
     if not price: return err('Choose a package')
-    if method == 'usdt':
-        if len(ref_in) < 10: return err('Enter USDT TX hash')
-        ref = 'U' + secrets.token_hex(12); txhash = ref_in[:80]
-    else:
-        if len(ref_in) < 6: return err('Enter Telebirr transaction ID')
-        ref = ref_in.upper()[:40]; txhash = ''
-    f = request.files.get('file'); data = f.read() if f else b''; mime = sniff_image(data)
+    if not 6 <= len(ref_in) <= 40:
+        return err('Enter a valid Telebirr transaction ID (6–40 characters)')
+    ref = ref_in.upper()
+    existing = Purchase.query.filter(func.lower(Purchase.ref) == ref.lower()).first()
+    if existing:
+        if existing.user_id == g.user.id and existing.method == 'telebirr' and existing.coins == pkg:
+            return jsonify(ok=1, duplicate=1, status=existing.status)
+        return err('This Telebirr transaction ID has already been submitted', 409)
+    f = request.files.get('file'); data = f.read() if f else b''
+    mime = sniff_image(data)
     if not mime: return err('Attach payment screenshot')
-    if Purchase.query.filter_by(user_id=g.user.id, status='pending').count() >= 3: return err('3 pending requests')
-    p = Purchase(user_id=g.user.id, username=g.user.username, coins=pkg, birr=price, ref=ref, method=method, txhash=txhash); db.session.add(p)
+    if Purchase.query.filter_by(user_id=g.user.id, status='pending').count() >= 3:
+        return err('3 pending requests')
+    p = Purchase(user_id=g.user.id, username=g.user.username, coins=pkg,
+                 birr=price, ref=ref, method='telebirr', txhash='')
+    db.session.add(p)
     try:
-        db.session.flush(); db.session.add(Shot(purchase_id=p.id, data=data, mime=mime)); db.session.commit()
+        db.session.flush()
+        db.session.add(Shot(purchase_id=p.id, data=data, mime=mime))
+        db.session.commit()
     except IntegrityError:
-        db.session.rollback(); return err('Transaction ID already used')
-    notify_admins(f'🛒 {method.upper()} Purchase: {g.user.username} — {pkg} coins / {price} Birr / {round(price/USDT_BIRR,2)} USDT\nRef: {txhash or ref}'); return jsonify(ok=1)
+        db.session.rollback()
+        existing = Purchase.query.filter(func.lower(Purchase.ref) == ref.lower()).first()
+        if existing and existing.user_id == g.user.id and existing.method == 'telebirr' and existing.coins == pkg:
+            return jsonify(ok=1, duplicate=1, status=existing.status)
+        return err('This Telebirr transaction ID has already been submitted', 409)
+    notify_admins(f'🛒 TELEBIRR Purchase: {g.user.username} — {pkg} coins / {price} Birr\\nRef: {ref}')
+    return jsonify(ok=1, duplicate=0, status='pending')
 @app.post('/api/withdraw')
 @auth
 def withdraw():
-    b = body(); coins = num(b.get('coins')); method = (b.get('method') or 'telebirr').strip()
-    if method not in ('telebirr', 'usdt'): method = 'telebirr'
-    if coins < MIN_WITHDRAW: return err(f'Minimum withdrawal {MIN_WITHDRAW} coins')
-    phone = ''; address = ''
-    if method == 'usdt':
-        address = str(b.get('address') or '').strip()
-        if not (address.startswith('T') and len(address) == 34): return err('Enter a valid TRC20 address (T…, 34 chars)')
-    else:
-        phone = str(b.get('phone') or g.user.phone or '').strip()
-        if not (phone.isdigit() and len(phone) == 10): return err('Enter valid phone number')
-    min_c = case((User.commission <= coins, User.commission), else_=coins)
-    r = db.session.execute(update(User).where(User.id == g.user.id, User.earnings + User.commission >= coins).values(commission=User.commission - min_c, earnings=User.earnings - (coins - min_c)), execution_options={'synchronize_session': False})
-    if r.rowcount != 1:
-        db.session.rollback(); return err('Not enough income')
-    w = Withdraw(user_id=g.user.id, username=g.user.username, coins=coins, birr=int(coins * COIN_BIRR), phone=phone, method=method, usdt_address=address); db.session.add(w)
-    tx(g.user.id, 'withdraw', -coins, f'{method} withdraw'); db.session.commit()
-    dest = address if method == 'usdt' else phone
-    notify_admins(f'💸 {method.upper()} Withdraw: {g.user.username} — {coins} coins = {w.birr} Birr / {round(coins*COIN_USDT,4)} USDT → {dest}'); return jsonify(ok=1)
+    b = body(); coins = strict_num(b.get('coins')); method = (b.get('method') or 'telebirr').strip()
+    request_id = str(b.get('request_id') or '').strip()
+    if not (8 <= len(request_id) <= 64 and all(c.isalnum() or c in '-_' for c in request_id)):
+        return err('A valid withdrawal request ID is required')
+    if method != 'telebirr': return err('Only Telebirr withdrawals are currently supported')
+    try:
+        quote = rules.withdrawal_quote(coins)
+    except (TypeError, ValueError) as e:
+        return err(str(e))
+    phone = str(b.get('phone') or g.user.phone or '').strip()
+    if not (phone.isdigit() and len(phone) == 10): return err('Enter valid Telebirr phone number')
 
+    # A retry of the same user action returns its original request, never a
+    # second debit. A reused key with changed details is a conflict.
+    existing = WithdrawRequest.query.filter_by(sender_id=g.user.id, request_id=request_id).first()
+    if existing:
+        if existing.coins != coins or existing.phone != phone or existing.method != method:
+            return err('Withdrawal request ID was already used with different details', 409)
+        prior = db.session.get(Withdraw, existing.withdraw_id)
+        if not prior: return err('Withdrawal request record needs administrator review', 409)
+        return jsonify(ok=1, duplicate=1, id=prior.id, coins=prior.coins, birr=prior.birr,
+                       method=prior.method, status=prior.status)
+
+    # Lock and validate withdrawable buckets. Debit, withdrawal, idempotency
+    # record and event are committed atomically.
+    balances = db.session.query(User.earnings, User.gift_earnings, User.commission).filter(User.id == g.user.id).with_for_update().first()
+    if not balances:
+        db.session.rollback(); return err('User wallet not found', 404)
+    try:
+        pk_earnings = max(0, int(balances[0] or 0) - int(balances[1] or 0))
+        split = rules.withdrawal_source_split(coins, int(balances[1] or 0), pk_earnings, int(balances[2] or 0))
+    except (TypeError, ValueError) as e:
+        db.session.rollback(); return err(str(e))
+    earnings_part, commission_part = split['earnings'], split['commission']
+    gift_earnings_part, pk_earnings_part = split['gift_earnings'], split['pk_earnings']
+    r = db.session.execute(update(User).where(User.id == g.user.id, User.earnings >= earnings_part, User.gift_earnings >= gift_earnings_part, User.commission >= commission_part).values(
+        commission=User.commission - commission_part, earnings=User.earnings - earnings_part, gift_earnings=User.gift_earnings - gift_earnings_part), execution_options={'synchronize_session': False})
+    if r.rowcount != 1:
+        db.session.rollback(); return err('Balances changed; please retry')
+    w = Withdraw(user_id=g.user.id, username=g.user.username, coins=coins, birr=quote['birr'], phone=phone, method='telebirr', usdt_address='',
+                 earnings_coins=earnings_part, commission_coins=commission_part,
+                 gift_earnings_coins=gift_earnings_part, pk_earnings_coins=pk_earnings_part)
+    db.session.add(w)
+    try:
+        db.session.flush()
+        db.session.add(WithdrawRequest(sender_id=g.user.id, request_id=request_id, coins=coins,
+                                       phone=phone, method=method, withdraw_id=w.id))
+        tx(g.user.id, 'withdraw', -coins, 'telebirr withdraw')
+        db.session.commit()
+    except IntegrityError:
+        db.session.rollback()
+        existing = WithdrawRequest.query.filter_by(sender_id=g.user.id, request_id=request_id).first()
+        if existing and existing.coins == coins and existing.phone == phone and existing.method == method:
+            prior = db.session.get(Withdraw, existing.withdraw_id)
+            if prior:
+                return jsonify(ok=1, duplicate=1, id=prior.id, coins=prior.coins, birr=prior.birr,
+                               method=prior.method, status=prior.status)
+        if existing:
+            return err('Withdrawal request ID was already used with different details', 409)
+        return err('Withdrawal request could not be saved; please retry', 409)
+    notify_admins(f'💸 TELEBIRR Withdraw: {g.user.username} — {coins} coins = {w.birr} Birr → {phone}')
+    return jsonify(ok=1, duplicate=0, id=w.id, coins=coins, birr=w.birr, method='telebirr', status='pending')
 
 @app.get('/api/posts')
 @auth
@@ -1187,6 +1504,13 @@ def finalize_pk(pk):
             if uid and amount:
                 db.session.execute(update(User).where(User.id == uid).values(earnings=User.earnings + amount)); tx(uid, kind, amount, f'PK #{pk.id}')
     db.session.commit()
+    feed_notify = globals().get('FEED', {}).get('notify_user')
+    if feed_notify and pk.host2_id:
+        for uid in (pk.host1_id, pk.host2_id):
+            if pk.winner_id == uid: result = 'You won the PK battle'
+            elif pk.winner_id is None: result = 'Your PK battle ended in a draw or without a winner'
+            else: result = 'Your PK battle has ended'
+            feed_notify(uid, None, 'pk_result', 'PK battle result', result, f'pk:{pk.id}')
 @app.post('/api/pk/create')
 @auth
 def pk_create():
@@ -1209,26 +1533,73 @@ def pk_join():
 @app.post('/api/pk/gift')
 @auth
 def pk_gift():
-    u = g.user; pk = db.session.get(PKBattle, num(body().get('pk_id')))
-    if not pk or pk.status != 'active': return err('PK not found', 404)
-    to_host = num(body().get('to_host')); gift = GIFT_MAP.get(body().get('gift')); qty = max(1, min(99, num(body().get('qty'), 1)))
+    u = g.user; b = body()
+    request_id = b.get('request_id')
+    if not isinstance(request_id, str) or not 8 <= len(request_id) <= 64 or not all(c.isalnum() or c in '-_' for c in request_id):
+        return err('A valid PK gift request_id is required')
+    pk_id = strict_num(b.get('pk_id'))
+    to_host = strict_num(b.get('to_host'))
+    gift_key = b.get('gift')
+    gift = GIFT_MAP.get(gift_key)
+    qty = strict_num(b.get('qty'), 1)
+    if not pk_id or pk_id <= 0 or to_host not in (1, 2) or qty is None or not 1 <= qty <= 99:
+        return err('Invalid PK gift details')
     if not gift: return err('Gift not found')
     total = gift['price'] * qty
+
+    # Resolve retries before checking whether the PK is still active: a committed
+    # gift remains safely replayable even after the battle has ended.
+    existing = PKGiftRequest.query.filter_by(sender_id=u.id, request_id=request_id).first()
+    if existing:
+        same = (existing.pk_id == pk_id and existing.to_host == to_host and
+                existing.gift_key == gift_key and existing.qty == qty)
+        if not same: return err('request_id already used for a different PK gift', 409)
+        pk = db.session.get(PKBattle, existing.pk_id)
+        if not pk: return err('PK record unavailable', 409)
+        return jsonify(coins=coins_of(u.id), host1_gifts=pk.host1_gifts or 0,
+                       host2_gifts=pk.host2_gifts or 0, duplicate=1)
+
+    pk = db.session.get(PKBattle, pk_id)
+    if not pk or pk.status != 'active': return err('PK not found', 404)
     if to_host == 1 and pk.host1_id: score, paid = 'host1_gifts', 'host1_real'
     elif to_host == 2 and pk.host2_id: score, paid = 'host2_gifts', 'host2_real'
     else: return err('Invalid host')
     if now() > pk.started_at + pk.duration:
         finalize_pk(pk); return err('PK has ended', 409)
+
     real_used = spend_split(u.id, total)
     if real_used is None:
         db.session.rollback(); return err('Not enough coins', 402)
     r = db.session.execute(update(PKBattle).where(PKBattle.id == pk.id, PKBattle.status == 'active').values(
-        {score: func.coalesce(getattr(PKBattle, score), 0) + total, paid: func.coalesce(getattr(PKBattle, paid), 0) + real_used}), execution_options={'synchronize_session': False})
+        {score: func.coalesce(getattr(PKBattle, score), 0) + total,
+         paid: func.coalesce(getattr(PKBattle, paid), 0) + real_used}),
+        execution_options={'synchronize_session': False})
     if r.rowcount != 1:
         db.session.rollback(); return err('PK has ended', 409)
-    db.session.execute(update(User).where(User.id == u.id).values(spent=User.spent + total, gifts_sent=User.gifts_sent + total), execution_options={'synchronize_session': False})
-    tx(u.id, 'pk_gift', -total, f'PK#{pk.id} side{to_host} {gift["key"]} {qty}'); db.session.commit(); db.session.refresh(pk)
-    return jsonify(coins=coins_of(u.id), host1_gifts=pk.host1_gifts, host2_gifts=pk.host2_gifts)
+    db.session.execute(update(User).where(User.id == u.id).values(
+        spent=User.spent + total, gifts_sent=User.gifts_sent + total),
+        execution_options={'synchronize_session': False})
+    db.session.add(PKGiftRequest(sender_id=u.id, request_id=request_id, pk_id=pk.id,
+                                 to_host=to_host, gift_key=gift_key, qty=qty,
+                                 total=total, real_used=real_used))
+    tx(u.id, 'pk_gift', -total, f'PK#{pk.id} side{to_host} {gift_key} {qty}')
+    try:
+        db.session.commit()
+    except IntegrityError:
+        # The failed transaction, including wallet debit and score update, rolls back.
+        db.session.rollback()
+        existing = PKGiftRequest.query.filter_by(sender_id=u.id, request_id=request_id).first()
+        if not existing: raise
+        same = (existing.pk_id == pk_id and existing.to_host == to_host and
+                existing.gift_key == gift_key and existing.qty == qty)
+        if not same: return err('request_id already used for a different PK gift', 409)
+        pk = db.session.get(PKBattle, existing.pk_id)
+        if not pk: return err('PK record unavailable', 409)
+        return jsonify(coins=coins_of(u.id), host1_gifts=pk.host1_gifts or 0,
+                       host2_gifts=pk.host2_gifts or 0, duplicate=1)
+    db.session.refresh(pk)
+    return jsonify(coins=coins_of(u.id), host1_gifts=pk.host1_gifts,
+                   host2_gifts=pk.host2_gifts, duplicate=0)
 @app.post('/api/pk/end')
 @auth
 def pk_end():
@@ -1245,6 +1616,33 @@ def pk_active():
         h1 = db.session.get(User, pk.host1_id); h2 = db.session.get(User, pk.host2_id) if pk.host2_id else None
         out.append(dict(id=pk.id, host1=pub(h1) if h1 else None, host2=pub(h2) if h2 else None, host1_gifts=pk.host1_gifts or 0, host2_gifts=pk.host2_gifts or 0, time_left=max(0, pk.started_at + pk.duration - now())))
     return jsonify(pks=out)
+@app.get('/api/pk/history')
+@auth
+def pk_history():
+    limit = max(1, min(50, num(request.args.get('limit'), 20)))
+    before = num(request.args.get('before'))
+    q = PKBattle.query.filter(
+        PKBattle.status == 'ended',
+        or_(PKBattle.host1_id == g.user.id, PKBattle.host2_id == g.user.id)
+    )
+    if before > 0: q = q.filter(PKBattle.id < before)
+    rows = q.order_by(PKBattle.ended_at.desc(), PKBattle.id.desc()).limit(limit).all()
+    ids = {x.host1_id for x in rows} | {x.host2_id for x in rows if x.host2_id}
+    users = {x.id: x for x in User.query.filter(User.id.in_(ids or {0})).all()}
+    items = []
+    for pk in rows:
+        mine_first = pk.host1_id == g.user.id
+        mine = pk.host1_gifts or 0 if mine_first else pk.host2_gifts or 0
+        other = pk.host2_gifts or 0 if mine_first else pk.host1_gifts or 0
+        opponent_id = pk.host2_id if mine_first else pk.host1_id
+        outcome = 'win' if pk.winner_id == g.user.id else 'draw' if pk.winner_id is None and pk.host2_id and mine == other else 'no_winner' if pk.winner_id is None else 'loss'
+        items.append(dict(
+            id=pk.id, opponent=pub(users[opponent_id]) if opponent_id in users else None,
+            my_gifts=mine, opponent_gifts=other, outcome=outcome,
+            winner_id=pk.winner_id, started_at=pk.started_at, ended_at=pk.ended_at,
+            duration=pk.duration
+        ))
+    return jsonify(items=items, next_before=items[-1]['id'] if len(items) == limit else None)
 _pk_cache = {}
 
 
@@ -1311,7 +1709,7 @@ POLICY = {
     'lucky': "LUCKY GIFT POLICY\n1. Lucky gifts are chance games: sending one may return a multiplier to the sender.\n2. 70% of lucky volume returns to players; 30% retained by platform.\n3. Lucky gifts add hype/stage score but do not pay host earnings.\n4. 18+ only. Play responsibly.",
     'pk': "PK BATTLE POLICY\n1. Two hosts battle 5 minutes; viewers gift each side.\n2. Winner 70%, loser 20%, platform 10%. Tie 45/45/10.",
     'stage': "LIVE GUESTS\n1. A LIVE host may invite up to 3 guests on stage.\n2. The host can mute or remove a guest; a guest can leave anytime.\n3. No nudity, harassment or explicit content — instant removal and ban.",
-    'withdraw': f"WITHDRAWAL & PAYMENTS\n1. Telebirr: 1 coin = {COIN_BIRR} ETB, min {MIN_WITHDRAW} coins.\n2. USDT (TRC20): 1 coin = {COIN_USDT} USDT. Provide a valid T… address (34 chars).\n3. Rate: 1 USDT = {USDT_BIRR} ETB.\n4. TX id/hash + screenshot required for purchases.\n5. 24–72h processing after approval.",
+    'withdraw': f"WITHDRAWAL & PAYMENTS\n1. Telebirr only: 1,000 coins = 100 ETB (reference rate).\n2. Minimum withdrawal: {rules.MIN_WITHDRAW_ETB} ETB ({MIN_WITHDRAW} coins).\n3. At least 50% of each withdrawal must come from genuine gift earnings; activity and bonus rewards are not withdrawable.\n4. Admin review, Telebirr ownership verification and payout confirmation are required.\n5. Purchases require a transaction ID and screenshot.",
     'conduct': "COMMUNITY RULES\n1. No hate, harassment, threats.\n2. No minor sexual content — permanent ban + reporting.\n3. No nudity/explicit live content.\n4. No scams, bots, cheating.\n5. Report to @TwentyOneOwner.",
     'privacy': "PRIVACY\n1. We collect Telegram ID, name, optional phone/wallet address, usage data.\n2. Photos stored only for display.\n3. We never sell data.\n4. Account deletion via support."
 }
@@ -1341,8 +1739,20 @@ def adm_purchases():
 @app.get('/api/admin/withdraws')
 @admin_only
 def adm_withdraws():
-    ws = Withdraw.query.filter_by(status=request.args.get('status', 'pending')).order_by(Withdraw.id.desc()).limit(50).all()
-    return jsonify(items=[dict(id=w.id, user_id=w.user_id, name=w.username, coins=w.coins, birr=w.birr, phone=w.phone, ts=w.ts, method=w.method, address=(w.usdt_address or w.phone), usdt=round(w.coins*COIN_USDT, 4)) for w in ws])
+    status = (request.args.get('status') or '').strip()
+    q = Withdraw.query
+    if status:
+        q = q.filter_by(status=status)
+    else:
+        q = q.filter(Withdraw.status.in_(('pending', 'under_review', 'approved', 'processing')))
+    ws = q.order_by(Withdraw.id.desc()).limit(100).all()
+    return jsonify(items=[dict(id=w.id, user_id=w.user_id, name=w.username, coins=w.coins, birr=w.birr,
+                               phone=w.phone, ts=w.ts, method=w.method, address=w.phone,
+                               status=w.status, earnings_coins=int(w.earnings_coins or 0),
+                               commission_coins=int(w.commission_coins or 0),
+                               gift_earnings_coins=int(w.gift_earnings_coins or 0),
+                               pk_earnings_coins=int(w.pk_earnings_coins or 0),
+                               payout_reference=w.payout_reference or '') for w in ws])
 @app.get('/api/admin/users')
 @admin_only
 def adm_users():
@@ -1360,8 +1770,18 @@ def adm_shot(pid):
 @app.post('/api/admin/purchase')
 @admin_only
 def adm_purchase():
-    b = body(); pid, act = num(b.get('id')), b.get('action'); p = db.session.get(Purchase, pid)
+    b = body(); pid, act = num(b.get('id')), str(b.get('action') or '').strip().lower()
+    if act not in ('approve', 'reject'):
+        return err('Invalid purchase action')
+    p = db.session.get(Purchase, pid)
     if not p: return err('not found', 404)
+    if act == 'approve':
+        if p.method != 'telebirr':
+            return err('Legacy non-Telebirr purchase requires separate manual review', 409)
+        if not p.ref or not (6 <= len(p.ref) <= 40):
+            return err('Purchase has no valid Telebirr transaction ID', 409)
+        if not Shot.query.filter_by(purchase_id=pid).first():
+            return err('Payment screenshot is missing; cannot approve', 409)
     new = 'approved' if act == 'approve' else 'rejected'
     r = db.session.execute(update(Purchase).where(Purchase.id == pid, Purchase.status == 'pending').values(status=new), execution_options={'synchronize_session': False})
     if r.rowcount != 1:
@@ -1387,18 +1807,76 @@ def adm_purchase():
 @app.post('/api/admin/withdraw')
 @admin_only
 def adm_withdraw():
-    b = body(); wid, act = num(b.get('id')), b.get('action'); w = db.session.get(Withdraw, wid)
+    b = body(); wid, act = num(b.get('id')), str(b.get('action') or '').strip()
+    w = db.session.query(Withdraw).filter_by(id=wid).with_for_update().first()
     if not w: return err('not found', 404)
-    new = 'paid' if act == 'paid' else 'rejected'
-    r = db.session.execute(update(Withdraw).where(Withdraw.id == wid, Withdraw.status == 'pending').values(status=new), execution_options={'synchronize_session': False})
+    old = w.status
+    new = rules.withdrawal_next_status(old, act)
+    if not new:
+        # Safe replay after an uncertain admin response: never repeat a refund,
+        # status event or notification for an already-completed transition.
+        already = {'under_review': 'under_review', 'approve': 'approved',
+                   'processing': 'processing', 'paid': 'paid', 'reject': 'rejected'}.get(act)
+        if already and old == already:
+            supplied_ref = str(b.get('payout_reference') or '').strip()
+            if old == 'paid' and supplied_ref and supplied_ref.lower() != str(w.payout_reference or '').lower():
+                return err('Withdrawal was paid with a different Telebirr reference', 409)
+            return jsonify(ok=1, duplicate=1, status=old, payout_reference=w.payout_reference or '')
+        return err(f'Invalid withdrawal transition: {old} -> {act}')
+    # Older installations may contain USDT withdrawal rows. They must not be
+    # approved or settled through the new Telebirr-only payout workflow.
+    if new in ('approved', 'processing', 'paid') and w.method != 'telebirr':
+        return err('Legacy non-Telebirr withdrawal requires separate manual review', 409)
+    payout_reference = ''
+    if new == 'paid':
+        payout_reference = str(b.get('payout_reference') or '').strip()
+        if not (4 <= len(payout_reference) <= 80):
+            return err('A verified Telebirr payout transaction reference is required')
+        duplicate = db.session.query(Withdraw.id).filter(
+            func.lower(Withdraw.payout_reference) == payout_reference.lower(),
+            Withdraw.id != wid
+        ).first()
+        if duplicate:
+            return err('This Telebirr payout reference has already been used', 409)
+    values = {'status': new}
+    if new == 'under_review':
+        values.update(reviewed_by=str(g.user.tg_id), reviewed_ts=now())
+    if new == 'paid':
+        values.update(payout_reference=payout_reference, processed_by=str(g.user.tg_id), processed_ts=now())
+    r = db.session.execute(update(Withdraw).where(Withdraw.id == wid, Withdraw.status == old).values(**values),
+                           execution_options={'synchronize_session': False})
     if r.rowcount != 1:
-        db.session.rollback(); return err('Already processed')
+        db.session.rollback(); return err('Withdrawal changed; reload and retry')
     u = db.session.get(User, w.user_id)
-    if act != 'paid':
-        db.session.execute(update(User).where(User.id == w.user_id).values(earnings=User.earnings + w.coins), execution_options={'synchronize_session': False}); tx(w.user_id, 'refund', w.coins, f'withdraw #{w.id} rejected')
-    db.session.commit()
-    if u: notify(u.tg_id, '💰 Payment sent!' if act == 'paid' else f'❌ Rejected; {w.coins} refunded.')
-    return jsonify(ok=1)
+    if new == 'rejected':
+        refund_earnings = int(w.earnings_coins or 0)
+        refund_gift_earnings = int(w.gift_earnings_coins or 0)
+        refund_commission = int(w.commission_coins or 0)
+        if refund_earnings + refund_commission == 0:
+            refund_earnings = int(w.coins or 0)  # legacy request before source-bucket tracking
+            refund_gift_earnings = 0  # ambiguous legacy source: do not reclassify as gift earnings
+        db.session.execute(update(User).where(User.id == w.user_id).values(
+            earnings=User.earnings + refund_earnings, gift_earnings=User.gift_earnings + refund_gift_earnings,
+            commission=User.commission + refund_commission),
+            execution_options={'synchronize_session': False})
+        tx(w.user_id, 'refund', w.coins, f'withdraw #{w.id} rejected (earnings {refund_earnings}, commission {refund_commission})')
+    tx(w.user_id, 'withdraw_status', 0, f'withdraw #{w.id}: {old}->{new}; admin {g.user.tg_id}' +
+       (f'; payout_ref {payout_reference}' if payout_reference else ''))
+    try:
+        db.session.commit()
+    except IntegrityError:
+        db.session.rollback()
+        return err('This Telebirr payout reference has already been used', 409)
+    if u:
+        messages = {
+            'under_review': 'Your Telebirr withdrawal is under review.',
+            'approved': 'Your Telebirr withdrawal has been approved.',
+            'processing': 'Your Telebirr withdrawal is being processed.',
+            'paid': f'Payment sent. Reference: {payout_reference}',
+            'rejected': f'Withdrawal rejected; {w.coins} coins have been refunded to the original balances.',
+        }
+        notify(u.tg_id, messages[new])
+    return jsonify(ok=1, status=new)
 @app.post('/api/admin/user')
 @admin_only
 def adm_user():
@@ -1440,7 +1918,17 @@ except ImportError:
 
 FEED = init_feed(app, db, dict(
     User=User, Room=Room, Seat=Seat, Presence=Presence, Tx=Tx, now=now, err=err, body=body, num=num,
-    auth=auth, pub=pub, limited=limited, gc_rooms=gc_rooms))
+    auth=auth, pub=pub, limited=limited, gc_rooms=gc_rooms, admin_only=admin_only))
+
+
+try:
+    from .host_rewards import init_host_rewards
+except ImportError:
+    from host_rewards import init_host_rewards
+
+HOST_REWARDS = init_host_rewards(app, db, dict(
+    User=User, Room=Room, Presence=Presence, now=now, tx=tx, auth=auth
+))
 
 
 if __name__ == '__main__':

@@ -89,6 +89,42 @@ WELCOME_REWARDS = (100, 120, 140, 160, 180, 200, 250)
 LEVEL_REWARDS = ((5, 50), (10, 65), (20, 80), (30, 100), (50, 125))
 TOP_LEVEL_REWARD = 150
 
+# Cash-out policy: reference value only; actual payout remains subject to admin approval.
+WITHDRAW_ETB_PER_COIN = Decimal('0.10')  # 1,000 coins = 100 ETB
+MIN_WITHDRAW_ETB = 1000
+MIN_WITHDRAW_COINS = int((Decimal(MIN_WITHDRAW_ETB) / WITHDRAW_ETB_PER_COIN).to_integral_value(rounding='ROUND_UP'))
+MIN_GIFT_EARNINGS_SHARE = Decimal('0.50')
+
+
+def withdrawal_quote(coins):
+    coins = _int_amount(coins)
+    if coins < MIN_WITHDRAW_COINS:
+        raise ValueError(f'minimum withdrawal is {MIN_WITHDRAW_ETB} ETB ({MIN_WITHDRAW_COINS} coins)')
+    birr = int((Decimal(coins) * WITHDRAW_ETB_PER_COIN).to_integral_value(rounding=ROUND_DOWN))
+    return dict(coins=coins, birr=birr, rate=str(WITHDRAW_ETB_PER_COIN))
+
+
+def withdrawal_source_split(coins, gift_earnings, pk_earnings, commission):
+    coins = _int_amount(coins)
+    gift_earnings = _int_amount(gift_earnings)
+    pk_earnings = _int_amount(pk_earnings)
+    commission = _int_amount(commission)
+    min_gift = (coins + 1) // 2
+    if gift_earnings < min_gift:
+        raise ValueError('at least 50% of the withdrawal must come from genuine gift earnings')
+    if gift_earnings + pk_earnings + commission < coins:
+        raise ValueError('not enough withdrawable income')
+    gift_part = max(min_gift, coins - pk_earnings - commission)
+    if gift_part > gift_earnings:
+        raise ValueError('not enough genuine gift earnings')
+    remainder = coins - gift_part
+    commission_part = min(commission, remainder)
+    pk_part = remainder - commission_part
+    if pk_part > pk_earnings:
+        raise ValueError('not enough withdrawable income')
+    return dict(gift_earnings=gift_part, pk_earnings=pk_part,
+                earnings=gift_part + pk_part, commission=commission_part)
+
 
 def merge_intervals(intervals):
     """Joins overlapping (start, end) times so no second is counted twice."""
@@ -130,6 +166,20 @@ def reward_per_block(day_number, host_level):
     if day_number <= len(WELCOME_REWARDS):
         return WELCOME_REWARDS[day_number - 1]
     return next((coins for top, coins in LEVEL_REWARDS if host_level <= top), TOP_LEVEL_REWARD)
+
+WITHDRAWAL_TRANSITIONS = {
+    ('pending', 'under_review'): 'under_review',
+    ('pending', 'reject'): 'rejected',
+    ('under_review', 'approve'): 'approved',
+    ('under_review', 'reject'): 'rejected',
+    ('approved', 'processing'): 'processing',
+    ('approved', 'reject'): 'rejected',
+    ('processing', 'paid'): 'paid',
+}
+
+
+def withdrawal_next_status(current, action):
+    return WITHDRAWAL_TRANSITIONS.get((str(current), str(action)))
 
 
 # ---------- income -> coins (spec 6). There is deliberately no reverse function ----------

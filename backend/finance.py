@@ -159,13 +159,20 @@ def init_finance(app, db, deps):
         if not u: return
         coins = int(u.coins or 0); real = int(u.real_coins or 0)
         vals = {'coins': coins, 'real': real, 'promo': max(0, coins - real),
-                'earnings': int(u.earnings or 0), 'commission': int(u.commission or 0)}
+                'earnings': int(u.earnings or 0), 'gift_earnings': int(u.gift_earnings or 0), 'commission': int(u.commission or 0)}
         for k, v in vals.items():
             row = db.session.get(FinWallet, (user_id, k))
             if row: row.balance = v; row.updated = now()
             else: db.session.add(FinWallet(user_id=user_id, kind=k, balance=v))
         try: db.session.commit()
         except Exception: db.session.rollback()
+
+    def find_gift_idem(idem):
+        row = FinGiftTx.query.filter_by(idem=str(idem)[:80]).first()
+        if not row: return None
+        return dict(id=row.id, sender_id=row.sender_id, receiver_id=row.receiver_id, gift_key=row.gift_key,
+                    qty=int(row.qty or 0), room_id=str(row.room_id or ''),
+                    total=int(row.total or 0), lucky=(row.tier == 'lucky'))
 
     def record_gift(sender_id, receiver_id, gift_key, qty, total, real_used, host_earning, room_id, tier, idem):
         pool = max(0, int(real_used) - int(host_earning))
@@ -263,11 +270,11 @@ def init_finance(app, db, deps):
         except Exception: db.session.rollback()
 
     def pnl(days=30):
-        cutoff = now() - days * 86400; rate = coin_birr()
+        cutoff = now() - days * 86400; rate = float(rules.WITHDRAW_ETB_PER_COIN)
         revenue = db.session.query(func.coalesce(func.sum(Purchase.birr), 0)).filter(Purchase.status == 'approved', Purchase.ts >= cutoff).scalar() or 0
         coins_sold = db.session.query(func.coalesce(func.sum(Purchase.coins), 0)).filter(Purchase.status == 'approved', Purchase.ts >= cutoff).scalar() or 0
         paid_out = db.session.query(func.coalesce(func.sum(Withdraw.birr), 0)).filter(Withdraw.status == 'paid', Withdraw.ts >= cutoff).scalar() or 0
-        pending_out = db.session.query(func.coalesce(func.sum(Withdraw.birr), 0)).filter(Withdraw.status == 'pending').scalar() or 0
+        pending_out = db.session.query(func.coalesce(func.sum(Withdraw.birr), 0)).filter(Withdraw.status.in_(('pending', 'under_review', 'approved', 'processing'))).scalar() or 0
         host_liab_coins = db.session.query(func.coalesce(func.sum(User.earnings), 0)).scalar() or 0
         comm_liab_coins = db.session.query(func.coalesce(func.sum(User.commission), 0)).scalar() or 0
         promo = db.session.query(func.coalesce(func.sum(Tx.amount), 0)).filter(Tx.kind.in_(REWARD_KINDS), Tx.amount > 0, Tx.ts >= cutoff).scalar() or 0
@@ -277,32 +284,78 @@ def init_finance(app, db, deps):
         host_paid_coins = db.session.query(func.coalesce(func.sum(FinGiftTx.host_earning), 0)).filter(FinGiftTx.ts >= cutoff).scalar() or 0
         comm_paid_coins = db.session.query(func.coalesce(func.sum(FinCommission.amount), 0)).filter(FinCommission.ts >= cutoff).scalar() or 0
         host_liab_birr = round(host_liab_coins * rate, 2); comm_liab_birr = round(comm_liab_coins * rate, 2)
-        est_net = round(revenue - paid_out - host_liab_birr - comm_liab_birr, 2)
+        est_net = round(revenue - paid_out - pending_out - host_liab_birr - comm_liab_birr, 2)
         margin = round((est_net / revenue * 100), 2) if revenue else 0.0
         return dict(days=days, revenue_birr=revenue, coins_sold=coins_sold, paid_out_birr=paid_out, pending_withdraw_birr=pending_out,
                     host_liability_birr=host_liab_birr, commission_liability_birr=comm_liab_birr, promo_coins_issued=promo,
                     game_house_coins=-game_net, lucky_house_coins=lucky_house, gift_volume_coins=gift_volume,
-                    host_earned_coins=host_paid_coins, commission_paid_coins=comm_paid_coins, estimated_net_birr=est_net,
-                    estimated_margin_pct=margin, target_margin_pct=30, on_target=margin >= 30, scheme=scheme(), coin_birr=rate, usdt_birr=usdt_birr())
+                    host_earned_coins=host_paid_coins, commission_paid_coins=comm_paid_coins,
+                    # Compatibility fields only: this is not a statutory P&L or net margin.
+                    estimated_net_birr=est_net, estimated_margin_pct=margin,
+                    estimated_liability_adjusted_surplus_birr=est_net,
+                    estimated_liability_adjusted_surplus_pct=margin,
+                    target_margin_pct=30, on_target=None, net_profit_verified=False,
+                    margin_status='unverified_operating_costs_and_period_liabilities_incomplete',
+                    scheme=scheme(), coin_birr=rate, usdt_birr=usdt_birr())
 
     def reconcile():
         issues = []
         bad = db.session.query(func.count()).select_from(User).filter(User.real_coins > User.coins).scalar() or 0
         if bad: issues.append(dict(kind='real_gt_coins', count=bad, severity='high'))
-        neg = db.session.query(func.count()).select_from(User).filter(or_(User.coins < 0, User.earnings < 0, User.commission < 0)).scalar() or 0
+        neg = db.session.query(func.count()).select_from(User).filter(or_(User.coins < 0, User.earnings < 0, User.gift_earnings < 0, User.commission < 0)).scalar() or 0
         if neg: issues.append(dict(kind='negative_balance', count=neg, severity='critical'))
+        gift_over = db.session.query(func.count()).select_from(User).filter(User.gift_earnings > User.earnings).scalar() or 0
+        if gift_over: issues.append(dict(kind='gift_earnings_exceed_total_earnings', count=gift_over, severity='critical'))
         dup = db.session.query(FinCommission.gift_tx_id, FinCommission.agent_id, func.count()).group_by(FinCommission.gift_tx_id, FinCommission.agent_id).having(func.count() > 1).all()
         if dup: issues.append(dict(kind='duplicate_commission', count=len(dup), severity='critical'))
-        over = []
-        for gid, pool, tot in db.session.query(FinGiftTx.id, FinGiftTx.platform_share, func.coalesce(func.sum(FinCommission.amount), 0)).outerjoin(
-                FinCommission, FinCommission.gift_tx_id == FinGiftTx.id).group_by(FinGiftTx.id).all():
-            if (tot or 0) > (pool or 0) + len(rules.GENERATION_RATES): over.append(gid)
-        if over: issues.append(dict(kind='commission_exceeds_pool', count=len(over), severity='critical'))
+        # Validate gift-row arithmetic independently of commission carry rounding.
+        bad_gifts = db.session.query(func.count()).select_from(FinGiftTx).filter(or_(
+            FinGiftTx.total < 0, FinGiftTx.real_used < 0, FinGiftTx.host_earning < 0,
+            FinGiftTx.platform_share < 0, FinGiftTx.qty < 1,
+            FinGiftTx.real_used > FinGiftTx.total,
+            FinGiftTx.host_earning > FinGiftTx.real_used,
+            FinGiftTx.platform_share != FinGiftTx.real_used - FinGiftTx.host_earning,
+            (FinGiftTx.tier == 'lucky') & (FinGiftTx.host_earning != 0)
+        )).scalar() or 0
+        if bad_gifts:
+            issues.append(dict(kind='gift_split_invariant', count=bad_gifts, severity='critical'))
+
+        # Commission carry is accumulated across gifts, so a per-gift cap is
+        # incorrect. The aggregate paid amount must stay within 12% of all
+        # eligible purchased-coin gift value (Lucky gifts are excluded).
+        eligible_base = db.session.query(func.coalesce(func.sum(FinGiftTx.real_used), 0)).filter(
+            FinGiftTx.tier != 'lucky').scalar() or 0
+        commission_paid = db.session.query(func.coalesce(func.sum(FinCommission.amount), 0)).scalar() or 0
+        commission_cap = int((eligible_base * rules.POOL_RATE).to_integral_value(rounding='ROUND_DOWN'))
+        if commission_paid > commission_cap:
+            issues.append(dict(kind='commission_exceeds_aggregate_12pct_pool',
+                               paid=int(commission_paid), cap=commission_cap, severity='critical'))
+
+        # Source-bucket withdrawals must add up to the debited amount. Zeroed
+        # source fields identify legacy rows created before source tracking.
+        bad_withdrawals = db.session.query(func.count()).select_from(Withdraw).filter(
+            or_(
+                ((Withdraw.earnings_coins != 0) | (Withdraw.commission_coins != 0) |
+                 (Withdraw.gift_earnings_coins != 0) | (Withdraw.pk_earnings_coins != 0)) &
+                (Withdraw.coins != Withdraw.earnings_coins + Withdraw.commission_coins),
+                ((Withdraw.earnings_coins != 0) | (Withdraw.commission_coins != 0) |
+                 (Withdraw.gift_earnings_coins != 0) | (Withdraw.pk_earnings_coins != 0)) &
+                (Withdraw.earnings_coins != Withdraw.gift_earnings_coins + Withdraw.pk_earnings_coins),
+                (Withdraw.status == 'paid') & ((Withdraw.payout_reference == '') | (Withdraw.payout_reference.is_(None)))
+            )
+        ).scalar() or 0
+        if bad_withdrawals:
+            issues.append(dict(kind='withdrawal_source_or_settlement_invariant',
+                               count=bad_withdrawals, severity='critical'))
+
         return dict(ok=not any(i['severity'] in ('critical', 'high') for i in issues), issues=issues,
                     users=db.session.query(func.count()).select_from(User).scalar(),
                     ledger_rows=db.session.query(func.count()).select_from(FinLedger).scalar(),
                     gift_rows=db.session.query(func.count()).select_from(FinGiftTx).scalar(),
-                    commission_rows=db.session.query(func.count()).select_from(FinCommission).scalar())
+                    commission_rows=db.session.query(func.count()).select_from(FinCommission).scalar(),
+                    eligible_gift_base_coins=int(eligible_base),
+                    commission_paid_coins=int(commission_paid),
+                    commission_cap_coins=commission_cap)
 
     def scan():
         found = []
@@ -427,7 +480,53 @@ def init_finance(app, db, deps):
         rows = FinAudit.query.order_by(FinAudit.id.desc()).limit(120).all()
         return jsonify(items=[dict(id=r.id, ts=r.ts, admin=r.admin_id, action=r.action, target=r.target, details=r.details) for r in rows])
 
-    return dict(record_gift=record_gift, pay_commissions=pay_commissions, wallet_sync=wallet_sync,
+    @app.get('/api/creator/dashboard')
+    @auth
+    def creator_dashboard():
+        uid = g.user.id
+        since_30 = now() - 30 * 86400
+        gifts = db.session.query(
+            func.count(FinGiftTx.id),
+            func.coalesce(func.sum(FinGiftTx.total), 0),
+            func.coalesce(func.sum(FinGiftTx.host_earning), 0)
+        ).filter(FinGiftTx.receiver_id == uid, FinGiftTx.ts >= since_30).one()
+        commission_30 = db.session.query(func.coalesce(func.sum(FinCommission.amount), 0)).filter(
+            FinCommission.agent_id == uid, FinCommission.ts >= since_30
+        ).scalar() or 0
+        activity_30 = db.session.query(func.coalesce(func.sum(Tx.amount), 0)).filter(
+            Tx.user_id == uid, Tx.kind == 'host_activity', Tx.amount > 0, Tx.ts >= since_30
+        ).scalar() or 0
+        # This repository currently has no authoritative follow table/model.
+        # Return an explicit unavailable state rather than showing a misleading zero.
+        follower_tracking_enabled = 'user_follow' in db.metadata.tables
+        followers = None
+        if follower_tracking_enabled:
+            follow_table = db.metadata.tables['user_follow']
+            followers = db.session.query(func.count()).select_from(follow_table).filter(
+                follow_table.c.target_id == uid
+            ).scalar() or 0
+        withdrawals = Withdraw.query.filter_by(user_id=uid).order_by(Withdraw.id.desc()).limit(20).all()
+        return jsonify(
+            balances=dict(earnings_coins=int(g.user.earnings or 0),
+                          gift_earnings_coins=int(g.user.gift_earnings or 0),
+                          pk_earnings_coins=max(0, int(g.user.earnings or 0) - int(g.user.gift_earnings or 0)),
+                          commission_coins=int(g.user.commission or 0)),
+            last_30_days=dict(gift_count=int(gifts[0] or 0),
+                              gift_volume_coins=int(gifts[1] or 0),
+                              host_earned_coins=int(gifts[2] or 0),
+                              commission_earned_coins=int(commission_30),
+                              activity_reward_coins=int(activity_30)),
+            followers=int(followers) if followers is not None else None,
+            follower_tracking_enabled=follower_tracking_enabled,
+            withdrawals=[dict(id=w.id, coins=int(w.coins or 0), birr=int(w.birr or 0),
+                               status=w.status, method=w.method, ts=w.ts,
+                               earnings_coins=int(w.earnings_coins or 0),
+                               commission_coins=int(w.commission_coins or 0))
+                         for w in withdrawals],
+            note='Balances are recorded coin balances, not a guarantee of cash redemption. Activity rewards are reported separately and are not included in withdrawable earnings.'
+        )
+
+    return dict(record_gift=record_gift, find_gift_idem=find_gift_idem, pay_commissions=pay_commissions, wallet_sync=wallet_sync,
                 referral_register=referral_register, referral_qualify=referral_qualify,
                 reward_allowed=reward_allowed, reward_spend=reward_spend, ledger=ledger,
                 audit=audit, flag=flag, pnl=pnl, reconcile=reconcile, scan=scan, scheme=scheme)

@@ -203,6 +203,103 @@ body:has(.mini.on) .golive{bottom:calc(136px + var(--sb))}
 .pod>div.p1{padding:22px 4px;border-color:#ffd700;background:linear-gradient(180deg,#ffd70033,transparent)}.pod .ell{max-width:100%}
 #lv-follow{background:linear-gradient(135deg,#ff4d8d,#9b5cff);border-radius:16px;padding:4px 11px;font-size:12px;font-weight:800;flex:none}
 #lv-hint{position:absolute;top:42%;left:50%;transform:translateX(-50%);z-index:3;background:#0009;border-radius:20px;padding:8px 16px;font-size:13px;pointer-events:none;display:none;white-space:nowrap}
+
+/* Twenty One Party · premium visual refinement */
+:root{
+ --bg:#080817;--bg2:#17102f;--card:rgba(27,25,57,.72);
+ --line:rgba(210,203,255,.13);--pri:#7568f5;--pri2:#b35cf6;
+ --gold:#ffd66b;--mut:#b7b3d0;--ok:#39e6ae;--bad:#ff6689;
+ --glow:0 14px 38px rgba(4,3,18,.32);
+}
+html,body{background:
+ radial-gradient(ellipse at 8% 0%,rgba(111,91,244,.2),transparent 38%),
+ radial-gradient(ellipse at 100% 38%,rgba(183,78,224,.13),transparent 34%),
+ linear-gradient(155deg,#080817 0%,#100d26 48%,#17102f 100%) fixed}
+body{letter-spacing:.05px}
+.page{padding-left:16px;padding-right:16px;scrollbar-width:thin;scrollbar-color:#6559b8 transparent}
+.page.on{animation:pageEnter .32s cubic-bezier(.2,.7,.2,1)}
+@keyframes pageEnter{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+h2{font-size:22px;letter-spacing:-.45px;font-weight:800;margin:8px 0 14px}
+h3{font-size:13px;letter-spacing:.55px;text-transform:uppercase;color:#c3bde0}
+.card,.game,.fi,.gi{background:linear-gradient(145deg,rgba(39,35,78,.78),rgba(22,20,49,.8));border:1px solid rgba(205,196,255,.12);box-shadow:0 8px 24px rgba(0,0,0,.14);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px)}
+.card{border-radius:19px;padding:14px;margin-bottom:12px;transition:transform .2s,border-color .2s,box-shadow .2s}
+.hero{position:relative;isolation:isolate;overflow:hidden;border-radius:23px;padding:19px;background:linear-gradient(125deg,rgba(92,79,211,.48),rgba(153,67,199,.25) 58%,rgba(255,202,91,.12));border:1px solid rgba(213,197,255,.2);box-shadow:0 16px 36px rgba(34,18,89,.22)}
+.hero:after{content:"";position:absolute;width:170px;height:170px;border-radius:50%;right:-48px;top:-75px;background:radial-gradient(circle,rgba(255,221,135,.25),rgba(255,221,135,0) 70%);z-index:-1}
+.logo{font-size:19px;letter-spacing:.25px;background:linear-gradient(100deg,#fff0b2 0%,#ffd66b 38%,#d8b9ff 78%,#fff 100%);-webkit-background-clip:text;background-clip:text}
+.btn{border-radius:14px;background:linear-gradient(120deg,#6e62ed,#a34de0);box-shadow:0 7px 18px rgba(104,79,224,.22);transition:transform .16s,filter .16s,box-shadow .16s}
+.btn.gold{background:linear-gradient(120deg,#ffe49a,#f7b942);color:#33230b;box-shadow:0 7px 18px rgba(247,185,66,.18)}
+.btn.ghost{background:rgba(255,255,255,.055);border:1px solid rgba(220,212,255,.16);box-shadow:none}
+.btn.bad{background:linear-gradient(120deg,#ff6689,#d94678)}
+.btn:active{transform:scale(.97);filter:brightness(1.12)}
+.chip{border-radius:13px;background:rgba(255,255,255,.055);border-color:rgba(220,212,255,.13);padding:8px 14px}
+.chip.on{background:linear-gradient(120deg,#675de2,#a64bdf);box-shadow:0 5px 16px rgba(115,87,228,.2)}
+input,textarea,select{background:rgba(255,255,255,.055);border:1px solid rgba(220,212,255,.15);border-radius:14px;transition:border-color .2s,background .2s,box-shadow .2s}
+input:focus,textarea:focus,select:focus{border-color:#a68aff;background:rgba(130,105,255,.09);box-shadow:0 0 0 3px rgba(145,115,255,.12)}
+.av{box-shadow:0 5px 15px rgba(0,0,0,.25)}
+.pill{background:linear-gradient(120deg,rgba(255,214,107,.16),rgba(255,166,70,.08));border-color:rgba(255,214,107,.35)}
+nav{padding:8px 7px calc(8px + var(--sb));background:rgba(9,8,25,.88);border-top:1px solid rgba(213,203,255,.13);box-shadow:0 -10px 30px rgba(0,0,0,.22);backdrop-filter:blur(22px);-webkit-backdrop-filter:blur(22px)}
+nav button{position:relative;border-radius:14px;padding:5px 1px;color:#9691b5;font-weight:600;transition:color .2s,background .2s}
+nav button i{font-size:20px;transition:transform .2s,filter .2s}
+nav button.on{color:#fff;background:linear-gradient(180deg,rgba(139,111,255,.17),rgba(139,111,255,.04))}
+nav button.on:before{content:"";position:absolute;top:-8px;left:35%;right:35%;height:3px;border-radius:4px;background:linear-gradient(90deg,#8a7bff,#ffd66b);box-shadow:0 0 12px #9b7cff}
+nav button.on i{transform:translateY(-1px) scale(1.08);filter:none}
+.game{border-radius:19px;padding:20px 8px;transition:transform .2s,border-color .2s}
+.game b{font-size:37px;filter:drop-shadow(0 4px 12px rgba(161,121,255,.25))}
+.game span{color:#ffdc83;font-weight:700}
+.fi,.gi{border-radius:16px;transition:transform .18s,border-color .18s,background .18s}
+.fi:active,.gi:active,.game:active{transform:scale(.975)}
+.sheet{background:linear-gradient(160deg,#21183f,#100d26);border:1px solid rgba(220,212,255,.15);box-shadow:0 -18px 55px rgba(0,0,0,.3)}
+.ov{background:rgba(3,3,15,.72);backdrop-filter:blur(5px)}
+.toast{background:rgba(18,15,39,.96);border-color:rgba(220,212,255,.2);box-shadow:0 12px 34px rgba(0,0,0,.3);backdrop-filter:blur(16px)}
+.room-card{padding:3px 0}
+.live{box-shadow:0 0 10px rgba(57,230,174,.7)}
+.bar{background:rgba(10,8,25,.78);backdrop-filter:blur(16px)}
+.rb{border-color:rgba(220,212,255,.15);box-shadow:0 5px 14px rgba(0,0,0,.2)}
+.mini{border:1px solid rgba(220,212,255,.18);background:linear-gradient(120deg,#4538a5,#8545c7);box-shadow:0 12px 34px rgba(29,13,72,.5)}
+.foot a{border-color:rgba(220,212,255,.14)}
+.badge,.hbadge,.abadge{letter-spacing:.2px}
+@media(hover:hover){.card:hover{border-color:rgba(174,153,255,.28);box-shadow:0 13px 30px rgba(0,0,0,.22)}.btn:hover{filter:brightness(1.08)}.game:hover,.fi:hover,.gi:hover{transform:translateY(-2px);border-color:rgba(174,153,255,.28)}}
+@media(min-width:600px){.page{max-width:620px;margin:0 auto;left:0;right:0;padding-left:22px;padding-right:22px}nav{justify-content:center;gap:8px}nav button{max-width:94px}}
+@media(prefers-reduced-motion:reduce){*,*:before,*:after{animation-duration:.01ms!important;animation-iteration-count:1!important;scroll-behavior:auto!important;transition-duration:.01ms!important}}
+
+
+/* Home discovery: clearer hierarchy, richer live cards, and thumb-friendly controls. */
+#p-home .hm-top{position:sticky;top:0;z-index:12;margin:-12px -14px 12px;padding:10px 14px 11px;background:linear-gradient(180deg,rgba(12,8,31,.97),rgba(12,8,31,.88));border-bottom:1px solid rgba(218,205,255,.1);backdrop-filter:blur(22px);-webkit-backdrop-filter:blur(22px)}
+#p-home .hm-tabs{gap:18px;align-items:center}
+#p-home .hm-tabs button{padding:8px 1px 9px;font-size:13px;letter-spacing:.1px;transition:color .18s,transform .18s}
+#p-home .hm-tabs button.on{font-size:15px;font-weight:800;color:#fff}
+#p-home .hm-quick{gap:9px;margin:0 0 15px}
+#p-home .hm-quick button{min-height:48px;border-radius:15px;padding:10px 6px;background:linear-gradient(145deg,rgba(49,42,91,.86),rgba(25,22,54,.9));border:1px solid rgba(211,195,255,.15);box-shadow:0 7px 18px rgba(0,0,0,.16);font-size:11.5px;font-weight:750;transition:transform .16s,border-color .16s}
+#p-home .hm-quick button:active{transform:scale(.96);border-color:rgba(255,214,107,.42)}
+#p-home .fgrid{gap:11px}
+#p-home .fcard{border:1px solid rgba(224,211,255,.19);border-radius:19px;box-shadow:0 12px 28px rgba(0,0,0,.24);isolation:isolate;transition:transform .2s,border-color .2s,box-shadow .2s}
+#p-home .fcard:after{content:"";position:absolute;inset:0;z-index:0;background:linear-gradient(180deg,rgba(9,5,22,.08) 0%,transparent 38%,rgba(7,4,18,.84) 100%);pointer-events:none}
+#p-home .fcard .tg,#p-home .fcard .vw,#p-home .fcard .inf{z-index:1}
+#p-home .fcard .tg{border:1px solid rgba(255,255,255,.22);box-shadow:0 4px 12px rgba(0,0,0,.22);padding:4px 8px}
+#p-home .fcard .vw{padding:4px 8px;border:1px solid rgba(255,255,255,.14);backdrop-filter:blur(8px)}
+#p-home .fcard .inf{padding:34px 10px 10px}
+#p-home .fcard .inf>div:first-child{font-size:13px;letter-spacing:.1px}
+#p-home .fcard:active{transform:scale(.975);border-color:rgba(255,214,107,.55)}
+#p-home .empty{padding:34px 16px;border:1px dashed rgba(205,190,255,.17);border-radius:18px;background:rgba(255,255,255,.025)}
+.golive{border:1px solid rgba(255,255,255,.22);box-shadow:0 10px 30px rgba(153,65,209,.38),0 0 0 5px rgba(157,91,255,.08);padding:14px 21px}
+@media(min-width:600px){#p-home .hm-top{margin-left:-22px;margin-right:-22px;padding-left:22px;padding-right:22px}}
+@media(prefers-reduced-motion:reduce){#p-home .fcard,#p-home .hm-quick button{transition:none}}
+
+/* Creator studio dashboard */
+.cd-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.cd-balance{padding:18px;border-radius:19px;background:linear-gradient(130deg,rgba(108,91,225,.34),rgba(163,77,224,.18),rgba(255,214,107,.08));border:1px solid rgba(218,204,255,.2);margin-bottom:12px}
+.cd-total{font-size:30px;font-weight:850;letter-spacing:-.7px;color:#ffe39a;margin:4px 0}
+.cd-total small{font-size:12px;color:#d8cdef;font-weight:600}
+.cd-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+.cd-stat{padding:13px;border-radius:15px;background:linear-gradient(145deg,rgba(42,37,79,.88),rgba(22,19,49,.9));border:1px solid rgba(211,195,255,.13);min-width:0}
+.cd-stat span,.cd-stat small{display:block;color:#bcb4d7;font-size:11px}
+.cd-stat b{display:block;font-size:21px;margin:5px 0 2px;overflow-wrap:anywhere}
+.cd-stat small{font-size:10px}
+.cd-follow{margin:12px 0;padding:12px 14px;border-radius:14px;background:rgba(255,255,255,.045);border:1px solid rgba(211,195,255,.12);font-size:12px}
+.cd-follow b{float:right;color:#ffe39a}
+.cd-row{display:flex;align-items:center;gap:10px;padding:11px 3px;border-bottom:1px solid rgba(211,195,255,.1)}
+.cd-note{line-height:1.55;margin-top:13px}
+
 </style>
 </head>
 <body>
@@ -241,13 +338,13 @@ body:has(.mini.on) .golive{bottom:calc(136px + var(--sb))}
 <button data-p="wallet"><i>👛</i>Wallet</button><button data-p="community"><i>💬</i>Community</button><button data-p="me"><i>👤</i>Me</button>
 </nav>
 <div id="room">
-  <div class="rh"><button onclick="minimize()">⌄</button><div class="t"><div class="ell" id="r-name" style="font-weight:700"></div><div class="mut"><span class="live"></span><span id="r-on">0</span> online · <span class="vs" id="r-vs">🔇</span></div></div><button onclick="exitRoom()">✕</button></div>
+  <div class="rh"><button onclick="minimize()">⌄</button><div class="t"><div class="ell" id="r-name" style="font-weight:700"></div><div class="mut"><span class="live"></span><span id="r-on" onclick="openAudience()" style="cursor:pointer;text-decoration:underline">0</span> online · <span class="vs" id="r-vs">🔇</span></div></div><button onclick="exitRoom()">✕</button></div>
   <div class="seats"><div class="hostrow" id="r-host"></div><div class="sg" id="r-seats"></div></div>
   <div class="chat" id="r-chat"></div>
   <div class="bar"><button class="rb mic" id="r-mic" onclick="toggleMic()">🎤</button><input id="r-in" placeholder="Message…" maxlength="200" onkeydown="if(event.key==='Enter')sendChat()"><button class="rb" onclick="openGift()">🎁</button><button class="rb" style="background:linear-gradient(135deg,var(--pri),var(--pri2))" onclick="sendChat()">➤</button></div>
 </div>
 <div id="live"><div id="lv-video"></div><div id="lv-hint">⬆️ Swipe up for the next live</div>
-  <div class="lv-top"><div class="row sp" id="lv-host" style="background:#0007;border-radius:24px;padding:4px 12px 4px 4px;flex:0 1 auto"></div><button id="lv-follow" style="display:none" onclick="lvFollow()">＋ Follow</button><span class="lv-tag">LIVE</span><span class="vs">👁 <span id="lv-on">0</span></span><span class="vs" id="lv-vs">⏳</span><span class="sp"></span><button class="rb" id="lv-pk" style="width:36px;height:36px;font-size:15px;display:none" onclick="startPKFromLive()">⚔️</button><button class="rb" style="width:36px;height:36px;font-size:15px" onclick="exitRoom()">✕</button></div>
+  <div class="lv-top"><div class="row sp" id="lv-host" style="background:#0007;border-radius:24px;padding:4px 12px 4px 4px;flex:0 1 auto"></div><button id="lv-follow" style="display:none" onclick="lvFollow()">＋ Follow</button><span class="lv-tag">LIVE</span><span class="vs">👁 <span id="lv-on" onclick="openAudience()" style="cursor:pointer;text-decoration:underline">0</span></span><span class="vs" id="lv-vs">⏳</span><span class="sp"></span><button class="rb" id="lv-pk" style="width:36px;height:36px;font-size:15px;display:none" onclick="startPKFromLive()">⚔️</button><button class="rb" style="width:36px;height:36px;font-size:15px" onclick="exitRoom()">✕</button></div>
   <div class="lv-bot"><div id="lv-chat"></div><div class="row"><input id="lv-in" placeholder="Message…" maxlength="200" style="background:#0007" onkeydown="if(event.key==='Enter')sendChat()"><button class="rb" id="lv-flip" style="display:none" onclick="flipCam()">🔄</button><button class="rb" id="lv-mic" style="display:none" onclick="liveMic()">🎤</button><button class="rb" onclick="openGift()">🎁</button><button class="rb" style="background:linear-gradient(135deg,var(--pri),var(--pri2))" onclick="sendChat()">➤</button></div></div>
 </div>
 <div id="gfx" aria-hidden="true"><div id="gfx-lane"></div></div>
@@ -305,7 +402,7 @@ async function resume(){
   if(r.status===401||r.status===403){store.del('tk');TOKEN='';return false}
   if(!r.ok)throw new Error('Server error. Try again');
   const d=await r.json();S.me=d.me;S.cfg=d.cfg;return true}
-function startApp(){$('#auth').classList.remove('on');$('#splash')&&$('#splash').remove();$('#nav').style.display='';go('home')}
+function startApp(){$('#auth').classList.remove('on');$('#splash')&&$('#splash').remove();$('#nav').style.display='';go('home');refreshNotificationBadge()}
 let AUTH_MODE='login';
 function pvGet(){try{const v=JSON.parse(store.get('pv')||'null');return v&&Date.now()-v.ts<25*60000?v:null}catch(e){return null}}
 function showVerify(v){$('#au-form').style.display=v?'none':'';$('.au-tabs').style.display=v?'none':'';$('#au-verify').style.display=v?'':'none';
@@ -345,7 +442,37 @@ function modal(html,onclose){const o=document.createElement('div');o.className='
 const closeModal=()=>{const m=$$('.ov').pop();m&&m.close()};
 async function run(btn,fn){if(btn)btn.disabled=true;try{return await fn()}catch(e){toast(e.message)}finally{if(btn)btn.disabled=false}}
 function shrink(file,max=1100,q=.8){return new Promise((res,rej)=>{const i=new Image();i.onload=()=>{const k=Math.min(1,max/Math.max(i.width,i.height));const c=document.createElement('canvas');c.width=i.width*k;c.height=i.height*k;c.getContext('2d').drawImage(i,0,0,c.width,c.height);c.toBlob(b=>b?res(b):rej(new Error('image')),'image/jpeg',q)};i.onerror=()=>rej(new Error('Not an image'));i.src=URL.createObjectURL(file)})}
-const topbar=()=>`<div class="top"><div class="logo">🎙 Twenty One</div><span class="pill" onclick="go('wallet')">🪙 <span class="coins-n">${fmt(S.me.coins)}</span></span></div>`;
+let NT_UNREAD=0;
+const topbar=()=>`<div class="top"><div class="logo">🎙 Twenty One</div><div class="row"><button class="hm-ic" onclick="openNotifications()" aria-label="Notifications" style="position:relative">🔔<span id="nt-count" style="display:${NT_UNREAD?'':'none'};position:absolute;top:-3px;right:-3px;background:var(--bad);border-radius:10px;padding:1px 5px;font-size:10px">${NT_UNREAD>99?'99+':NT_UNREAD}</span></button><span class="pill" onclick="go('wallet')">🪙 <span class="coins-n">${fmt(S.me.coins)}</span></span></div></div>`;
+async function refreshNotificationBadge(){
+  if(!TOKEN)return;
+  try{const d=await api('/api/notifications');NT_UNREAD=d.unread||0;
+    const b=$('#nt-count');if(b){b.textContent=NT_UNREAD>99?'99+':NT_UNREAD;b.style.display=NT_UNREAD?'':'none'}
+  }catch(e){}
+}
+async function openNotifications(){
+  const o=modal('<div class="empty">Loading notifications…</div>');
+  try{
+    const d=await api('/api/notifications');
+    if(!o.isConnected)return;
+    o.firstChild.innerHTML=`<div class="row"><h3 class="sp">🔔 Notifications</h3><button class="btn sm ghost" id="nt-all">Mark all read</button></div>${d.items.length?d.items.map(x=>`<div class="card" data-notification="${x.id}" data-target="${esc(x.target)}" style="cursor:pointer;opacity:${x.read?'.7':'1'}"><div class="row"><span>${x.kind==='follow'?'💗':x.kind==='room_invite'?'🎥':x.kind==='pk_result'?'⚔️':'🔔'}</span><div class="sp"><b>${esc(x.title)}</b><div class="mut">${esc(x.body)}</div><div class="mut">${ago(x.ts)}</div></div>${x.read?'':'<span class="live"></span>'}</div></div>`).join(''):'<div class="empty">No notifications yet</div>'}`;
+    $('[data-notification]',o).forEach(el=>el.onclick=()=>openNotification(+el.dataset.notification,el.dataset.target,o));
+    const all=$('#nt-all',o);if(all)all.onclick=()=>run(all,async()=>{await api('/api/notifications/read',{});NT_UNREAD=0;refreshNotificationBadge();o.close();toast('All notifications marked read')});
+    await api('/api/notifications/read',{});
+    NT_UNREAD=0;refreshNotificationBadge();
+  }catch(e){if(o.isConnected)o.firstChild.innerHTML=`<div class="empty">${esc(e.message)}</div>`}
+}
+async function openNotification(id,target,o){
+  try{await api('/api/notifications/read',{id});}catch(e){}
+  if(o&&o.isConnected)o.close();
+  refreshNotificationBadge();
+  const [kind,key]=String(target||'').split(':');const value=Number(key);
+  if(!Number.isSafeInteger(value)||value<1)return;
+  if(kind==='profile')openProfile(value);
+  else if(kind==='room')enterRoom(String(key));
+  else if(kind==='pk')enterPK(value);
+}
+setInterval(()=>{if(TOKEN&&!document.hidden)refreshNotificationBadge()},45000);
 const footbar=()=>`<div class="foot"><a href="${esc(S.cfg.channel)}" target="_blank">📢 Join Channel</a><a href="https://t.me/${esc((S.cfg.support||'').replace('@',''))}" target="_blank">🎧 Support</a></div>`;
 const LOAD={home:renderHome,rooms:renderRooms,games:renderGames,wallet:renderWallet,community:renderCommunity,me:renderMe,rank:renderRank};
 function go(p){PAGE=p;$$('.page').forEach(e=>e.classList.toggle('on',e.id==='p-'+p));$$('#nav button').forEach(b=>b.classList.toggle('on',b.dataset.p===p));hideRoom();LOAD[p]();hap()}
@@ -379,8 +506,10 @@ async function openProfile(uid){const o=modal('<div class="empty">…</div>');
     const onStage=R&&Object.values(R.seats).some(x=>x.u.id===uid);
     box.innerHTML=`<div class="col" style="align-items:center;text-align:center">${av(u,'l')}<b style="font-size:20px">${esc(u.name)}</b><div><span class="badge">${u.lvi} Lv.${u.lv+1} ${esc(u.lvn)}</span> ${vipTag(u)} ${hostTag(u)} ${agentTag(u)}</div><div class="mut">${esc(u.bio||'')}</div></div>
     <div class="pf-stats"><button data-f="followers"><b>${fmt(d.followers)}</b><span class="mut">Followers</span></button><button data-f="following"><b>${fmt(d.following)}</b><span class="mut">Following</span></button><button><b class="gold">${fmt(d.recv)}</b><span class="mut">Received</span></button><button><b class="gold">${fmt(d.sent)}</b><span class="mut">Sent</span></button></div>
-    <div class="col">${d.me?'':`<button class="btn ${d.is_following?'ghost':''}" id="pf-f">${d.is_following?'✓ Following':'＋ Follow'}</button>`}${d.room&&!(R&&R.id===d.room.id)?`<button class="btn bad" id="pf-w">${d.room.kind==='live'?'📹 Watch live':'🎙 Join party'}</button>`:''}${!d.me&&onStage?'<button class="btn gold" id="pf-g">🎁 Send gift</button>':''}</div>`;
-    $$('[data-f]',box).forEach(b=>b.onclick=()=>openFollows(uid,b.dataset.f));
+    <div class="col">${d.me?'':`<button class="btn ${d.is_following?'ghost':''}" id="pf-f">${d.is_following?'✓ Following':'＋ Follow'}</button><div class="row"><button class="btn ghost" id="pf-block">${d.is_blocked?'Unblock user':'🚫 Block user'}</button><button class="btn ghost" id="pf-report">⚑ Report</button></div>`}${d.room&&!(R&&R.id===d.room.id)?`<button class="btn bad" id="pf-w">${d.room.kind==='live'?'📹 Watch live':'🎙 Join party'}</button>`:''}${!d.me&&onStage?'<button class="btn gold" id="pf-g">🎁 Send gift</button>':''}</div>`;
+    $('[data-f]',box).forEach(b=>b.onclick=()=>openFollows(uid,b.dataset.f));
+     const bl=$('#pf-block',box);if(bl)bl.onclick=()=>run(bl,async()=>{if(!d.is_blocked&&!confirm('Block this user? This hides their profile, rooms and messages from you.'))return;await api('/api/users/'+uid+'/block',{blocked:!d.is_blocked});o.close();toast(d.is_blocked?'User unblocked':'User blocked')});
+     const rp=$('#pf-report',box);if(rp)rp.onclick=()=>{const reason=prompt('Reason: harassment, hate, spam, impersonation, sexual_content, scam, other','harassment');if(!reason)return;run(rp,async()=>{await api('/api/users/'+uid+'/report',{reason:reason.trim().toLowerCase(),details:''});toast('Report submitted for review')})};
     const f=$('#pf-f',box);if(f)f.onclick=()=>run(f,async()=>{const r=await api('/api/follow/'+uid,{follow:!d.is_following});hap('medium');lvSetFollow(uid,r.following);await draw()});
     const w=$('#pf-w',box);if(w)w.onclick=()=>watch(d.room.id);
     const gb=$('#pf-g',box);if(gb)gb.onclick=()=>{o.close();openGift(uid)}
@@ -508,6 +637,15 @@ async function seatTap(i){const r=R;if(!r)return;const s=r.seats[i];
   ${amHost&&!mine&&u.id!==r.host?`<button class="btn ghost sm" onclick="seatAct(${u.id},'${s.m?'unmute':'mute'}')">${s.m?'🔊':'🔇'}</button><button class="btn bad sm" onclick="seatAct(${u.id},'kick')">⛔</button>`:''}</div>`)}
 async function seatLeave(){closeModal();await run(null,async()=>{await api('/api/rooms/'+R.id+'/leave-seat',{});poll()})}
 async function seatAct(uid,a){closeModal();await run(null,async()=>{await api('/api/rooms/'+R.id+'/seat-action',{uid,action:a});poll()})}
+async function openAudience(){
+  if(!R)return;
+  const rid=R.id,o=modal('<div class="empty">Loading audience…</div>');
+  try{
+    const d=await api('/api/rooms/'+rid+'/audience');
+    if(!o.isConnected)return;
+    o.firstChild.innerHTML=`<h3>👥 Audience · ${fmt(d.total)} online</h3>${d.truncated?'<div class="mut">Showing the first 100 active users</div>':''}${d.users.length?d.users.map(u=>userRow(u,`<span class="badge">${esc(u.role)}</span>`)).join(''):'<div class="empty">No active audience</div>'}`;
+  }catch(e){if(o.isConnected)o.firstChild.innerHTML=`<div class="empty">${esc(e.message)}</div>`}
+}
 async function sendChat(){const i=$(R&&R.kind==='live'?'#lv-in':'#r-in'),t=i.value.trim();if(!t||!R)return;i.value='';try{await api('/api/rooms/'+R.id+'/chat',{text:t});poll()}catch(e){toast(e.message)}}
 function addMsg(m,anim){const c=$(R&&R.kind==='live'?'#lv-chat':'#r-chat'),near=c.scrollHeight-c.scrollTop-c.clientHeight<90,d=document.createElement('div');
   if(m.k==='gift'){const g=m.meta||{};
@@ -556,24 +694,28 @@ function clearFx(){FXGEN++;BIGQ=[];BIGBUSY=false;COMBO.forEach(c=>clearTimeout(c
 function renderLiveHost(){const h=R&&R.seats[0];if(h)lvLoadFollow(h.u.id);$('#lv-host').innerHTML=h?`${av(h.u,'s')}<div style="line-height:1.2"><b class="ell" style="display:block;max-width:110px">${esc(h.u.name)}</b><span class="mut ell" style="color:#ddd;display:block;max-width:110px">${esc(R.name)}</span></div>`:'…'}
 async function flipCam(){try{const c=await AgoraRTC.getCameras();if(c.length<2||!V.vtrack)return;V.camI=((V.camI||0)+1)%c.length;await V.vtrack.setDevice(c[V.camI].deviceId)}catch(e){toast('Camera switch failed')}}
 async function liveMic(){if(!V.track||!R)return;R.selfMute=!R.selfMute;await V.track.setEnabled(!R.selfMute);$('#lv-mic').textContent=R.selfMute?'🔇':'🎤'}
-let GF={to:0,gift:null,qty:1};
+function newGiftRequestId(){
+  const bytes=new Uint8Array(16);crypto.getRandomValues(bytes);
+  return Array.from(bytes,b=>b.toString(16).padStart(2,'0')).join('');
+}
+let GF={to:0,gift:null,qty:1,requestId:''};
 function openGift(to){if(!R)return;const r=R;
   const rec=Object.values(r.seats).filter(s=>s.u.id!==S.me.id);if(!rec.length)return toast('No one to gift');
-  GF={to:to||rec[0].u.id,gift:S.cfg.gifts[0].key,qty:1};
+  GF={to:to||rec[0].u.id,gift:S.cfg.gifts[0].key,qty:1,requestId:newGiftRequestId()};
   const m=modal('');const draw=()=>{const g=S.cfg.gifts.find(x=>x.key===GF.gift);
    m.firstChild.innerHTML=`<div class="row"><h3 class="sp" style="margin:0">🎁 Gift</h3><span class="pill">🪙 <span class="coins-n">${fmt(S.me.coins)}</span></span></div>
    <div class="chips" style="margin:10px 0">${rec.map(s=>`<div class="chip ${GF.to===s.u.id?'on':''}" onclick="GF.to=${s.u.id};this.parentNode.querySelectorAll('.chip').forEach(c=>c.classList.remove('on'));this.classList.add('on')">${esc(s.u.name.slice(0,12))}</div>`).join('')}</div>
    <div class="gg">${S.cfg.gifts.map(x=>`<div class="gi tier-${x.tier} ${GF.gift===x.key?'on':''}" data-k="${x.key}"><b>${x.emoji}</b>${esc(x.name)}<div class="gold">🪙${fmt(x.price)}</div>${x.tier==='lucky'?'<div class="mut" style="color:var(--ok)">LUCKY</div>':''}</div>`).join('')}</div>
    <div class="row" style="margin-top:12px"><div class="chips sp">${[1,5,10,20,50].map(q=>`<div class="chip ${GF.qty===q?'on':''}" data-q="${q}">×${q}</div>`).join('')}</div><button class="btn gold" id="g-send">Send · ${fmt(g.price*GF.qty)}</button></div>`;
    $$('.gi',m).forEach(e=>e.onclick=()=>{GF.gift=e.dataset.k;draw()});$$('[data-q]',m).forEach(e=>e.onclick=()=>{GF.qty=+e.dataset.q;draw()});
-   $('#g-send',m).onclick=e=>run(e.target,async()=>{const d=await api('/api/rooms/'+r.id+'/gift',{to:GF.to,gift:GF.gift,qty:GF.qty});S.me.coins=d.coins;setMe(S.me);
-     if(d.lucky>0)toast('🍀 LUCKY ×'+d.lucky+'! +'+fmt(d.refund)+' coins');else toast('✅ Sent');
+   $('#g-send',m).onclick=e=>run(e.target,async()=>{const requestId=GF.requestId;const d=await api('/api/rooms/'+r.id+'/gift',{to:GF.to,gift:GF.gift,qty:GF.qty,request_id:requestId});GF.requestId=newGiftRequestId();S.me.coins=d.coins;setMe(S.me);
+     if(d.duplicate)toast('✅ This gift was already processed');else if(d.lucky>0)toast('🍀 LUCKY ×'+d.lucky+'! +'+fmt(d.refund)+' coins');else toast('✅ Sent');
      hap('medium');poll()})};draw()}
 const GM={dice:{n:'Dice',i:'🎲',x:'4.2x',pick:[1,2,3,4,5,6],hint:'Guess the number'},flip:{n:'Coin flip',i:'🪙',x:'1.4x',pick:[1,2],lab:['Heads','Tails'],hint:'Pick'},wheel:{n:'Lucky wheel',i:'🎡',x:'5x'},race:{n:'Horse race',i:'🐎',x:'4.5x',pick:[1,2,3,4,5,6],hint:'Pick a horse'},box:{n:'Mystery box',i:'🎁',x:'10x',pick:[1,2,3],hint:'Pick a box'}};
 async function renderGames(){
   $('#p-games').innerHTML=topbar()+`<h2>🎮 Games</h2><div class="grid2">${Object.entries(GM).map(([k,g])=>`<div class="game" onclick="openGame('${k}')"><b>${g.i}</b>${g.n}<br><span>up to ${g.x}</span></div>`).join('')}</div>
   <h3>⚔️ P2P battles (${S.cfg.p2p_mult}x)</h3><button class="btn gold" style="width:100%;margin-bottom:10px" onclick="p2pNew()">＋ Open battle</button><div id="p2p"><div class="empty">…</div></div>
-  <h3>⚔️ Live PK Battle</h3><button class="btn bad" style="width:100%;margin-bottom:10px" onclick="openPKArena()">⚔️ PK Arena</button>
+  <h3>⚔️ Live PK Battle</h3><button class="btn bad" style="width:100%;margin-bottom:10px" onclick="openPKArena()">⚔️ PK Arena</button><button class="btn ghost" style="width:100%;margin-bottom:10px" onclick="openPKHistory()">📜 My PK History</button>
   <h3>🍀 Lucky Gift</h3><button class="btn gold" style="width:100%;margin-bottom:10px" onclick="openLucky()">🍀 Lucky odds & stats</button>${footbar()}`;loadP2P()}
 async function loadP2P(){try{const d=await api('/api/games');const el=$('#p2p');if(!el)return;el.innerHTML=d.p2p.length?d.p2p.map(x=>`<div class="card row"><div class="sp"><b>${esc(x.name)}</b><div class="gold">🪙 ${fmt(x.bet)}</div></div>${x.mine?`<button class="btn bad sm" onclick="p2pCancel(${x.id})">Cancel</button>`:`<button class="btn sm" onclick="p2pJoin(${x.id},${x.bet})">⚔️ Join</button>`}</div>`).join(''):'<div class="empty">No open battles</div>'}catch(e){}}
 function p2pNew(){const m=modal(`<h3>⚔️ Open battle</h3><input id="pb" type="number" inputmode="numeric" placeholder="Bet (${S.cfg.min_bet}–${S.cfg.max_bet})"><button class="btn gold" id="pbb" style="width:100%;margin-top:10px">Open</button>`);
@@ -609,6 +751,19 @@ async function openPKArena(){const m=modal('<div class="empty">…</div>');
   m.firstChild.innerHTML=`<h3>⚔️ PK Arena</h3>${myHost?`<button class="btn bad" style="width:100%;margin-bottom:12px" onclick="pkCreate()">＋ Create PK Match</button>`:'<div class="mut" style="margin-bottom:10px;text-align:center">Become a host to create PK matches</div>'}
   ${d.pks.length?d.pks.map(pk=>`<div class="card" style="border-color:rgba(255,45,85,.3)"><div class="row"><div class="sp" style="text-align:center">${av(pk.host1,'s')}<b>${esc(pk.host1?pk.host1.name:'?')}</b><div class="gold">${fmt(pk.host1_gifts)}</div></div><b class="gold">VS</b><div class="sp" style="text-align:center">${pk.host2?av(pk.host2,'s')+'<b>'+esc(pk.host2.name)+'</b><div class="gold">'+fmt(pk.host2_gifts)+'</div>':'<div class="mut">Waiting…</div>'}</div></div>
    <div class="row" style="margin-top:8px"><button class="btn sm sp" onclick="closeModal();enterPK(${pk.id})">👁 Watch</button>${myHost&&!pk.host2?`<button class="btn sm bad sp" onclick="pkJoin(${pk.id})">⚔️ Join as Host 2</button>`:''}</div></div>`).join(''):'<div class="empty">No active PK matches</div>'}`}catch(e){m.close();toast(e.message)}}
+async function openPKHistory(){
+  const o=modal('<div class="empty">Loading PK history…</div>');
+  try{
+    const d=await api('/api/pk/history');
+    if(!o.isConnected)return;
+    const dateFmt=new Intl.DateTimeFormat('en-ET',{dateStyle:'medium',timeStyle:'short',timeZone:'Africa/Addis_Ababa'});
+    o.firstChild.innerHTML=`<h3>📜 My PK History</h3>${d.items.length?d.items.map(x=>{
+      const label=x.outcome==='win'?'🏆 Victory':x.outcome==='loss'?'Defeat':x.outcome==='draw'?'🤝 Draw':'No winner';
+      const cls=x.outcome==='win'?'win':x.outcome==='loss'?'lose':'mut';
+      return `<div class="card"><div class="row">${av(x.opponent,'s')}<div class="sp"><b>${esc(x.opponent?x.opponent.name:'Opponent unavailable')}</b><div class="mut">PK #${x.id} · ${x.ended_at?dateFmt.format(new Date(x.ended_at*1000)):'—'}</div></div><b class="${cls}">${label}</b></div><div class="row" style="justify-content:space-around;margin-top:10px"><span>Us <b class="gold">${fmt(x.my_gifts)}</b></span><b>VS</b><span>Them <b class="gold">${fmt(x.opponent_gifts)}</b></span></div></div>`;
+    }).join(''):'<div class="empty">No completed PK matches yet</div>'}`;
+  }catch(e){if(o.isConnected)o.firstChild.innerHTML=`<div class="empty">${esc(e.message)}</div>`}
+}
 async function pkCreate(){try{const d=await api('/api/pk/create',{});toast('⚔️ PK created');closeModal();enterPK(d.pk_id)}catch(e){toast(e.message)}}
 async function pkJoin(id){try{await api('/api/pk/join',{pk_id:id});toast('⚔️ Joined!');closeModal();enterPK(id)}catch(e){toast(e.message)}}
 async function startPKFromLive(){try{const d=await api('/api/pk/create',{});await exitRoom(true);enterPK(d.pk_id)}catch(e){toast(e.message)}}
@@ -678,49 +833,46 @@ function openPKGift(side){
    <div class="gg">${S.cfg.gifts.filter(x=>x.tier!=='lucky').map(x=>`<div class="gi tier-${x.tier} ${gift===x.key?'on':''}" data-k="${x.key}"><b>${x.emoji}</b>${esc(x.name)}<div class="gold">🪙${fmt(x.price)}</div></div>`).join('')}</div>
    <div class="row" style="margin-top:12px"><div class="chips sp">${[1,5,10,20,50].map(q=>`<div class="chip ${qty===q?'on':''}" data-q="${q}">×${q}</div>`).join('')}</div><button class="btn gold" id="pk-send">Send · ${fmt(g.price*qty)}</button></div>`;
    $$('.gi',m).forEach(e=>e.onclick=()=>{gift=e.dataset.k;draw()});$$('[data-q]',m).forEach(e=>e.onclick=()=>{qty=+e.dataset.q;draw()});
-   $('#pk-send',m).onclick=e=>run(e.target,async()=>{const d=await api('/api/pk/gift',{pk_id:P.pid,to_host:side,gift,qty});S.me.coins=d.coins;setMe(S.me);toast('✅ Sent');hap('medium');m.close();clearTimeout(P.t);pkPoll()})};
+   let requestId=Array.from(crypto.getRandomValues(new Uint8Array(16)),b=>b.toString(16).padStart(2,'0')).join('');
+   $('#pk-send',m).onclick=e=>run(e.target,async()=>{const d=await api('/api/pk/gift',{pk_id:P.pid,to_host:side,gift,qty,request_id:requestId});S.me.coins=d.coins;setMe(S.me);toast(d.duplicate?'Already sent · no extra charge':'✅ Sent');hap('medium');m.close();clearTimeout(P.t);pkPoll()})};
   draw()}
 async function renderWallet(){
   const el=$('#p-wallet');el.innerHTML=topbar()+`<div class="empty">…</div>`;
   try{const w=await api('/api/wallet');setMe(w.me);const m=w.me,u=U();
   el.innerHTML=topbar()+`<div class="ratebar">💱 <span class="sp">Live rate</span><b class="usdt">1 USDT = ${fmt(u.birr_per_usdt)} Birr</b></div>
   <div class="grid2"><div class="card"><div class="mut">🪙 Coins</div><div style="font-size:26px;font-weight:800" class="gold coins-n">${fmt(m.coins)}</div><button class="btn gold sm" style="width:100%;margin-top:8px" onclick="buyModal()">Buy</button></div>
-  <div class="card"><div class="mut">💰 Income</div><div style="font-size:26px;font-weight:800;color:var(--ok)">${fmt(m.earnings)}</div><div class="mut">≈ ${fmt(Math.floor(m.earnings*S.cfg.rate))} Birr · ${u2(m.earnings*u.coin_usdt)} USDT</div><button class="btn sm" style="width:100%;margin-top:4px" onclick="withModal()">Withdraw</button></div>
-  <div class="card"><div class="mut">🤝 Commission</div><div style="font-size:26px;font-weight:800;color:var(--pri2)">${fmt(m.comm)}</div><div class="mut">≈ ${fmt(Math.floor(m.comm*S.cfg.rate))} Birr · ${u2(m.comm*u.coin_usdt)} USDT</div></div>
+  <div class="card"><div class="mut">💰 Income</div><div style="font-size:26px;font-weight:800;color:var(--ok)">${fmt(m.earnings)}</div><div class="mut">≈ ${fmt(Math.floor(m.earnings*(S.cfg.withdraw_rate||0.1)))} Birr reference value</div><button class="btn sm" style="width:100%;margin-top:4px" onclick="withModal()">Withdraw</button></div>
+  <div class="card"><div class="mut">🤝 Commission</div><div style="font-size:26px;font-weight:800;color:var(--pri2)">${fmt(m.comm)}</div><div class="mut">≈ ${fmt(Math.floor(m.comm*(S.cfg.withdraw_rate||0.1)))} Birr reference value</div></div>
   <div class="card"><div class="mut">🔗 Invited</div><div style="font-size:26px;font-weight:800">${fmt(m.inv||0)}</div><button class="btn ghost sm" style="width:100%;margin-top:4px" onclick="openInvite()">Invite</button></div></div>
   <h3>Purchase history</h3>${w.purchases.map(p=>`<div class="card row"><div class="sp"><b>${fmt(p.coins)} 🪙</b> <span class="mut">${p.birr} Birr · ${p.method==='usdt'?'USDT '+u2(p.birr/u.birr_per_usdt):'Telebirr'}</span></div><span class="badge">${{pending:'⏳',approved:'✅',rejected:'❌'}[p.status]}</span></div>`).join('')||'<div class="empty">—</div>'}
-  <h3>Withdrawal history</h3>${w.withdraws.map(p=>`<div class="card row"><div class="sp"><b>${fmt(p.coins)}</b> <span class="mut">${p.birr} Birr · ${p.method==='usdt'?'USDT '+u2(p.coins*u.coin_usdt):'Telebirr'}</span></div><span class="badge">${{pending:'⏳',paid:'✅',rejected:'❌'}[p.status]}</span></div>`).join('')||'<div class="empty">—</div>'}
+  <h3>Withdrawal history</h3>${w.withdraws.map(p=>`<div class="card row"><div class="sp"><b>${fmt(p.coins)}</b> <span class="mut">${p.birr} Birr · ${p.method==='usdt'?'USDT '+u2(p.coins*u.coin_usdt):'Telebirr'}</span></div><span class="badge">${{pending:'⏳',under_review:'🔎',approved:'✅',processing:'💸',paid:'✅',rejected:'❌'}[p.status]||p.status}</span></div>`).join('')||'<div class="empty">—</div>'}
   <h3>Activity</h3>${w.txs.map(x=>`<div class="row mut" style="padding:4px 0"><span class="sp ell">${esc(x.kind)} ${esc(x.note)}</span><b class="${x.amount>=0?'win':'lose'}">${x.amount>=0?'+':''}${fmt(x.amount)}</b><span>${ago(x.ts)}</span></div>`).join('')}${footbar()}`}catch(e){toast(e.message)}}
-function buyModal(){let pk=S.cfg.packages[0];let method='telebirr';
+function buyModal(){let pk=S.cfg.packages[0];
   const m=modal('');
-  const draw=()=>{const u=U();const isU=method==='usdt';
-   m.firstChild.innerHTML=`<h3>🪙 Buy Coins</h3>
-  <div class="chips" style="margin-bottom:10px"><div class="chip ${!isU?'on':''}" data-m="telebirr">Telebirr</div><div class="chip ${isU?'onu':''}" data-m="usdt">USDT (TRC20)</div></div>
-  <div class="ratebar">💱 <span class="sp">Market rate</span><b class="usdt">1 USDT = ${fmt(u.birr_per_usdt)} Birr</b></div>
-  <div class="grid2" id="pkgs">${S.cfg.packages.map(p=>`<div class="card" data-c="${p.coins}" style="text-align:center;margin:0;${p.coins===pk.coins?'border-color:var(--gold)':''}"><b>${fmt(p.coins)} 🪙</b><div class="mut">${fmt(p.birr)} Birr</div><div class="usdt" style="font-size:12px;font-weight:700">${u2(p.birr/u.birr_per_usdt)} USDT</div></div>`).join('')}</div>
-  ${isU?`<div class="card" style="margin-top:10px;border-color:rgba(38,161,123,.35)">1️⃣ Send <b class="usdt">${u2(pk.birr/u.birr_per_usdt)} USDT</b> (TRC20) to:<div class="addr"><b id="uaddr">${esc(u.address)}</b><button class="btn sm" style="background:linear-gradient(135deg,#26a17b,#3ddc97);color:#04231a" onclick="copyTxt('${esc(u.address)}')">Copy</button></div><div class="mut" style="margin-top:6px">2️⃣ Enter TX hash + screenshot</div></div>`:`<div class="card" style="margin-top:10px">1️⃣ Send <b class="gold">${fmt(pk.birr)} Birr</b> to Telebirr <b class="gold">${esc(S.cfg.pay_number||'—')}</b><br>2️⃣ Enter transaction ID + screenshot</div>`}
-  <div class="col"><input id="b-ref" placeholder="${isU?'USDT TX hash':'Telebirr ID'}"><input id="b-f" type="file" accept="image/*"><button class="btn gold" id="b-go">Send · ${isU?u2(pk.birr/u.birr_per_usdt)+' USDT':fmt(pk.birr)+' Birr'}</button></div>`;
-   $$('[data-m]',m).forEach(c=>c.onclick=()=>{method=c.dataset.m;draw()});
-   $$('#pkgs .card',m).forEach(c=>c.onclick=()=>{pk=S.cfg.packages.find(p=>p.coins==c.dataset.c);draw()});
-   $('#b-go',m).onclick=e=>run(e.target,async()=>{const f=$('#b-f',m).files[0];if(!f)throw new Error('Attach screenshot');const fd=new FormData();fd.append('coins',pk.coins);fd.append('ref',$('#b-ref',m).value);fd.append('method',method);fd.append('file',await shrink(f),'s.jpg');
-    await api('/api/coins/buy',fd);m.close();toast('✅ Sent — credited after approval');renderWallet()})};
+  const draw=()=>{m.firstChild.innerHTML=`<h3>🪙 Buy Coins</h3>
+  <div class="ratebar">💳 <span class="sp">Payment method</span><b class="gold">Telebirr</b></div>
+  <div class="grid2" id="pkgs">${S.cfg.packages.map(p=>`<div class="card" data-c="${p.coins}" style="text-align:center;margin:0;${p.coins===pk.coins?'border-color:var(--gold)':''}"><b>${fmt(p.coins)} 🪙</b><div class="mut">${fmt(p.birr)} Birr</div></div>`).join('')}</div>
+  <div class="card" style="margin-top:10px">1️⃣ Send <b class="gold">${fmt(pk.birr)} Birr</b> to Telebirr <b class="gold">${esc(S.cfg.pay_number||'—')}</b><br>2️⃣ Enter transaction ID and attach payment screenshot</div>
+  <div class="col"><input id="b-ref" placeholder="Telebirr transaction ID" maxlength="40"><input id="b-f" type="file" accept="image/*"><button class="btn gold" id="b-go">Send · ${fmt(pk.birr)} Birr</button></div>`;
+  $$('#pkgs .card',m).forEach(c=>c.onclick=()=>{pk=S.cfg.packages.find(p=>p.coins==c.dataset.c);draw()});
+  $('#b-go',m).onclick=e=>run(e.target,async()=>{const f=$('#b-f',m).files[0];if(!f)throw new Error('Attach screenshot');const fd=new FormData();fd.append('coins',pk.coins);fd.append('ref',$('#b-ref',m).value);fd.append('method','telebirr');fd.append('file',await shrink(f),'s.jpg');
+   const d=await api('/api/coins/buy',fd);m.close();toast(d.duplicate?'This request was already submitted':'✅ Sent — credited after admin verification');renderWallet()})};
   draw()}
-function withModal(){let method='telebirr';const m=modal('');
-  const draw=()=>{const u=U();const isU=method==='usdt';const avail=(S.me.earnings||0)+(S.me.comm||0);
-   const coins=Math.max(0,+($('#w-c',m)?$('#w-c',m).value:avail)||0);
-   m.firstChild.innerHTML=`<h3>💰 Withdraw</h3>
-  <div class="chips" style="margin-bottom:10px"><div class="chip ${!isU?'on':''}" data-m="telebirr">Telebirr</div><div class="chip ${isU?'onu':''}" data-m="usdt">USDT (TRC20)</div></div>
-  <div class="ratebar">💱 <span class="sp">${isU?'You receive':'You receive'}</span><b class="${isU?'usdt':'gold'}">${isU?u2(coins*u.coin_usdt)+' USDT':fmt(Math.floor(coins*S.cfg.rate))+' Birr'}</b></div>
-  <div class="mut" style="margin-bottom:8px">${isU?`1 coin = ${u.coin_usdt} USDT · 1 USDT = ${fmt(u.birr_per_usdt)} Birr`:`1 coin = ${S.cfg.rate} Birr`} · min ${S.cfg.min_withdraw} coins</div>
-  <div class="col"><input id="w-c" type="number" inputmode="numeric" value="${avail}">
-  ${isU?`<input id="w-a" placeholder="Your USDT TRC20 address (T…)" maxlength="64">`:`<input id="w-p" placeholder="Telebirr 09xxxxxxxx" value="${esc(S.me.phone)}" maxlength="10">`}
-  <button class="btn" id="w-go">Request</button></div>`;
-   $$('[data-m]',m).forEach(c=>c.onclick=()=>{method=c.dataset.m;draw()});
-   $('#w-c',m).oninput=()=>{const v=Math.max(0,+$('#w-c',m).value||0);const b=$('.ratebar b',m);if(b)b.textContent=isU?u2(v*u.coin_usdt)+' USDT':fmt(Math.floor(v*S.cfg.rate))+' Birr'};
-   $('#w-go',m).onclick=e=>run(e.target,async()=>{const bd={coins:+$('#w-c',m).value,method};
-     if(isU)bd.address=$('#w-a',m).value.trim();else bd.phone=$('#w-p',m).value;
-     await api('/api/withdraw',bd);m.close();toast('✅ Request sent');renderWallet()})};
-  draw()}
+function withModal(){const m=modal('');
+   const makeRequestId=()=>{const b=new Uint8Array(16);crypto.getRandomValues(b);return Array.from(b,x=>x.toString(16).padStart(2,'0')).join('')};
+   let requestId=makeRequestId();
+   const draw=()=>{const rate=S.cfg.withdraw_rate||0.1;const avail=(S.me.earnings||0)+(S.me.comm||0);
+    const coins=Math.max(0,+($('#w-c',m)?$('#w-c',m).value:avail)||0);
+    m.firstChild.innerHTML=`<h3>💰 Withdraw to Telebirr</h3>
+   <div class="ratebar">💱 <span class="sp">Reference payout value</span><b class="gold">${fmt(Math.floor(coins*rate))} Birr</b></div>
+   <div class="mut" style="margin-bottom:8px">1,000 Coins = 100 ETB · Minimum ${fmt(S.cfg.min_withdraw_etb||1000)} ETB (${fmt(S.cfg.min_withdraw)} Coins). At least 50% must be genuine gift earnings. Activity/bonus coins are not withdrawable.</div>
+   <div class="col"><input id="w-c" type="number" inputmode="numeric" value="${avail}">
+   <input id="w-p" placeholder="Telebirr 09xxxxxxxx" value="${esc(S.me.phone)}" maxlength="10">
+   <button class="btn" id="w-go">Request</button></div>`;
+    $('#w-c',m).oninput=()=>{const v=Math.max(0,+$('#w-c',m).value||0);const b=$('.ratebar b',m);if(b)b.textContent=fmt(Math.floor(v*rate))+' Birr'};
+    $('#w-go',m).onclick=e=>run(e.target,async()=>{const bd={coins:+$('#w-c',m).value,method:'telebirr',phone:$('#w-p',m).value,request_id:requestId};
+      const d=await api('/api/withdraw',bd);requestId=makeRequestId();m.close();toast(d.duplicate?'This withdrawal request was already submitted':'✅ Request sent');renderWallet()})};
+   draw()}
 function genTable(){const r=(S.cfg.agent&&S.cfg.agent.rates)||[];
   return `<div class="card" style="margin-top:10px"><b>💰 7 Generation Commission</b><div class="mut" style="margin:4px 0 8px">የጋበዝካቸው ሰዎች ስጦታ ሲቀበሉ (በተገዛ coin) ኮሚሽን ታገኛለህ።<br>Earn when people you invited receive gifts bought with purchased coins.</div>${r.map((x,i)=>`<div class="row" style="padding:3px 0"><span class="sp">Generation ${i+1}${i?'':' · የጋበዝካቸው'}</span><b class="gold">${+(x*100).toFixed(2)}%</b></div>`).join('')}</div>`}
 async function openInvite(){const m=modal('<div class="empty">…</div>');
@@ -780,6 +932,31 @@ async function openPolicy(){const m=modal('<div class="empty">…</div>');
  try{const d=await api('/api/policy');
   const titles={terms:'Terms of Service',commission:'Host & Agent Commission',lucky:'Lucky Gift',pk:'PK Battle',withdraw:'Withdrawal & Payments',conduct:'Community Rules',privacy:'Privacy'};
   m.firstChild.innerHTML='<h3>📜 Policy</h3>'+Object.entries(d.sections).map(([k,v])=>`<div class="card"><b>${titles[k]||k}</b><div class="mut" style="white-space:pre-wrap;margin-top:6px;font-size:12px">${esc(v)}</div></div>`).join('')+footbar()}catch(e){m.close();toast(e.message)}}
+async function openCreatorDashboard(){
+  const m=modal('<div class="empty">Loading creator dashboard…</div>');
+  const statusLabel={pending:'Pending',under_review:'Under review',approved:'Approved',processing:'Processing',paid:'Paid',rejected:'Rejected',failed:'Failed',reversed:'Reversed'};
+  try{
+    const [d,a]=await Promise.all([api('/api/creator/dashboard'),api('/api/creator/activity')]);
+    const b=d.balances||{},s=d.last_30_days||{};
+    const money=n=>fmt(Number(n||0));
+    const activityPct=Math.min(100,Math.round((Number(a.verified_seconds||0)/3600)*100));
+    const activityTime=Math.floor(Number(a.verified_seconds||0)/3600)+'h '+Math.floor((Number(a.verified_seconds||0)%3600)/60)+'m';
+    const activityRewards=(a.rewards||[]).map(r=>'<div class="cd-row"><span>Verified hosting reward · Block '+r.block+'</span><b>'+money(r.coins)+' Coins</b></div>').join('');
+    const withdrawRows=(d.withdrawals||[]).map(w=>`<div class="cd-row"><div class="sp"><b>${money(w.birr)} Birr</b><div class="mut">${money(w.coins)} Coins · ${ago(w.ts)}</div></div><span class="badge">${esc(statusLabel[w.status]||w.status||'Unknown')}</span></div>`).join('');
+    m.firstChild.innerHTML=`<div class="cd-head"><div><div class="mut">CREATOR STUDIO</div><h3 style="margin:3px 0 0;font-size:20px">📊 Creator Dashboard</h3></div><span class="pill">30 days</span></div>
+    <div class="cd-balance"><div class="mut">Withdrawable earnings</div><div class="cd-total">${money(b.earnings_coins)} <small>Coins</small></div><div class="mut">Gift earnings (50% eligibility source) · ${money(b.gift_earnings_coins)} Coins</div><div class="mut">PK earnings · ${money(b.pk_earnings_coins)} Coins</div><div class="mut">Commission balance · ${money(b.commission_coins)} Coins</div></div>
+    <div class="cd-grid">
+      <div class="cd-stat"><span>🎁 Gifts received</span><b>${money(s.gift_count)}</b><small>${money(s.gift_volume_coins)} Coins volume</small></div>
+      <div class="cd-stat"><span>💜 Host earnings</span><b>${money(s.host_earned_coins)}</b><small>From gifts · Coins</small></div>
+      <div class="cd-stat"><span>🤝 Commission</span><b>${money(s.commission_earned_coins)}</b><small>Earned · Coins</small></div>
+      <div class="cd-stat"><span>⭐ Activity rewards</span><b>${money(s.activity_reward_coins)}</b><small>Non-withdrawable · Coins</small></div>
+    </div>
+    <div class="card" style="margin-top:10px"><div class="row"><b class="sp">🎤 Today's verified hosting</b><span class="pill">${a.day||''}</span></div><div style="font-size:20px;font-weight:800;margin:8px 0">${activityTime}</div><div class="bar2"><i style="width:${activityPct}%"></i></div><div class="mut" style="margin-top:6px">${money(a.eligible_blocks||0)} / ${money(a.daily_limit||2)} reward blocks · 60 minutes each</div><div class="cd-row"><span>Today's activity rewards</span><b>${money(a.reward_coins)} Coins</b></div>${a.next_reward_coins?'<div class="mut">Next eligible reward: '+money(a.next_reward_coins)+' Coins</div>':''}${activityRewards}<div class="mut cd-note">${esc(a.note||'Verified hosting only. Activity rewards cannot be withdrawn.')}</div></div>
+    <div class="cd-follow">${d.follower_tracking_enabled?`👥 Followers <b>${money(d.followers)}</b>`:'👥 Follower statistics are not available yet'}</div>
+    <h3>💸 Withdrawal history</h3>${withdrawRows||'<div class="empty">No withdrawal requests yet</div>'}
+    <p class="mut cd-note">${esc(d.note||'Balances shown are recorded coin balances and do not guarantee cash redemption.')}</p>${footbar()}`;
+  }catch(e){m.firstChild.innerHTML='<h3>📊 Creator Dashboard</h3><div class="empty">'+esc(e.message)+'</div><button class="btn ghost" onclick="this.closest(\'.ov\').remove()">Close</button>'}
+}
 async function renderMe(){
   try{const d=await api('/api/me');setMe(d.me)}catch(e){}
   const m=S.me,pct=m.next?Math.min(100,Math.round((m.spent-m.base)/(m.next-m.base)*100)):100;
@@ -787,28 +964,42 @@ async function renderMe(){
   <div class="bar2"><i style="width:${pct}%"></i></div><div class="mut" style="margin-top:4px">${m.next?fmt(m.next-m.spent)+' 🪙 → next':'👑 MAX'}</div></div>
   <div class="grid2"><div class="card" style="text-align:center"><div class="mut">Gifts sent</div><b class="gold">${fmt(m.sent)}</b></div><div class="card" style="text-align:center"><div class="mut">Gifts received</div><b class="gold">${fmt(m.recv)}</b></div></div>
   <div class="col">
+  <button class="btn gold" onclick="openCreatorDashboard()">📊 Creator Dashboard</button>
   ${m.host==='none'?`<button class="btn ghost" onclick="applyHost()">🎤 Become a Host (50%)</button>`:m.host==='pending'?`<button class="btn ghost" disabled>⏳ Host pending</button>`:`<button class="btn ghost" disabled>✅ Host</button>`}
   ${m.host==='host'&&!m.ag?`<button class="btn ghost" onclick="applyAgent()">🤝 Become an Agent</button>`:''}
   ${m.ag?`<button class="btn" onclick="openAgent()">📊 Agent Dashboard</button>`:''}
   <button class="btn ghost" onclick="openInvite()">🔗 Invite · ${fmt(m.inv||0)}</button>
   <button class="btn gold" onclick="openShop()">✨ VIP & Frames${m.vip?' · '+vipLeft(m)+'d':''}</button>
   <button class="btn ghost" onclick="editProfile()">✏️ Edit profile</button>
+  <button class="btn ghost" onclick="openBlocks()">🚫 Blocked users</button>
   <button class="btn ghost" onclick="openPolicy()">📜 Policy</button>
   ${String(m.tg_id).startsWith('p_')?`<button class="btn ghost" onclick="changePassword()">🔑 Change password</button>`:''}
   <button class="btn ghost" onclick="copyTxt('${esc(m.tg_id)}')">🆔 My ID: ${esc(m.tg_id)}</button>
   ${tgInit()?'':`<button class="btn ghost" onclick="confirm('${String(m.tg_id).startsWith('g_')?'Leave guest mode?':'Log out?'}')&&logout()">🚪 Log out</button>`}
   ${m.is_admin?`<button class="btn gold" onclick="openAdmin()">🛡 Admin</button>`:''}
   </div>${footbar()}`;loadMyStats()}
+async function openBlocks(){const o=modal('<h3>🚫 Blocked users</h3><div class="empty">…</div>');try{const d=await api('/api/blocks');o.firstChild.innerHTML='<h3>🚫 Blocked users</h3>'+(d.users.length?d.users.map(u=>`<div class="row" style="padding:8px 0">${av(u,'s')}<b class="sp">${esc(u.name)}</b><button class="btn sm ghost" data-unblock="${u.id}">Unblock</button></div>`).join(''):'<div class="empty">No blocked users</div>');$('[data-unblock]',o).forEach(b=>b.onclick=()=>run(b,async()=>{await api('/api/users/'+b.dataset.unblock+'/block',{blocked:false});b.parentElement.remove();toast('User unblocked')}))}catch(e){o.firstChild.innerHTML='<div class="empty">'+esc(e.message)+'</div>'}}
 function editProfile(){const m=S.me;const o=modal(`<h3>✏️ Edit profile</h3><div class="col"><input id="e-p" type="file" accept="image/*"><input id="e-n" value="${esc(m.name)}" maxlength="30"><input id="e-b" value="${esc(m.bio)}" maxlength="160"><input id="e-t" value="${esc(m.phone)}" maxlength="10" placeholder="09xxxxxxxx"><button class="btn" id="e-go">Save</button></div>`);
   $('#e-go',o).onclick=e=>run(e.target,async()=>{const f=$('#e-p',o).files[0];if(f){const fd=new FormData();fd.append('file',await shrink(f,320,.85),'p.jpg');setMe((await api('/api/profile/photo',fd)).me)}
    setMe((await api('/api/profile',{name:$('#e-n',o).value,bio:$('#e-b',o).value,phone:$('#e-t',o).value})).me);o.close();renderMe()})}
-function openAdmin(){const o=modal(`<div class="chips" id="at">${['overview','purchases','withdraws','users'].map((x,i)=>`<div class="chip ${i?'':'on'}" data-t="${x}">${x}</div>`).join('')}</div><div id="ab" style="margin-top:10px"></div>`);
+function withdrawActions(y){
+ const btn=(action,label,cls)=>'<button class="'+(cls||'btn sm')+'" onclick="admAct(\'withdraw\','+y.id+',\''+action+'\')">'+label+'</button>';
+ const badge='<span class="badge">'+esc(y.status)+'</span>';
+ if(y.status==='pending')return badge+btn('under_review','Review')+btn('reject','Reject','btn bad sm');
+ if(y.status==='under_review')return badge+btn('approve','Approve')+btn('reject','Reject','btn bad sm');
+ if(y.status==='approved')return badge+btn('processing','Start payout');
+ if(y.status==='processing')return badge+'<button class="btn sm" onclick="admPaid('+y.id+')">Mark paid · ref required</button>';
+ return badge;
+}
+function openAdmin(){const o=modal(`<div class="chips" id="at">${['overview','purchases','withdraws','users','reports'].map((x,i)=>`<div class="chip ${i?'':'on'}" data-t="${x}">${x}</div>`).join('')}</div><div id="ab" style="margin-top:10px"></div>`);
   const load=async x=>{$$('#at .chip',o).forEach(c=>c.classList.toggle('on',c.dataset.t===x));const b=$('#ab',o);b.innerHTML='…';
    try{if(x==='overview'){const d=await api('/api/admin/overview');b.innerHTML=`<div class="grid2">${Object.entries(d).map(([k,v])=>`<div class="card" style="margin:0"><div class="mut">${k}</div><b>${fmt(v)}</b></div>`).join('')}</div>`}
-   else if(x==='purchases'||x==='withdraws'){const d=await api('/api/admin/'+x);b.innerHTML=d.items.map(y=>`<div class="card"><b>${esc(y.name)}</b> · ${fmt(y.coins)} 🪙 · ${fmt(y.birr)} Birr ${y.method==='usdt'?'· <span class="usdt">USDT '+(y.usdt||'')+'</span>':'· Telebirr'}<div class="mut" style="word-break:break-all">${esc(y.ref||y.address||y.phone||'')} · ${ago(y.ts)}</div><div class="row" style="margin-top:8px">${x==='purchases'?`<button class="btn ghost sm" onclick="viewShot(${y.id})">🖼</button><button class="btn sm" onclick="admAct('purchase',${y.id},'approve')">✅</button><button class="btn bad sm" onclick="admAct('purchase',${y.id},'reject')">❌</button>`:`<button class="btn sm" onclick="admAct('withdraw',${y.id},'paid')">💰</button><button class="btn bad sm" onclick="admAct('withdraw',${y.id},'reject')">❌</button>`}</div></div>`).join('')||'<div class="empty">—</div>'}
-   else{b.innerHTML=`<input id="uq" placeholder="Search name / phone / ID"><div id="pnd" style="margin-top:8px"></div><div id="ul" style="margin-top:8px"></div>`;admPending(o);const ld=async()=>{const d=await api('/api/admin/users?q='+encodeURIComponent($('#uq',o).value));$('#ul',o).innerHTML=d.items.map(u=>`<div class="card"><b>${esc(u.name)}</b> ${u.banned?'🚫':''} ${u.vip?'<span class="vip">VIP</span>':''} ${u.host==='host'?'<span class="hbadge">HOST</span>':''} ${u.ag?'<span class="abadge">AGENT</span>':''}<div class="mut">${u.login_phone?'📱 '+esc(u.login_phone)+' · ':''}ID:${esc(u.tg)} · 🪙${fmt(u.coins)} · 💰${fmt(u.earn)} · 🤝${fmt(u.comm)}</div><div class="row" style="margin-top:6px;flex-wrap:wrap"><button class="btn sm ghost" onclick="admUser(${u.id},'${u.banned?'unban':'ban'}')">${u.banned?'Unban':'Ban'}</button><button class="btn sm gold" onclick="admGrant(${u.id})">+🪙</button>${u.login_phone?`<button class="btn sm ghost" onclick="admReset(${u.id})">🔑</button>`:''}<button class="btn sm ghost" onclick="admVip(${u.id})">+VIP</button><button class="btn sm ${u.host==='host'?'bad':'gold'}" onclick="admUser(${u.id},'host',${u.host==='host'?0:1})">${u.host==='host'?'-Host':'+Host'}</button>${u.host==='host'?`<button class="btn sm ghost" onclick="admUser(${u.id},'agent')">${u.ag?'-Agent':'+Agent'}</button>`:''}<button class="btn sm bad" onclick="confirm('Delete?')&&admUser(${u.id},'delete')">🗑</button></div></div>`).join('')};$('#uq',o).oninput=()=>{clearTimeout(window._uq);window._uq=setTimeout(ld,350)};ld()}}catch(e){b.innerHTML=esc(e.message)}};
+   else if(x==='purchases'||x==='withdraws'){const d=await api('/api/admin/'+x);b.innerHTML=d.items.map(y=>`<div class="card"><b>${esc(y.name)}</b> · ${fmt(y.coins)} 🪙 · ${fmt(y.birr)} Birr ${y.method==='usdt'?'· <span class="usdt">USDT '+(y.usdt||'')+'</span>':'· Telebirr'}<div class="mut" style="word-break:break-all">${esc(y.ref||y.address||y.phone||'')} · ${ago(y.ts)}</div><div class="row" style="margin-top:8px">${x==='purchases'?`<button class="btn ghost sm" onclick="viewShot(${y.id})">🖼</button><button class="btn sm" onclick="admAct('purchase',${y.id},'approve')">✅</button><button class="btn bad sm" onclick="admAct('purchase',${y.id},'reject')">❌</button>`:withdrawActions(y)}</div></div>`).join('')||'<div class="empty">—</div>'}
+   else if(x==='reports'){b.innerHTML=`<div class="row"><b class="sp">🛡 User reports</b><select id="rp-status"><option value="pending">Pending</option><option value="reviewing">Reviewing</option><option value="resolved">Resolved</option><option value="dismissed">Dismissed</option><option value="all">All</option></select></div><div id="rp-list" class="col" style="margin-top:8px"></div>`;const ld=async()=>{const d=await api('/api/admin/reports?status='+encodeURIComponent($('#rp-status',b).value));$('#rp-list',b).innerHTML=d.items.map(r=>`<div class="card"><div class="row"><b class="sp">#${r.id} · ${esc(r.reason)}</b><span class="badge">${esc(r.status)}</span></div><div class="mut">Reporter: ${esc(r.reporter)} (ID ${r.reporter_id}) → Target: <b>${esc(r.target)}</b> (ID ${r.target_id}) · ${ago(r.ts)}</div><div style="margin:8px 0;white-space:pre-wrap;overflow-wrap:anywhere">${esc(r.details||'No extra details')}</div>${r.resolution?`<div class="mut">Action: ${esc(r.resolution)}</div>`:''}<div class="row" style="flex-wrap:wrap;margin-top:8px">${r.status==='pending'?`<button class="btn sm ghost" onclick="admReport(${r.id},'reviewing','')">Review</button>`:''}${!['resolved','dismissed'].includes(r.status)?`<button class="btn sm" onclick="admReport(${r.id},'resolved','no_action')">Resolve</button><button class="btn sm bad" onclick="admReport(${r.id},'dismissed','no_action')">Dismiss</button><button class="btn sm bad" onclick="confirm('Permanently ban this account?')&&admReport(${r.id},'resolved','permanent_ban')">Permanent ban</button>`:''}</div></div>`).join('')||'<div class="empty">No reports in this filter</div>'};$('#rp-status',b).onchange=ld;ld()}else{b.innerHTML=`<input id="uq" placeholder="Search name / phone / ID"><div id="pnd" style="margin-top:8px"></div><div id="ul" style="margin-top:8px"></div>`;admPending(o);const ld=async()=>{const d=await api('/api/admin/users?q='+encodeURIComponent($('#uq',o).value));$('#ul',o).innerHTML=d.items.map(u=>`<div class="card"><b>${esc(u.name)}</b> ${u.banned?'🚫':''} ${u.vip?'<span class="vip">VIP</span>':''} ${u.host==='host'?'<span class="hbadge">HOST</span>':''} ${u.ag?'<span class="abadge">AGENT</span>':''}<div class="mut">${u.login_phone?'📱 '+esc(u.login_phone)+' · ':''}ID:${esc(u.tg)} · 🪙${fmt(u.coins)} · 💰${fmt(u.earn)} · 🤝${fmt(u.comm)}</div><div class="row" style="margin-top:6px;flex-wrap:wrap"><button class="btn sm ghost" onclick="admUser(${u.id},'${u.banned?'unban':'ban'}')">${u.banned?'Unban':'Ban'}</button><button class="btn sm gold" onclick="admGrant(${u.id})">+🪙</button>${u.login_phone?`<button class="btn sm ghost" onclick="admReset(${u.id})">🔑</button>`:''}<button class="btn sm ghost" onclick="admVip(${u.id})">+VIP</button><button class="btn sm ${u.host==='host'?'bad':'gold'}" onclick="admUser(${u.id},'host',${u.host==='host'?0:1})">${u.host==='host'?'-Host':'+Host'}</button>${u.host==='host'?`<button class="btn sm ghost" onclick="admUser(${u.id},'agent')">${u.ag?'-Agent':'+Agent'}</button>`:''}<button class="btn sm bad" onclick="confirm('Delete?')&&admUser(${u.id},'delete')">🗑</button></div></div>`).join('')};$('#uq',o).oninput=()=>{clearTimeout(window._uq);window._uq=setTimeout(ld,350)};ld()}}catch(e){b.innerHTML=esc(e.message)}};
   $$('#at .chip',o).forEach(c=>c.onclick=()=>load(c.dataset.t));window._admLoad=load;window._admTab=()=>$('#at .chip.on',o).dataset.t;load('overview')}
-const admAct=(k,id,a)=>run(null,async()=>{await api('/api/admin/'+k,{id,action:a});window._admLoad(window._admTab())});
+const admAct=(k,id,a,reference)=>run(null,async()=>{const payload={id,action:a};if(reference)payload.payout_reference=reference;await api('/api/admin/'+k,payload);window._admLoad(window._admTab())});
+ const admPaid=id=>{const ref=prompt('Enter the verified Telebirr payout transaction reference:');if(ref&&ref.trim())admAct('withdraw',id,'paid',ref.trim())};
+const admReport=(id,status,resolution)=>run(null,async()=>{await api('/api/admin/report',{id,status,resolution});window._admLoad('reports')});
 const admUser=(id,a,amount)=>run(null,async()=>{await api('/api/admin/user',{id,action:a,amount});window._admLoad(window._admTab())});
 function admVip(id){const n=prompt('VIP days (1–365)','30');if(n)admUser(id,'vip',+n)}
 function admGrant(id){const n=prompt('Coins (negative allowed)');if(n)admUser(id,'grant',+n)}
