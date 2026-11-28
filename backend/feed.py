@@ -31,6 +31,23 @@ def init_feed(app, db, d):
         read_at = db.Column(db.Integer, nullable=True)
         ts = db.Column(db.Integer, default=now, index=True)
 
+    class UserBlock(db.Model):
+        __tablename__ = 'user_block'
+        blocker_id = db.Column(db.Integer, primary_key=True)
+        blocked_id = db.Column(db.Integer, primary_key=True, index=True)
+        ts = db.Column(db.Integer, default=now)
+
+    class UserReport(db.Model):
+        __tablename__ = 'user_report'
+        id = db.Column(db.Integer, primary_key=True)
+        reporter_id = db.Column(db.Integer, nullable=False, index=True)
+        target_type = db.Column(db.String(12), nullable=False)
+        target_id = db.Column(db.Integer, nullable=False, index=True)
+        reason = db.Column(db.String(32), nullable=False)
+        details = db.Column(db.String(500), default='')
+        status = db.Column(db.String(16), default='pending', nullable=False, index=True)
+        ts = db.Column(db.Integer, default=now, index=True)
+
     def notify_user(user_id, actor_id, kind, title, message='', target=''):
         if not db.session.get(User, user_id): return False
         db.session.add(AppNotification(user_id=user_id, actor_id=actor_id, kind=str(kind)[:32], title=str(title)[:100], body=str(message)[:240], target=str(target)[:120]))
@@ -68,6 +85,10 @@ def init_feed(app, db, d):
         elif tab == 'voice': q = q.filter(or_(Room.kind == 'voice', Room.kind.is_(None)))
         elif tab == 'follow':
             q = q.filter(Room.host_id.in_(select(Follow.target_id).where(Follow.follower_id == g.user.id)))
+        blocked = {x for (x,) in db.session.query(UserBlock.blocked_id).filter(UserBlock.blocker_id == g.user.id).all()}
+        blockers = {x for (x,) in db.session.query(UserBlock.blocker_id).filter(UserBlock.blocked_id == g.user.id).all()}
+        hidden_hosts = blocked | blockers
+        if hidden_hosts: q = q.filter(~Room.host_id.in_(hidden_hosts))
         rs = q.order_by(Room.created.desc() if tab == 'new' else Room.last_active.desc()).limit(100).all()
         ids = [r.id for r in rs] or ['-']
         online = dict(db.session.query(Presence.room_id, func.count()).filter(Presence.room_id.in_(ids), Presence.seen > t - 20).group_by(Presence.room_id).all())
@@ -86,6 +107,8 @@ def init_feed(app, db, d):
     def user_profile(uid):
         u = visible_user(uid)
         if not u: return err('User not found', 404)
+        if db.session.get(UserBlock, (g.user.id, uid)) or db.session.get(UserBlock, (uid, g.user.id)):
+            return err('User not found', 404)
         followers, following = counts(uid)
         r = active_rooms().filter(Room.host_id == uid).order_by((Room.kind == 'live').desc(), Room.last_active.desc()).first()
         # only public fields: never phone, login ID or balance
@@ -115,6 +138,8 @@ def init_feed(app, db, d):
     def follow_set(uid):
         if uid == g.user.id: return err('You cannot follow yourself')
         if not visible_user(uid): return err('User not found', 404)
+        if db.session.get(UserBlock, (g.user.id, uid)) or db.session.get(UserBlock, (uid, g.user.id)):
+            return err('User not found', 404)
         if limited('follow', 0.5): return err('Slow down', 429)
         want = bool(body().get('follow'))
         row = db.session.get(Follow, (g.user.id, uid))
@@ -141,6 +166,57 @@ def init_feed(app, db, d):
         mine = Follow.target_id if followers else Follow.follower_id
         us = db.session.query(User).join(Follow, other == User.id).filter(mine == uid, User.banned == False).order_by(Follow.ts.desc()).limit(100).all()
         return jsonify(users=[pub(u) for u in us])
+
+    @app.post('/api/users/<int:uid>/block')
+    @auth
+    def user_block(uid):
+        if uid == g.user.id: return err('You cannot block yourself')
+        target = visible_user(uid)
+        if not target: return err('User not found', 404)
+        if limited('block', 0.5): return err('Slow down', 429)
+        want = bool((request.get_json(silent=True) or {}).get('blocked'))
+        row = db.session.get(UserBlock, (g.user.id, uid))
+        try:
+            if want and not row:
+                db.session.add(UserBlock(blocker_id=g.user.id, blocked_id=uid))
+                Follow.query.filter(or_(
+                    and_(Follow.follower_id == g.user.id, Follow.target_id == uid),
+                    and_(Follow.follower_id == uid, Follow.target_id == g.user.id)
+                )).delete(synchronize_session=False)
+            elif not want and row:
+                db.session.delete(row)
+            db.session.commit()
+        except IntegrityError:
+            db.session.rollback()
+        return jsonify(blocked=bool(db.session.get(UserBlock, (g.user.id, uid))))
+
+    @app.get('/api/blocks')
+    @auth
+    def user_blocks():
+        rows = db.session.query(UserBlock, User).join(User, User.id == UserBlock.blocked_id).filter(
+            UserBlock.blocker_id == g.user.id, User.banned == False
+        ).order_by(UserBlock.ts.desc()).limit(200).all()
+        return jsonify(users=[dict(pub(u), blocked_at=b.ts) for b, u in rows])
+
+    @app.post('/api/users/<int:uid>/report')
+    @auth
+    def user_report(uid):
+        if uid == g.user.id: return err('You cannot report yourself')
+        target = visible_user(uid)
+        if not target: return err('User not found', 404)
+        if limited('report', 30): return err('Please wait before sending another report', 429)
+        b = request.get_json(silent=True) or {}
+        reason = str(b.get('reason', '')).strip().lower()
+        allowed = {'harassment', 'hate', 'spam', 'impersonation', 'sexual_content', 'scam', 'other'}
+        if reason not in allowed: return err('Choose a valid report reason')
+        details = str(b.get('details', '')).strip()[:500]
+        recent = UserReport.query.filter_by(reporter_id=g.user.id, target_type='user', target_id=uid).filter(
+            UserReport.ts > now() - 86400
+        ).first()
+        if recent: return err('You already reported this user recently', 409)
+        db.session.add(UserReport(reporter_id=g.user.id, target_type='user', target_id=uid, reason=reason, details=details))
+        db.session.commit()
+        return jsonify(ok=1, message='Report submitted for review')
 
     _cache = {}
 
