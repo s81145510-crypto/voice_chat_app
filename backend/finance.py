@@ -295,16 +295,54 @@ def init_finance(app, db, deps):
         if gift_over: issues.append(dict(kind='gift_earnings_exceed_total_earnings', count=gift_over, severity='critical'))
         dup = db.session.query(FinCommission.gift_tx_id, FinCommission.agent_id, func.count()).group_by(FinCommission.gift_tx_id, FinCommission.agent_id).having(func.count() > 1).all()
         if dup: issues.append(dict(kind='duplicate_commission', count=len(dup), severity='critical'))
-        over = []
-        for gid, pool, tot in db.session.query(FinGiftTx.id, FinGiftTx.platform_share, func.coalesce(func.sum(FinCommission.amount), 0)).outerjoin(
-                FinCommission, FinCommission.gift_tx_id == FinGiftTx.id).group_by(FinGiftTx.id).all():
-            if (tot or 0) > (pool or 0) + len(rules.GENERATION_RATES): over.append(gid)
-        if over: issues.append(dict(kind='commission_exceeds_pool', count=len(over), severity='critical'))
+        # Validate gift-row arithmetic independently of commission carry rounding.
+        bad_gifts = db.session.query(func.count()).select_from(FinGiftTx).filter(or_(
+            FinGiftTx.total < 0, FinGiftTx.real_used < 0, FinGiftTx.host_earning < 0,
+            FinGiftTx.platform_share < 0, FinGiftTx.qty < 1,
+            FinGiftTx.real_used > FinGiftTx.total,
+            FinGiftTx.host_earning > FinGiftTx.real_used,
+            FinGiftTx.platform_share != FinGiftTx.real_used - FinGiftTx.host_earning,
+            (FinGiftTx.tier == 'lucky') & (FinGiftTx.host_earning != 0)
+        )).scalar() or 0
+        if bad_gifts:
+            issues.append(dict(kind='gift_split_invariant', count=bad_gifts, severity='critical'))
+
+        # Commission carry is accumulated across gifts, so a per-gift cap is
+        # incorrect. The aggregate paid amount must stay within 12% of all
+        # eligible purchased-coin gift value (Lucky gifts are excluded).
+        eligible_base = db.session.query(func.coalesce(func.sum(FinGiftTx.real_used), 0)).filter(
+            FinGiftTx.tier != 'lucky').scalar() or 0
+        commission_paid = db.session.query(func.coalesce(func.sum(FinCommission.amount), 0)).scalar() or 0
+        commission_cap = int((eligible_base * rules.POOL_RATE).to_integral_value(rounding='ROUND_DOWN'))
+        if commission_paid > commission_cap:
+            issues.append(dict(kind='commission_exceeds_aggregate_12pct_pool',
+                               paid=int(commission_paid), cap=commission_cap, severity='critical'))
+
+        # Source-bucket withdrawals must add up to the debited amount. Zeroed
+        # source fields identify legacy rows created before source tracking.
+        bad_withdrawals = db.session.query(func.count()).select_from(Withdraw).filter(
+            or_(
+                ((Withdraw.earnings_coins != 0) | (Withdraw.commission_coins != 0) |
+                 (Withdraw.gift_earnings_coins != 0) | (Withdraw.pk_earnings_coins != 0)) &
+                (Withdraw.coins != Withdraw.earnings_coins + Withdraw.commission_coins),
+                ((Withdraw.earnings_coins != 0) | (Withdraw.commission_coins != 0) |
+                 (Withdraw.gift_earnings_coins != 0) | (Withdraw.pk_earnings_coins != 0)) &
+                (Withdraw.earnings_coins != Withdraw.gift_earnings_coins + Withdraw.pk_earnings_coins),
+                (Withdraw.status == 'paid') & ((Withdraw.payout_reference == '') | (Withdraw.payout_reference.is_(None)))
+            )
+        ).scalar() or 0
+        if bad_withdrawals:
+            issues.append(dict(kind='withdrawal_source_or_settlement_invariant',
+                               count=bad_withdrawals, severity='critical'))
+
         return dict(ok=not any(i['severity'] in ('critical', 'high') for i in issues), issues=issues,
                     users=db.session.query(func.count()).select_from(User).scalar(),
                     ledger_rows=db.session.query(func.count()).select_from(FinLedger).scalar(),
                     gift_rows=db.session.query(func.count()).select_from(FinGiftTx).scalar(),
-                    commission_rows=db.session.query(func.count()).select_from(FinCommission).scalar())
+                    commission_rows=db.session.query(func.count()).select_from(FinCommission).scalar(),
+                    eligible_gift_base_coins=int(eligible_base),
+                    commission_paid_coins=int(commission_paid),
+                    commission_cap_coins=commission_cap)
 
     def scan():
         found = []
