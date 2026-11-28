@@ -242,4 +242,53 @@ def init_journal(app, db, deps):
                                   memo='Platform retained gift value'))
         return lines
 
-    return dict(JournalEntry=JournalEntry, JournalLine=JournalLine, serialize=serialize, post_internal=post_internal, gift_lines=gift_lines)
+    def pk_gift_lines(sender_id, total, real_used):
+        """Record PK gift spend; only purchased coins fund the PK prize pool."""
+        if any(isinstance(v, bool) or not isinstance(v, int) or v < 0 for v in (total, real_used)):
+            raise ValueError('PK gift amounts must be non-negative whole integers')
+        if total <= 0 or real_used > total:
+            raise ValueError('invalid PK gift allocation')
+        lines = []
+        promo = total - real_used
+        if real_used:
+            lines.append(dict(account_code='liability.user_coin_balance', user_id=sender_id,
+                              debit=real_used, credit=0, memo='Purchased coins committed to PK prize pool'))
+            lines.append(dict(account_code='liability.pk_prize_pool', debit=0, credit=real_used,
+                              memo='PK purchased-coin prize pool funding'))
+        if promo:
+            lines.append(dict(account_code='liability.promo_coin_balance', user_id=sender_id,
+                              debit=promo, credit=0, memo='Promotional coins spent on PK gift'))
+            lines.append(dict(account_code='revenue.platform_pk_gift', debit=0, credit=promo,
+                              memo='Promotional PK gift spend; not prize eligible'))
+        return lines
+
+    def pk_payout_lines(real_used, payouts):
+        """Settle the PK pool into host earnings and the platform's retained share."""
+        if isinstance(real_used, bool) or not isinstance(real_used, int) or real_used <= 0:
+            raise ValueError('PK prize pool must be a positive whole integer')
+        if not isinstance(payouts, list):
+            raise ValueError('PK payouts must be a list')
+        lines = [dict(account_code='liability.pk_prize_pool', debit=real_used, credit=0,
+                      memo='Settle PK purchased-coin prize pool')]
+        paid = 0
+        for payout in payouts:
+            if not isinstance(payout, (tuple, list)) or len(payout) != 3:
+                raise ValueError('invalid PK payout')
+            user_id, amount, kind = payout
+            if isinstance(user_id, bool) or not isinstance(user_id, int) or user_id <= 0:
+                raise ValueError('invalid PK payout user')
+            if isinstance(amount, bool) or not isinstance(amount, int) or amount < 0:
+                raise ValueError('invalid PK payout amount')
+            if amount:
+                lines.append(dict(account_code='liability.host_earnings', user_id=user_id,
+                                  debit=0, credit=amount, memo=f'{kind} PK earnings'))
+            paid += amount
+        if paid > real_used:
+            raise ValueError('PK payouts exceed prize pool')
+        retained = real_used - paid
+        if retained:
+            lines.append(dict(account_code='revenue.platform_pk', debit=0, credit=retained,
+                              memo='Platform retained PK pool share'))
+        return lines
+
+    return dict(JournalEntry=JournalEntry, JournalLine=JournalLine, serialize=serialize, post_internal=post_internal, gift_lines=gift_lines, pk_gift_lines=pk_gift_lines, pk_payout_lines=pk_payout_lines)
