@@ -102,10 +102,12 @@ def init_seller(app, db, deps):
                 ))
                 db.session.commit()
             if 'seller_order' in tables and db.engine.dialect.name == 'postgresql':
-                db.session.execute(text(
-                    'ALTER TABLE seller_order ALTER COLUMN ref TYPE VARCHAR(64)'
-                ))
-                db.session.commit()
+                ref_column = next((c for c in inspector.get_columns('seller_order') if c['name'] == 'ref'), None)
+                if ref_column and getattr(ref_column['type'], 'length', None) is not None and ref_column['type'].length < 64:
+                    db.session.execute(text(
+                        'ALTER TABLE seller_order ALTER COLUMN ref TYPE VARCHAR(64)'
+                    ))
+                    db.session.commit()
         except Exception as e:
             db.session.rollback()
             print('seller create_all/migration:', e)
