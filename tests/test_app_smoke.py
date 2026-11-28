@@ -66,6 +66,26 @@ class AppSmokeTests(unittest.TestCase):
             finally:
                 db.session.rollback()
 
+    def test_lucky_gift_outcome_is_durable_and_unique_per_gift_transaction(self):
+        from backend.main import LuckyGiftOutcome
+        from sqlalchemy.exc import IntegrityError
+        with app.app_context():
+            from sqlalchemy import inspect
+            self.assertTrue(inspect(db.engine).has_table('lucky_gift_outcome'))
+            db.session.add(LuckyGiftOutcome(gift_tx_id=99001, multiplier=5, refund=250))
+            db.session.commit()
+            try:
+                row = LuckyGiftOutcome.query.filter_by(gift_tx_id=99001).first()
+                self.assertEqual(row.multiplier, 5)
+                self.assertEqual(row.refund, 250)
+                db.session.add(LuckyGiftOutcome(gift_tx_id=99001, multiplier=2, refund=100))
+                with self.assertRaises(IntegrityError):
+                    db.session.commit()
+            finally:
+                db.session.rollback()
+                LuckyGiftOutcome.query.filter_by(gift_tx_id=99001).delete()
+                db.session.commit()
+
     def test_withdraw_request_table_and_unique_idempotency_constraint(self):
         from backend.main import WithdrawRequest
         from sqlalchemy.exc import IntegrityError

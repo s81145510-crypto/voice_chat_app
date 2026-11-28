@@ -237,6 +237,15 @@ class PKBattle(db.Model):
 class LuckyStats(db.Model):
     day = db.Column(db.String(10), primary_key=True); volume = db.Column(db.Integer, default=0); returned = db.Column(db.Integer, default=0); house = db.Column(db.Integer, default=0)
 
+class LuckyGiftOutcome(db.Model):
+    """Persist the random Lucky Gift result for exact idempotent replay."""
+    id = db.Column(db.Integer, primary_key=True)
+    gift_tx_id = db.Column(db.Integer, nullable=False, unique=True, index=True)
+    multiplier = db.Column(db.Integer, nullable=False)
+    refund = db.Column(db.Integer, nullable=False)
+    created_at = db.Column(db.Integer, default=now, nullable=False)
+
+
 class WithdrawRequest(db.Model):
     """Durable idempotency record for one user's withdrawal submission."""
     id = db.Column(db.Integer, primary_key=True)
@@ -963,6 +972,15 @@ def room_gift(rid):
                 and existing['room_id'] == str(rid)[:16])
         if not same:
             return err('Request ID already used for a different gift', 409)
+        if existing['lucky']:
+            outcome = LuckyGiftOutcome.query.filter_by(gift_tx_id=existing['id']).first()
+            if outcome:
+                return jsonify(coins=coins_of(g.user.id), lucky=outcome.multiplier,
+                               refund=outcome.refund, duplicate=1)
+            # Legacy Lucky gifts predate durable outcome storage. Do not invent
+            # or misreport a random result that cannot be reconstructed.
+            return jsonify(coins=coins_of(g.user.id), lucky=None, refund=None,
+                           outcome_unavailable=1, duplicate=1)
         return jsonify(coins=coins_of(g.user.id), lucky=0, refund=0, duplicate=1)
 
     r = get_room(rid)
@@ -1015,6 +1033,8 @@ def room_gift(rid):
             tx(g.user.id, 'gift', -total, f'{gift["key"]}x{qty} -> {to}')
         db.session.execute(update(User).where(User.id == g.user.id).values(spent=User.spent + total, gifts_sent=User.gifts_sent + total), execution_options={'synchronize_session': False})
         gid, pool = FIN['record_gift'](g.user.id, to, gift['key'], qty, total, real_used, earn, rid, gift['tier'], idem)
+        if gift['tier'] == 'lucky' and gid:
+            db.session.add(LuckyGiftOutcome(gift_tx_id=gid, multiplier=lucky_m, refund=refund))
         if gift['tier'] != 'lucky' and gid:
             FIN['pay_commissions'](to, real_used, g.user.id, gid)
         meta = dict(gift=gift['key'], emoji=gift['emoji'], qty=qty, tier=gift['tier'], to=to, to_name=target.username, price=total, lucky=lucky_m, refund=refund)
@@ -1024,6 +1044,13 @@ def room_gift(rid):
         db.session.rollback()
         existing = FIN['find_gift_idem'](idem)
         if existing and existing['sender_id'] == g.user.id and existing['receiver_id'] == to and existing['gift_key'] == gift['key'] and existing['qty'] == qty and existing['room_id'] == str(rid)[:16]:
+            if existing['lucky']:
+                outcome = LuckyGiftOutcome.query.filter_by(gift_tx_id=existing['id']).first()
+                if outcome:
+                    return jsonify(coins=coins_of(g.user.id), lucky=outcome.multiplier,
+                                   refund=outcome.refund, duplicate=1)
+                return jsonify(coins=coins_of(g.user.id), lucky=None, refund=None,
+                               outcome_unavailable=1, duplicate=1)
             return jsonify(coins=coins_of(g.user.id), lucky=0, refund=0, duplicate=1)
         return err('Gift could not be safely processed. Please retry with the same request.', 409)
 

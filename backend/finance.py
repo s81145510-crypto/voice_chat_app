@@ -170,7 +170,7 @@ def init_finance(app, db, deps):
     def find_gift_idem(idem):
         row = FinGiftTx.query.filter_by(idem=str(idem)[:80]).first()
         if not row: return None
-        return dict(sender_id=row.sender_id, receiver_id=row.receiver_id, gift_key=row.gift_key,
+        return dict(id=row.id, sender_id=row.sender_id, receiver_id=row.receiver_id, gift_key=row.gift_key,
                     qty=int(row.qty or 0), room_id=str(row.room_id or ''),
                     total=int(row.total or 0), lucky=(row.tier == 'lucky'))
 
