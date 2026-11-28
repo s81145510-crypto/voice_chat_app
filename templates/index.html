@@ -927,9 +927,9 @@ async function openSellerOrderReview(orderId){
  });
 }
 const admAct=(k,id,a)=>run(null,async()=>{await api('/api/admin/'+k,{id,action:a});window._admLoad(window._admTab())});
-const admUser=(id,a,amount)=>run(null,async()=>{await api('/api/admin/user',{id,action:a,amount});window._admLoad(window._admTab())});
+const admUser=(id,a,amount,reason)=>run(null,async()=>{await api('/api/admin/user',{id,action:a,amount,reason});window._admLoad(window._admTab())});
 function admVip(id){const n=prompt('VIP days (1–365)','30');if(n)admUser(id,'vip',+n)}
-function admGrant(id){const n=prompt('Coins (negative allowed)');if(n)admUser(id,'grant',+n)}
+function admGrant(id){const raw=prompt('Coins to grant (positive) or remove (negative)');if(raw===null||!raw.trim())return;const n=Number(raw);if(!Number.isInteger(n)||!n)return toast('Enter a non-zero whole number');let reason='';if(n<0){reason=prompt('Required reason for wallet reduction (minimum 5 characters):')||'';if(reason.trim().length<5)return toast('A clear reason is required');}admUser(id,'grant',n,reason.trim())}
 async function viewShot(id){try{const r=await fetch('/api/admin/shot/'+id,{headers:{Authorization:'Bearer '+TOKEN}});const u=URL.createObjectURL(await r.blob());modal(`<img src="${u}" style="width:100%;border-radius:12px">`)}catch(e){toast('Not found')}}
 document.addEventListener('visibilitychange',()=>{if(!document.hidden&&R&&R.alive){clearTimeout(R.t);poll()}});
 addEventListener('pagehide',()=>{if(R&&TOKEN)try{fetch('/api/rooms/'+R.id+'/exit',{method:'POST',keepalive:true,headers:{Authorization:'Bearer '+TOKEN,'Content-Type':'application/json'},body:'{}'})}catch(e){}});
