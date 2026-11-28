@@ -802,9 +802,19 @@ async function renderMe(){
 function editProfile(){const m=S.me;const o=modal(`<h3>✏️ Edit profile</h3><div class="col"><input id="e-p" type="file" accept="image/*"><input id="e-n" value="${esc(m.name)}" maxlength="30"><input id="e-b" value="${esc(m.bio)}" maxlength="160"><input id="e-t" value="${esc(m.phone)}" maxlength="10" placeholder="09xxxxxxxx"><button class="btn" id="e-go">Save</button></div>`);
   $('#e-go',o).onclick=e=>run(e.target,async()=>{const f=$('#e-p',o).files[0];if(f){const fd=new FormData();fd.append('file',await shrink(f,320,.85),'p.jpg');setMe((await api('/api/profile/photo',fd)).me)}
    setMe((await api('/api/profile',{name:$('#e-n',o).value,bio:$('#e-b',o).value,phone:$('#e-t',o).value})).me);o.close();renderMe()})}
-function openAdmin(){const o=modal(`<div class="chips" id="at">${['overview','purchases','withdraws','users'].map((x,i)=>`<div class="chip ${i?'':'on'}" data-t="${x}">${x}</div>`).join('')}</div><div id="ab" style="margin-top:10px"></div>`);
+function openAdmin(){const o=modal(`<div class="chips" id="at">${['overview','purchases','reviews','withdraws','users'].map((x,i)=>`<div class="chip ${i?'':'on'}" data-t="${x}">${x}</div>`).join('')}</div><div id="ab" style="margin-top:10px"></div>`);
   const load=async x=>{$$('#at .chip',o).forEach(c=>c.classList.toggle('on',c.dataset.t===x));const b=$('#ab',o);b.innerHTML='…';
    try{if(x==='overview'){const d=await api('/api/admin/overview');b.innerHTML=`<div class="grid2">${Object.entries(d).map(([k,v])=>`<div class="card" style="margin:0"><div class="mut">${k}</div><b>${fmt(v)}</b></div>`).join('')}</div>`}
+   else if(x==='reviews'){
+    const d=await api('/api/admin/purchase-reviews');
+    b.innerHTML=d.items.map(y=>`<div class="card">
+     <div class="row"><b>Purchase #${y.purchase_id}</b><span class="sp"></span><span class="badge">${esc(y.action)}</span></div>
+     <div>${fmt(y.coins)} 🪙 · ${fmt(y.amount_birr)} Birr · ${esc(y.method||'')}</div>
+     <div class="mut" style="word-break:break-all">Reference: ${esc(y.reference||'—')}</div>
+     <div class="mut">Admin: ${esc(y.reviewer_tg_id)} · ${ago(y.reviewed_at)}</div>
+     ${y.note?`<div style="margin-top:5px">Reason / note: ${esc(y.note)}</div>`:''}
+    </div>`).join('')||'<div class="empty">No review records yet.</div>';
+   }
    else if(x==='purchases'||x==='withdraws'){
     const d=await api('/api/admin/'+x);
     if(x==='purchases'){
