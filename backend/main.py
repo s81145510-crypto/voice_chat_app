@@ -1485,6 +1485,8 @@ def adm_purchase():
     p = db.session.get(Purchase, pid)
     if not p:
         return err('not found', 404)
+    if p.method not in ('telebirr', 'usdt'):
+        return err('Unsupported payment method; purchase cannot be approved', 422)
 
     review_note = str(b.get('reason') or b.get('note') or '').strip()[:240]
     if act == 'reject' and not review_note:
@@ -1498,6 +1500,8 @@ def adm_purchase():
     if p.method == 'telebirr':
         if not p.ref or len(p.ref.strip()) < 6:
             return err('Telebirr transaction reference is missing or invalid', 422)
+        if act == 'approve' and b.get('manual_verified') is not True:
+            return err('Confirm manual Telebirr verification before approving (manual_verified=true)', 400)
     elif p.method == 'usdt' and act == 'approve':
         # USDT approval remains chain-verified; it is not a manual bypass.
         try:
