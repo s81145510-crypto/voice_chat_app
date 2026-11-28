@@ -92,7 +92,10 @@ class AppSmokeTests(unittest.TestCase):
         from sqlalchemy.exc import IntegrityError
         from backend.main import Purchase
         with app.app_context():
-            indexes = {x["name"]: x for x in inspect(db.engine).get_indexes("purchase")}
+            from sqlalchemy import text
+            indexes = set(db.session.execute(text(
+                "SELECT name FROM sqlite_master WHERE type='index' AND tbl_name='purchase'"
+            )).scalars().all())
             self.assertIn("uq_purchase_ref_ci", indexes)
             self.assertIn("uq_purchase_txhash_ci", indexes)
             db.session.add(Purchase(user_id=8101, username="smoke", coins=100, birr=50,
