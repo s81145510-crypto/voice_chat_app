@@ -252,14 +252,14 @@ def init_feed(app, db, d):
             resolution = str(b.get('resolution') or '').strip().lower()
             if status not in {'reviewing', 'resolved', 'dismissed'}:
                 return err('Invalid report status')
-            if resolution not in {'', 'warning', 'temporary_ban', 'permanent_ban', 'no_action'}:
+            if resolution not in {'', 'warning', 'permanent_ban', 'no_action'}:
                 return err('Invalid moderation action')
             report = db.session.query(UserReport).filter_by(id=rid).with_for_update().first()
             if not report: return err('Report not found', 404)
             if report.status in {'resolved', 'dismissed'}:
                 return err('Report already closed', 409)
             target = db.session.get(User, report.target_id)
-            if resolution in {'temporary_ban', 'permanent_ban'} and target:
+            if resolution == 'permanent_ban' and target:
                 target.banned = True
             report.status = status
             report.reviewed_by = g.user.id
