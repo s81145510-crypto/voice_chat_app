@@ -209,6 +209,8 @@ button.vs{color:#fff}.r-ppl{cursor:pointer}
 .heart{position:fixed;z-index:45;pointer-events:none;font-size:28px}
 .pkh-s{display:flex;gap:8px;margin-bottom:10px}.pkh-s div{flex:1;text-align:center;border-radius:12px;padding:8px 2px;background:var(--card);border:1px solid var(--line)}.pkh-s b{display:block;font-size:19px}
 .pkh .who{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;gap:2px;cursor:pointer}.pkh .who .ell{max-width:100%}
+#lv-set{position:absolute;right:12px;bottom:calc(150px + var(--sb));z-index:3;width:44px;height:44px;border-radius:50%;background:#0007;color:#fff;font-size:20px;padding:0}
+.msg .who{cursor:pointer}.danger{border:1px solid rgba(255,77,109,.5)}.mrow{display:flex;gap:8px;align-items:center;padding:7px 0}.btnrow{display:flex;flex-wrap:wrap;gap:8px;justify-content:center}.warn{border:1px solid rgba(255,201,77,.5);border-radius:12px;padding:10px;font-size:13px}
 #lv-follow{background:linear-gradient(135deg,#ff4d8d,#9b5cff);border-radius:16px;padding:4px 11px;font-size:12px;font-weight:800;flex:none}
 #lv-hint{position:absolute;top:42%;left:50%;transform:translateX(-50%);z-index:3;background:#0009;border-radius:20px;padding:8px 16px;font-size:13px;pointer-events:none;display:none;white-space:nowrap}
 </style>
@@ -249,13 +251,14 @@ button.vs{color:#fff}.r-ppl{cursor:pointer}
 <button data-p="wallet"><i>👛</i>Wallet</button><button data-p="community"><i>💬</i>Community</button><button data-p="me"><i>👤</i>Me</button>
 </nav>
 <div id="room">
-  <div class="rh"><button onclick="minimize()">⌄</button><div class="t"><div class="ell" id="r-name" style="font-weight:700"></div><div class="mut"><span class="r-ppl" onclick="openViewers()"><span class="live"></span><span id="r-on">0</span> online ›</span> · <span class="vs" id="r-vs">🔇</span></div></div><button onclick="exitRoom()">✕</button></div>
+  <div class="rh"><button onclick="minimize()">⌄</button><div class="t"><div class="ell" id="r-name" style="font-weight:700"></div><div class="mut"><span class="r-ppl" onclick="openViewers()"><span class="live"></span><span id="r-on">0</span> online ›</span> · <span class="vs" id="r-vs">🔇</span></div></div><button id="r-set" style="display:none" onclick="openRoomSettings()" aria-label="Room settings">⚙️</button><button onclick="exitRoom()">✕</button></div>
   <div class="seats"><div class="hostrow" id="r-host"></div><div class="sg" id="r-seats"></div></div>
   <div class="chat" id="r-chat"></div>
   <div class="bar"><button class="rb mic" id="r-mic" onclick="toggleMic()">🎤</button><input id="r-in" placeholder="Message…" maxlength="200" onkeydown="if(event.key==='Enter')sendChat()"><button class="rb" onclick="openGift()">🎁</button><button class="rb" style="background:linear-gradient(135deg,var(--pri),var(--pri2))" onclick="sendChat()">➤</button></div>
 </div>
 <div id="live"><div id="lv-video"></div><div id="lv-hint">⬆️ Swipe up for the next live</div>
   <div class="lv-top"><div class="row sp" id="lv-host" style="background:#0007;border-radius:24px;padding:4px 12px 4px 4px;flex:0 1 auto"></div><button id="lv-follow" style="display:none" onclick="lvFollow()">＋ Follow</button><span class="lv-tag">LIVE</span><button class="vs" onclick="openViewers()" aria-label="Viewers">👁 <span id="lv-on">0</span></button><span class="vs" id="lv-vs">⏳</span><span class="sp"></span><button class="rb" id="lv-pk" style="width:36px;height:36px;font-size:15px;display:none" onclick="startPKFromLive()">⚔️</button><button class="rb" style="width:36px;height:36px;font-size:15px" onclick="exitRoom()">✕</button></div>
+  <button id="lv-set" style="display:none" onclick="openRoomSettings()" aria-label="Room settings">⚙️</button>
   <button id="lv-like" onclick="tapLike()" aria-label="Like"><i>❤️</i><span id="lv-likes">0</span></button>
   <div class="lv-bot"><div id="lv-chat"></div><div class="row"><input id="lv-in" placeholder="Message…" maxlength="200" style="background:#0007" onkeydown="if(event.key==='Enter')sendChat()"><button class="rb" id="lv-flip" style="display:none" onclick="flipCam()">🔄</button><button class="rb" id="lv-mic" style="display:none" onclick="liveMic()">🎤</button><button class="rb" onclick="openGift()">🎁</button><button class="rb" style="background:linear-gradient(135deg,var(--pri),var(--pri2))" onclick="sendChat()">➤</button></div></div>
 </div>
@@ -375,7 +378,7 @@ function goMenu(){const m=modal(`<h3>Start</h3><div class="col"><button class="b
   $('#gm-l',m).onclick=()=>{m.close();newRoom('live')};$('#gm-v',m).onclick=()=>{m.close();newRoom('voice')}}
 function feedCard(r){const h=r.host,lv=r.kind==='live',hue=(h.id*47)%360;
   const bg=h.photo?`background-image:url('${esc(h.photo)}')`:`background:linear-gradient(160deg,hsl(${hue},55%,45%),#1a0a2e)`;
-  return `<div class="fcard" style="${bg}" onclick="watch('${esc(r.id)}')">${h.photo?'':`<div class="ini">${esc((h.name||'?')[0].toUpperCase())}</div>`}<span class="tg lv-tag ${lv?'':'voice'}">${lv?'LIVE':'PARTY'}</span><span class="vw">👁 ${r.online}</span><div class="inf"><div class="ell" style="font-weight:700">${esc(r.name)}</div><div class="mut ell" style="color:#ddd">${r.following?'💗 ':''}${esc(h.name)} ${h.lvi} ${vipTag(h)}</div></div></div>`}
+  return `<div class="fcard" style="${bg}" onclick="watch('${esc(r.id)}')">${h.photo?'':`<div class="ini">${esc((h.name||'?')[0].toUpperCase())}</div>`}<span class="tg lv-tag ${lv?'':'voice'}">${lv?'LIVE':'PARTY'}</span><span class="vw">${r.private?'🔒 ':''}👁 ${r.online}</span><div class="inf"><div class="ell" style="font-weight:700">${esc(r.name)}</div><div class="mut ell" style="color:#ddd">${r.following?'💗 ':''}${esc(h.name)} ${h.lvi} ${vipTag(h)}</div></div></div>`}
 async function loadFeed(){const seq=++HOME_SEQ,tab=HT;
   try{const d=await api('/api/feed?tab='+tab);const el=$('#h-feed');if(!el||seq!==HOME_SEQ)return;
     el.innerHTML=d.rooms.length?`<div class="fgrid">${d.rooms.map(feedCard).join('')}</div>`:`<div class="empty">${tab==='follow'?'People you follow are not live now.<br>Open a profile and tap Follow.':'Nobody is live yet. Be the first! 📹'}</div>`}
@@ -388,7 +391,9 @@ async function openProfile(uid){const o=modal('<div class="empty">…</div>');
     const onStage=R&&Object.values(R.seats).some(x=>x.u.id===uid);
     box.innerHTML=`<div class="col" style="align-items:center;text-align:center">${av(u,'l')}<b style="font-size:20px">${esc(u.name)}</b><div><span class="badge">${u.lvi} Lv.${u.lv+1} ${esc(u.lvn)}</span> ${vipTag(u)} ${hostTag(u)} ${agentTag(u)}</div><div class="mut">${esc(u.bio||'')}</div></div>
     <div class="pf-stats"><button data-f="followers"><b>${fmt(d.followers)}</b><span class="mut">Followers</span></button><button data-f="following"><b>${fmt(d.following)}</b><span class="mut">Following</span></button><button><b class="gold">${fmt(d.recv)}</b><span class="mut">Received</span></button><button><b class="gold">${fmt(d.sent)}</b><span class="mut">Sent</span></button></div>
-    <div class="col">${d.me?'':`<button class="btn ${d.is_following?'ghost':''}" id="pf-f">${d.is_following?'✓ Following':'＋ Follow'}</button>`}${d.room&&!(R&&R.id===d.room.id)?`<button class="btn bad" id="pf-w">${d.room.kind==='live'?'📹 Watch live':'🎙 Join party'}</button>`:''}${!d.me&&onStage?'<button class="btn gold" id="pf-g">🎁 Send gift</button>':''}${u.host==='host'?'<button class="btn ghost" id="pf-pk">⚔️ PK record</button>':''}</div>`;
+    <div class="col">${d.me?'':`<button class="btn ${d.is_following?'ghost':''}" id="pf-f">${d.is_following?'✓ Following':'＋ Follow'}</button>`}${d.room&&!(R&&R.id===d.room.id)?`<button class="btn bad" id="pf-w">${d.room.kind==='live'?'📹 Watch live':'🎙 Join party'}</button>`:''}${!d.me&&onStage?'<button class="btn gold" id="pf-g">🎁 Send gift</button>':''}${u.host==='host'?'<button class="btn ghost" id="pf-pk">⚔️ PK record</button>':''}${!d.me&&R&&(R.my?.level||0)>=1&&uid!==R.host?'<button class="btn ghost" id="pf-m">🛡 Moderate in this room</button>':''}${d.me?'':'<button class="btn ghost sm" id="pf-r">🚩 Report</button>'}</div>`;
+    const md=$('#pf-m',box);if(md)md.onclick=()=>openModerate(uid,u.name);
+    const rp=$('#pf-r',box);if(rp)rp.onclick=()=>openReport(uid,u.name);
     const pk=$('#pf-pk',box);if(pk)pk.onclick=()=>openPKHistory(uid);
     $$('[data-f]',box).forEach(b=>b.onclick=()=>openFollows(uid,b.dataset.f));
     const f=$('#pf-f',box);if(f)f.onclick=()=>run(f,async()=>{const r=await api('/api/follow/'+uid,{follow:!d.is_following});hap('medium');lvSetFollow(uid,r.following);await draw()});
@@ -418,7 +423,7 @@ async function lvLoadFollow(uid){if(LVF.host===uid)return;LVF={host:uid,on:true}
 function lvFollow(){const uid=LVF.host;run($('#lv-follow'),async()=>{const r=await api('/api/follow/'+uid,{follow:true});lvSetFollow(uid,r.following);toast('💗 Followed');hap('medium')})}
 async function swipeLive(step){const cur=R;if(SWIPING||!cur||cur.kind!=='live'||cur.host===S.me.id)return;SWIPING=true;
   try{const d=await api('/api/feed?tab=live');if(R!==cur)return;
-    const ids=d.rooms.map(r=>r.id).sort(),i=ids.indexOf(cur.id),others=ids.filter(x=>x!==cur.id);
+    const ids=d.rooms.filter(r=>!r.private||r.id===cur.id).map(r=>r.id).sort(),i=ids.indexOf(cur.id),others=ids.filter(x=>x!==cur.id);
     if(!others.length){toast('No other live right now');return}
     const next=i<0?others[0]:ids[(i+step+ids.length)%ids.length];
     hap('medium');await enterRoom(next);await V.joining}
@@ -477,12 +482,82 @@ async function openPKHistory(uid,scope){const o=modal('<h3>⚔️ PK history</h3
     $$('[data-s]',o).forEach(c=>c.onclick=()=>{cur=c.dataset.s;draw()})
   }catch(e){o.firstChild.innerHTML=`<h3>⚔️ PK history</h3><div class="empty">${esc(e.message)}</div>`}};
   draw()}
+// ---- private rooms, room admins, mute and block ----
+const FOREVER=2147483647;
+const untilText=t=>t>=FOREVER?'until lifted':'until '+new Date(t*1000).toLocaleString([], {month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'});
+function applyMute(t){for(const id of ['#r-in','#lv-in']){const i=$(id);i.disabled=!!t;i.placeholder=t?'🔇 You are muted here':'Message…';if(t)i.value=''}}
+function applyMy(r,my){const was=r.my;r.my=my;if(!was||!was.muted!==!my.muted)applyMute(my.muted);
+  const show=my.level>=2?'':'none';$('#lv-set').style.display=r.kind==='live'?show:'none';$('#r-set').style.display=r.kind==='live'?'none':show}
+function askRoomPassword(rid,wrong){const m=modal(`<h3>🔒 Private room</h3><div class="col">${wrong?'<div class="warn">Wrong password · የተሳሳተ password</div>':'<div class="mut">Ask the room owner for the password.</div>'}<input id="rp-i" type="password" maxlength="20" placeholder="Room password" autocomplete="off"><button class="btn" id="rp-b">Enter</button></div>`);
+  $('#rp-b',m).onclick=()=>{const v=$('#rp-i',m).value.trim();if(!v)return toast('Enter the password');m.close();enterRoom(rid,v)}}
+function openRoomSettings(){const r=R;if(!r||!r.my)return;const owner=r.host===S.me.id,priv=r.my.private,staff=r.my.level>=3;
+  const m=modal(`<h3>⚙️ Room settings</h3><div class="col"><div class="mut">${priv?'🔒 Private: people need the password to enter.':'🌍 Public: anyone can enter.'}</div>
+  ${owner?`<input id="rs-p" maxlength="20" placeholder="${priv?'New password':'Password (4-20 characters)'}" autocomplete="off"><button class="btn" id="rs-lock">🔒 ${priv?'Change password':'Make private'}</button>`:''}
+  ${priv&&(owner||staff)?'<button class="btn ghost" id="rs-open">🔓 Make public</button>':''}
+  ${owner?'<button class="btn ghost" onclick="openRoomSafety()">🛡 Admins & blocked list</button>':''}
+  ${staff&&!owner?'<button class="btn bad" id="rs-close">🛑 Close this room (staff)</button>':''}</div>`);
+  const set=(btn,password,msg)=>run(btn,async()=>{await api('/api/rooms/'+r.id+'/privacy',{password});toast(msg);m.close()});
+  const l=$('#rs-lock',m);if(l)l.onclick=()=>{const v=$('#rs-p',m).value.trim();if(v.length<4)return toast('Password: 4-20 characters');set(l,v,'🔒 Room is private')};
+  const o=$('#rs-open',m);if(o)o.onclick=()=>set(o,'','🔓 Room is public');
+  const c=$('#rs-close',m);if(c)c.onclick=()=>confirm('Close this room for everyone?')&&run(c,async()=>{await api('/api/mod/close-room',{id:r.id});m.close();toast('Room closed')})}
+async function openModerate(uid,name){const r=R;if(!r)return;const o=modal('<h3>🛡 Moderate</h3><div class="empty">…</div>');
+  const draw=async()=>{try{const d=await api('/api/rooms/'+r.id+'/mod/'+uid),c=d.can;
+    const btn=(a,label,cls,min)=>`<button class="btn sm ${cls||'ghost'}" data-a="${a}" data-m="${min??10}">${label}</button>`;
+    const html=[c.mute?btn('mute','🔇 10 min','ghost',10)+btn('mute','🔇 1 hour','ghost',60)+btn('mute','🔇 1 day','ghost',1440):'',c.mute_forever?btn('mute','🔇 Always','ghost',0):'',c.unmute?btn('unmute','🔊 Unmute'):'',
+      c.kick?btn('kick','👢 Remove 1 hour','bad'):'',c.ban?btn('ban','⛔ Block','bad'):'',c.admin?btn('admin','⭐ Make room admin','gold'):'',c.unadmin?btn('unadmin','✖ Remove room admin'):''].join('');
+    o.firstChild.innerHTML=`<h3>🛡 ${esc(name||'Moderate')}</h3>${d.muted?`<div class="mut">🔇 Chat muted ${untilText(d.muted)}</div>`:''}${d.banned?`<div class="mut">⛔ Blocked ${untilText(d.banned)}</div>`:''}${d.room_admin?'<div class="mut">⭐ Room admin</div>':''}<div class="btnrow" style="margin-top:10px">${html||'<div class="mut">You cannot change anything for this person.</div>'}</div><div class="mut" style="margin-top:10px">Mute and block apply to all rooms of this room owner.</div>`;
+    $$('[data-a]',o).forEach(b=>b.onclick=()=>{const a=b.dataset.a;if((a==='ban'||a==='kick')&&!confirm((a==='ban'?'Block':'Remove')+' this person?'))return;
+      run(b,async()=>{await api('/api/rooms/'+r.id+'/mod',{uid,action:a,minutes:+b.dataset.m});toast('✅ Done');hap('medium');if(a==='ban'||a==='kick')o.close();else await draw()})})
+  }catch(e){o.firstChild.innerHTML=`<h3>🛡 Moderate</h3><div class="empty">${esc(e.message)}</div>`}};
+  draw()}
+async function openRoomSafety(){const o=modal('<h3>🛡 My rooms</h3><div class="empty">…</div>');
+  const draw=async()=>{try{const d=await api('/api/host/moderation');
+    const list=(title,items,action,label,note)=>`<div class="card"><b>${title}</b>${items.length?items.map(u=>`<div class="mrow">${av(u,'s')}<div class="sp ell">${esc(u.name)}${u.until?`<div class="mut">${untilText(u.until)}</div>`:''}</div><button class="btn sm ghost" data-a="${action}" data-u="${u.id}">${label}</button></div>`).join(''):`<div class="mut">${note}</div>`}</div>`;
+    o.firstChild.innerHTML='<h3>🛡 My rooms</h3><div class="mut" style="margin-bottom:8px">To add one: open your room, tap a person, then “🛡 Moderate”.</div>'+list('⭐ Room admins',d.admins,'unadmin','Remove','No room admins')+list('🔇 Muted',d.muted,'unmute','Unmute','Nobody is muted')+list('⛔ Blocked',d.blocked,'unban','Unblock','Nobody is blocked');
+    $$('[data-a]',o).forEach(b=>b.onclick=()=>run(b,async()=>{await api('/api/host/moderation',{uid:+b.dataset.u,action:b.dataset.a});await draw()}))
+  }catch(e){o.firstChild.innerHTML=`<h3>🛡 My rooms</h3><div class="empty">${esc(e.message)}</div>`}};
+  draw()}
+// ---- reports and the moderator panel ----
+const REASONS={abuse:'Insult / harassment',nudity:'Nudity / sexual content',scam:'Scam / fraud',spam:'Spam',underage:'Under age',other:'Other'};
+function openReport(uid,name){const m=modal(`<h3>🚩 Report ${esc(name||'')}</h3><div class="col"><select id="rep-r">${Object.entries(REASONS).map(([k,v])=>`<option value="${k}">${v}</option>`).join('')}</select><textarea id="rep-n" maxlength="200" rows="3" placeholder="What happened? (optional)"></textarea><button class="btn bad" id="rep-b">Send report</button></div>`);
+  $('#rep-b',m).onclick=e=>run(e.target,async()=>{await api('/api/report',{uid,reason:$('#rep-r',m).value,note:$('#rep-n',m).value,room_id:R?R.id:''});m.close();toast('✅ Report sent. A moderator will check it.',3500)})}
+function modSuspend(uid,name,done){const why=prompt('Suspend '+name+'? Write the reason:');if(why===null)return;run(null,async()=>{await api('/api/mod/suspend',{id:uid,reason:why});toast('✅ Suspended');done()})}
+function openModPanel(){let tab='reports';const o=modal('<h3>👮 Moderator panel</h3><div class="empty">…</div>');
+  const head=()=>`<h3>👮 Moderator panel</h3><div class="chips" style="margin-bottom:10px"><div class="chip ${tab==='reports'?'on':''}" data-t="reports">Reports</div><div class="chip ${tab==='users'?'on':''}" data-t="users">Users</div></div>`;
+  const tabs=()=>$$('[data-t]',o).forEach(c=>c.onclick=()=>{tab=c.dataset.t;draw()});
+  const person=u=>u?`<span style="cursor:pointer;text-decoration:underline" onclick="openProfile(${u.id})">${esc(u.name)}</span>${u.suspended?' 🚫':''}`:'—';
+  const susp=u=>u&&!u.suspended&&!u.staff?`<button class="btn sm bad" data-s="${u.id}">🚫 Suspend</button>`:'';
+  const wire=(map,again)=>$$('[data-s]',o).forEach(b=>b.onclick=()=>modSuspend(+b.dataset.s,map[b.dataset.s],again));
+  const draw=async()=>{const want=tab;try{
+    if(want==='reports'){const d=await api('/api/mod/reports');if(want!==tab)return;const names={};d.items.forEach(x=>{if(x.target)names[x.target.id]=x.target.name});
+      o.firstChild.innerHTML=head()+(d.items.length?d.items.map(x=>`<div class="card"><b>${person(x.target)}</b> · ${esc(REASONS[x.reason]||x.reason)}<div class="mut">from ${person(x.reporter)} · ${ago(x.ts)}</div>${x.note?`<div style="margin:6px 0;overflow-wrap:anywhere">${esc(x.note)}</div>`:''}<div class="btnrow" style="justify-content:flex-start;margin-top:8px">${x.room?`<button class="btn sm ghost" data-w="${esc(x.room.id)}">👁 Go to room</button>`:''}${susp(x.target)}<button class="btn sm ghost" data-c="${x.id}">✓ Close report</button></div></div>`).join(''):'<div class="empty">No open reports</div>');
+      wire(names,draw);$$('[data-c]',o).forEach(b=>b.onclick=()=>run(b,async()=>{await api('/api/mod/report',{id:+b.dataset.c});await draw()}));$$('[data-w]',o).forEach(b=>b.onclick=()=>watch(b.dataset.w))}
+    else{o.firstChild.innerHTML=head()+'<input id="mq" placeholder="Search by name"><div id="ml" style="margin-top:8px"></div><div class="mut">Only an Admin can lift a suspension.</div>';
+      let seq=0;const find=async()=>{const n=++seq,d=await api('/api/mod/users?q='+encodeURIComponent($('#mq',o).value)).catch(e=>{toast(e.message);return{items:[]}});if(n!==seq||!$('#ml',o))return;const names={};d.items.forEach(u=>names[u.id]=u.name);
+        $('#ml',o).innerHTML=d.items.map(u=>`<div class="mrow">${av(u,'s')}<div class="sp ell">${person(u)}${u.staff?' <span class="badge">staff</span>':''}</div>${susp(u)}</div>`).join('');wire(names,find)};
+      $('#mq',o).oninput=find}
+    tabs()
+  }catch(e){o.firstChild.innerHTML=head()+`<div class="empty">${esc(e.message)}</div>`;tabs()}};
+  draw()}
+const admMod=(id,on)=>confirm(on?'Make this person a Moderator? They can remove posts, close rooms and suspend users. They cannot touch coins or payments.':'Remove Moderator?')&&run(null,async()=>{await api('/api/admin/moderator',{id,on:!!on});window._admLoad(window._admTab())});
+async function openModLog(){const o=modal('<h3>📋 Moderator activity</h3><div class="empty">…</div>');
+  try{const d=await api('/api/admin/mod-log');o.firstChild.innerHTML='<h3>📋 Moderator activity</h3>'+(d.items.map(x=>`<div class="card"><b>${esc(x.staff)}</b> · ${esc(x.action)} → ${esc(x.target)}<div class="mut" style="overflow-wrap:anywhere">${esc(x.note||'')} · ${ago(x.ts)}</div></div>`).join('')||'<div class="empty">Nothing yet</div>')}
+  catch(e){o.firstChild.innerHTML=`<div class="empty">${esc(e.message)}</div>`}}
+// ---- closing your own account ----
+async function openCloseAccount(){const o=modal('<h3>🗑 Delete my account</h3><div class="empty">…</div>');
+  try{const d=await api('/api/account/close-check'),tg=String(S.me.tg_id).startsWith('p_');
+    if(d.blockers.length){o.firstChild.innerHTML=`<h3>🗑 Delete my account</h3><div class="warn">${d.blockers.map(esc).join('<br>')}</div>`;return}
+    o.firstChild.innerHTML=`<h3>🗑 Delete my account</h3><div class="col"><div class="warn">This cannot be undone from the app · ይህ ከ app ውስጥ አይመለስም።<br><br>You will lose access to <b>🪙 ${fmt(d.coins)}</b> coins and <b>💰 ${fmt(d.income)}</b> income${d.income>0?'. Withdraw your income first!':'.'}<br>Your profile, photo, posts, jobs, rooms and followers are removed. Payment and gift records are kept.${tg?`<br>Your Telegram can verify a new account only after ${d.reuse_days} days.`:''}</div>
+      ${d.has_password?'<input id="ca-p" type="password" placeholder="Your password" autocomplete="current-password">':''}<input id="ca-c" placeholder="Type DELETE" autocomplete="off" autocapitalize="characters"><button class="btn bad" id="ca-b">Delete my account</button></div>`;
+    $('#ca-b',o).onclick=e=>{if($('#ca-c',o).value.trim().toUpperCase()!=='DELETE')return toast('Type DELETE to confirm');
+      run(e.target,async()=>{await api('/api/account/close',{password:$('#ca-p',o)?.value||'',confirm:'DELETE'});if(R)await exitRoom(true).catch(()=>{});alert('Your account was deleted.');logout()})}
+  }catch(e){o.firstChild.innerHTML=`<h3>🗑 Delete my account</h3><div class="empty">${esc(e.message)}</div>`}}
 let RT='voice';
-function roomCard(r){const lv=r.kind==='live';return `<div class="card room-card" onclick="enterRoom('${r.id}')">${av(r.host,'')}<div class="sp"><div class="ell" style="font-weight:600">${lv?'<span class="lv-tag">LIVE</span> ':''}${esc(r.name)}</div><div class="mut ell">${esc(r.topic||('Host: '+(r.host?r.host.name:'-')))}</div></div><div style="text-align:right"><div><span class="live"></span><b>${r.online}</b></div><div class="mut">${lv?'📹':' '+r.seated+'/21'}</div></div></div>`}
+function roomCard(r){const lv=r.kind==='live';return `<div class="card room-card" onclick="enterRoom('${r.id}')">${av(r.host,'')}<div class="sp"><div class="ell" style="font-weight:600">${lv?'<span class="lv-tag">LIVE</span> ':''}${r.private?'🔒 ':''}${esc(r.name)}</div><div class="mut ell">${esc(r.topic||('Host: '+(r.host?r.host.name:'-')))}</div></div><div style="text-align:right"><div><span class="live"></span><b>${r.online}</b></div><div class="mut">${lv?'📹':' '+r.seated+'/21'}</div></div></div>`}
 function renderRooms(){$('#p-rooms').innerHTML=topbar()+`<div class="chips" style="margin-bottom:10px"><div class="chip ${RT==='voice'?'on':''}" onclick="RT='voice';renderRooms()">🎧 Voice</div><div class="chip ${RT==='live'?'on':''}" onclick="RT='live';renderRooms()">📹 Live</div></div><div class="row" style="margin-bottom:10px"><h2 class="sp" style="margin:0">${RT==='live'?'📹 Live streams':'🎧 Voice rooms'}</h2><button class="btn sm ${RT==='live'?'bad':''}" onclick="newRoom(RT)">${RT==='live'?'📹 Go Live':'＋ Open room'}</button></div><div id="rl"><div class="empty">…</div></div>${footbar()}`;loadRoomList()}
 async function loadRoomList(){try{const d=await api('/api/rooms');const l=d.rooms.filter(r=>(r.kind||'voice')===RT);const el=$('#rl');if(el)el.innerHTML=l.length?l.map(roomCard).join(''):`<div class="empty">${RT==='live'?'No live streams. Be the first!':'No rooms — open the first one!'}</div>`}catch(e){}}
-function newRoom(kind){const lv=kind==='live';const m=modal(`<h3>${lv?'📹 Go Live':'🎙 New room'}</h3><div class="col"><input id="nr-n" placeholder="${lv?'Live title':'Room name'}" maxlength="40">${lv?'':'<input id="nr-t" placeholder="Topic (optional)" maxlength="100">'}<button class="btn ${lv?'bad':''}" id="nr-b">${lv?'📹 Start':'Open'}</button></div>`);
-  $('#nr-b').onclick=e=>run(e.target,async()=>{const d=await api('/api/rooms/create',{name:$('#nr-n').value,topic:lv?'':$('#nr-t').value,kind:lv?'live':'voice'});m.close();enterRoom(d.id)})}
+function newRoom(kind){const lv=kind==='live';const m=modal(`<h3>${lv?'📹 Go Live':'🎙 New room'}</h3><div class="col"><input id="nr-n" placeholder="${lv?'Live title':'Room name'}" maxlength="40">${lv?'':'<input id="nr-t" placeholder="Topic (optional)" maxlength="100">'}<input id="nr-p" placeholder="🔒 Password (optional, private)" maxlength="20" autocomplete="off"><button class="btn ${lv?'bad':''}" id="nr-b">${lv?'📹 Start':'Open'}</button></div>`);
+  $('#nr-b').onclick=e=>run(e.target,async()=>{const d=await api('/api/rooms/create',{name:$('#nr-n').value,topic:lv?'':$('#nr-t').value,kind:lv?'live':'voice',password:$('#nr-p').value.trim()});const pw=$('#nr-p').value.trim();m.close();enterRoom(d.id,pw)})}
 const V={seq:0,joining:null,client:null,track:null,vtrack:null,rid:null,pub:false,busy:false,
  set(t,c){const e=$(R&&R.kind==='live'?'#lv-vs':'#r-vs');if(e){e.textContent=t;e.style.color=c||''}},
  async join(rid,kind,isHost){
@@ -523,16 +598,16 @@ const V={seq:0,joining:null,client:null,track:null,vtrack:null,rid:null,pub:fals
   if(this.track){try{this.track.close()}catch(e){}this.track=null}
   if(this.vtrack){try{this.vtrack.close()}catch(e){}this.vtrack=null}
   if(c){try{await c.leave()}catch(e){}}}};
-async function enterRoom(rid){
+async function enterRoom(rid,password){
   if(R&&R.id===rid){showRoom();return}
   if(R)await exitRoom(true);
-  try{const d=await api('/api/rooms/'+rid+'/join',{});
+  try{const d=await api('/api/rooms/'+rid+'/join',password?{password}:{});
    R={kind:d.room.kind||'voice',id:rid,name:d.room.name,host:d.room.host_id,v:-1,mid:0,seats:{},online:0,init:true,alive:true,selfMute:false,visible:true,t:null,n:0};
-   $('#r-name').textContent=d.room.name;$('#r-chat').innerHTML='';$('#lv-chat').innerHTML='';$('#lv-host').innerHTML='';$('#lv-mic').style.display='none';$('#lv-flip').style.display='none';$('#lv-pk').style.display='none';$('#lv-likes').textContent='0';$('#r-seats').innerHTML='';$('#r-host').innerHTML='';
+   $('#r-name').textContent=d.room.name;$('#r-chat').innerHTML='';$('#lv-chat').innerHTML='';$('#lv-host').innerHTML='';$('#lv-mic').style.display='none';$('#lv-flip').style.display='none';$('#lv-pk').style.display='none';$('#lv-likes').textContent='0';$('#lv-set').style.display='none';$('#r-set').style.display='none';applyMute(0);$('#r-seats').innerHTML='';$('#r-host').innerHTML='';
    showRoom();$('#lv-video').innerHTML='';LVF={host:0,on:false};$('#lv-follow').style.display='none';
    $('#lv-hint').style.display=R.kind==='live'&&R.host!==S.me.id?'block':'none';setTimeout(()=>$('#lv-hint').style.display='none',3500);
    V.joining=V.join(rid,R.kind,R.host===S.me.id).catch(e=>{V.set('❌','#ff5c7a');toast('Audio: '+e.message)});poll()
-  }catch(e){toast(e.message==='ROOM_GONE'?'Room closed':e.message)}}
+  }catch(e){if(e.message==='ROOM_LOCKED'||e.message==='WRONG_ROOM_PASSWORD')return askRoomPassword(rid,e.message==='WRONG_ROOM_PASSWORD');toast(e.message==='ROOM_GONE'?'Room closed':e.message)}}
 function showRoom(){if(!R)return;R.visible=true;$(R.kind==='live'?'#live':'#room').classList.add('on');$('#mini').classList.remove('on');$('#nav').style.display='none'}
 function hideRoom(){if(R&&R.kind==='live')return;$('#room').classList.remove('on');$('#nav').style.display='';if(R){R.visible=false;$('#mini').classList.add('on');$('#mini-n').textContent=R.name;$('#mini-o').textContent=R.online}else $('#mini').classList.remove('on')}
 function minimize(){go(PAGE==='home'?'rooms':PAGE)}
@@ -544,10 +619,11 @@ async function poll(){
   try{const d=await api('/api/rooms/'+r.id+'/state?v='+r.v+'&mid='+r.mid);if(R!==r)return;
    r.online=d.online;$('#r-on').textContent=d.online;$('#mini-o').textContent=d.online;$('#lv-on').textContent=d.online;
    if(d.seats){r.v=d.v;r.seats={};d.seats.forEach(s=>r.seats[s.i]=s);r.kind==='live'?renderLiveHost():renderSeats()}
+   if(d.my)applyMy(r,d.my);
    if(r.kind==='live')likeSync(r,d.likes||0);
    (d.msgs||[]).forEach(m=>{r.mid=Math.max(r.mid,m.id);addMsg(m,!r.init)});r.init=false;
    if(r.kind==='voice'){const mine=Object.values(r.seats).find(s=>s.u.id===S.me.id);V.sync(!!mine,mine&&mine.m);updateMicBtn(!!mine,mine&&mine.m)}r.n=0
-  }catch(e){if(R!==r)return;if(e.message==='ROOM_GONE'){toast('Room closed');exitRoom(true);return}if(e.code===403){exitRoom(true);return}r.n++}
+  }catch(e){if(R!==r)return;if(e.message==='ROOM_GONE'){toast('Room closed');exitRoom(true);return}if(e.code===403||e.code===423){toast(e.code===423?'🔒 This room is now private':e.message,3500);exitRoom(true);return}r.n++}
   if(R===r)r.t=setTimeout(poll,document.hidden?6000:r.n>2?5000:2200)}
 function seatHTML(i,s,host){
   if(!s)return `<div class="seat empty" onclick="seatTap(${i})"><div class="av">${i}</div><div class="nm">Empty</div></div>`;
@@ -561,12 +637,12 @@ async function seatTap(i){const r=R;if(!r)return;const s=r.seats[i];
   if(!s){if(i===0&&r.host!==S.me.id)return toast("Host's seat");if(i!==0&&r.host===S.me.id)return toast('Host on own seat');
     if(!await V.prepMic())return;
     try{await api('/api/rooms/'+r.id+'/seat',{idx:i});hap('medium');poll()}catch(e){toast(e.message);if(!V.pub&&V.track){V.track.close();V.track=null}}return}
-  const u=s.u,mine=u.id===S.me.id,amHost=r.host===S.me.id||S.me.is_admin;
+  const u=s.u,mine=u.id===S.me.id,amHost=r.host===S.me.id||S.me.is_admin||(r.my?.level||0)>=1;
   modal(`<div class="col" style="align-items:center;text-align:center">${av(u,'l')}<b style="font-size:18px">${esc(u.name)}</b><div><span class="badge">${u.lvi} ${u.lvn}</span> ${vipTag(u)} ${hostTag(u)}</div><div class="mut">${esc(u.bio||'')}</div></div>
   <div class="row" style="margin-top:14px;flex-wrap:wrap;justify-content:center">
   ${mine?(i===0?'':`<button class="btn bad sm" onclick="seatLeave()">Leave seat</button>`):`<button class="btn gold sm" onclick="closeModal();openGift(${u.id})">🎁 Gift</button>`}
   <button class="btn ghost sm" onclick="closeModal();openProfile(${u.id})">👤 Profile</button>
-  ${amHost&&!mine&&u.id!==r.host?`<button class="btn ghost sm" onclick="seatAct(${u.id},'${s.m?'unmute':'mute'}')">${s.m?'🔊':'🔇'}</button><button class="btn bad sm" onclick="seatAct(${u.id},'kick')">⛔</button>`:''}</div>`)}
+  ${amHost&&!mine&&u.id!==r.host?`${s.m&&r.host!==S.me.id&&!S.me.is_admin&&(r.my?.level||0)<2?'':`<button class="btn ghost sm" onclick="seatAct(${u.id},'${s.m?'unmute':'mute'}')">${s.m?'🔊':'🔇'}</button>`}<button class="btn bad sm" onclick="seatAct(${u.id},'kick')">⛔</button><button class="btn ghost sm" onclick="closeModal();openModerate(${u.id})">🛡</button>`:''}</div>`)}
 async function seatLeave(){closeModal();await run(null,async()=>{await api('/api/rooms/'+R.id+'/leave-seat',{});poll()})}
 async function seatAct(uid,a){closeModal();await run(null,async()=>{await api('/api/rooms/'+R.id+'/seat-action',{uid,action:a});poll()})}
 async function sendChat(){const i=$(R&&R.kind==='live'?'#lv-in':'#r-in'),t=i.value.trim();if(!t||!R)return;i.value='';try{await api('/api/rooms/'+R.id+'/chat',{text:t});poll()}catch(e){toast(e.message)}}
@@ -574,7 +650,7 @@ function addMsg(m,anim){const c=$(R&&R.kind==='live'?'#lv-chat':'#r-chat'),near=
   if(m.k==='gift'){const g=m.meta||{};
     if(g.lucky>0){d.className='msg lucky';d.innerHTML=`🍀 <b>${esc(m.n)}</b> LUCKY ×${g.lucky} → <b>${esc(g.to_name)}</b> +${fmt(g.refund)} 🪙`;if(anim)flyLucky(g,m.n)}
     else{d.className='msg gift';d.innerHTML=`<b>${esc(m.n)}</b> → <b>${esc(g.to_name)}</b> ${g.emoji} ×${g.qty}`;if(anim)flyGift(g,m.n)}}
-  else{d.className='msg';d.innerHTML=`${m.v?'<span class="vip">VIP</span> ':''}<b class="${m.v?'vipn':''}">${esc(m.n)}:</b> ${esc(m.t)}`}
+  else{d.className='msg';d.innerHTML=`${m.v?'<span class="vip">VIP</span> ':''}<b class="who ${m.v?'vipn':''}">${esc(m.n)}:</b> ${esc(m.t)}`;if(m.u)d.querySelector('.who').onclick=()=>openProfile(m.u)}
   c.appendChild(d);while(c.children.length>120)c.firstChild.remove();if(near||!anim)c.scrollTop=c.scrollHeight}
 const BIG_TIERS=['luxury','legendary','mythic'];
 const CALM=window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -799,8 +875,8 @@ async function openAgent(){const m=modal('<div class="empty">…</div>');
 let CT='posts';
 async function renderCommunity(){
   $('#p-community').innerHTML=topbar()+`<div class="chips" style="margin-bottom:10px"><div class="chip ${CT==='posts'?'on':''}" onclick="CT='posts';renderCommunity()">📝 Posts</div><div class="chip ${CT==='jobs'?'on':''}" onclick="CT='jobs';renderCommunity()">💼 Jobs</div></div><button class="btn" style="width:100%;margin-bottom:10px" onclick="${CT==='posts'?'postNew()':'jobNew()'}">${CT==='posts'?'＋ Write post':'＋ Post a job'}</button><div id="cl"><div class="empty">…</div></div>${footbar()}`;
-  try{if(CT==='posts'){const d=await api('/api/posts');$('#cl').innerHTML=d.posts.map(p=>`<div class="card"><div class="row">${av({id:p.uid,name:p.name,photo:p.photo,fr:p.fr},'s')}<div class="sp"><b>${esc(p.name)}</b> ${vipTag(p)} <span class="mut">${ago(p.ts)}</span></div>${p.mine||S.me.is_admin?`<span onclick="del('posts',${p.id})">🗑</span>`:''}</div><div style="margin:8px 0;white-space:pre-wrap;word-break:break-word">${esc(p.text)}</div>${p.has_image?`<img src="${p.image_url}" style="width:100%;border-radius:12px;margin-top:8px">`:''}<span class="chip" onclick="like(${p.id})">${p.liked?'❤️':'🤍'} ${p.likes}</span></div>`).join('')||'<div class="empty">No posts</div>'}
-   else{const d=await api('/api/jobs');$('#cl').innerHTML=d.jobs.map(j=>`<div class="card"><div class="row"><b class="sp">${esc(j.title)}</b>${j.mine||S.me.is_admin?`<span onclick="del('jobs',${j.id})">🗑</span>`:''}</div><div style="margin:6px 0;white-space:pre-wrap">${esc(j.desc)}</div>${j.has_image?`<img src="${j.image_url}" style="width:100%;border-radius:12px;margin-top:8px">`:''}<div class="mut">👤 ${esc(j.name)} · 📞 ${esc(j.contact)} · ${ago(j.ts)}</div></div>`).join('')||'<div class="empty">No jobs</div>'}}catch(e){toast(e.message)}}
+  try{if(CT==='posts'){const d=await api('/api/posts');$('#cl').innerHTML=d.posts.map(p=>`<div class="card"><div class="row">${av({id:p.uid,name:p.name,photo:p.photo,fr:p.fr},'s')}<div class="sp"><b>${esc(p.name)}</b> ${vipTag(p)} <span class="mut">${ago(p.ts)}</span></div>${p.mine||S.me.is_admin||S.me.mod?`<span onclick="del('posts',${p.id})">🗑</span>`:''}</div><div style="margin:8px 0;white-space:pre-wrap;word-break:break-word">${esc(p.text)}</div>${p.has_image?`<img src="${p.image_url}" style="width:100%;border-radius:12px;margin-top:8px">`:''}<span class="chip" onclick="like(${p.id})">${p.liked?'❤️':'🤍'} ${p.likes}</span></div>`).join('')||'<div class="empty">No posts</div>'}
+   else{const d=await api('/api/jobs');$('#cl').innerHTML=d.jobs.map(j=>`<div class="card"><div class="row"><b class="sp">${esc(j.title)}</b>${j.mine||S.me.is_admin||S.me.mod?`<span onclick="del('jobs',${j.id})">🗑</span>`:''}</div><div style="margin:6px 0;white-space:pre-wrap">${esc(j.desc)}</div>${j.has_image?`<img src="${j.image_url}" style="width:100%;border-radius:12px;margin-top:8px">`:''}<div class="mut">👤 ${esc(j.name)} · 📞 ${esc(j.contact)} · ${ago(j.ts)}</div></div>`).join('')||'<div class="empty">No jobs</div>'}}catch(e){toast(e.message)}}
 const like=id=>run(null,async()=>{await api('/api/posts/'+id+'/like',{});renderCommunity()});
 const del=(k,id)=>confirm('Delete?')&&run(null,async()=>{await api('/api/'+k+'/'+id+'/delete',{});renderCommunity()});
 function postNew(){const m=modal(`<h3>📝 New post</h3><textarea id="po" rows="5" maxlength="500" placeholder="What is on your mind?"></textarea><input id="po-f" type="file" accept="image/*" style="margin-top:8px"><button class="btn" id="po-b" style="width:100%;margin-top:10px">Post</button>`);
@@ -853,6 +929,7 @@ async function renderMe(){
   ${m.ag?`<button class="btn" onclick="openAgent()">📊 Agent Dashboard</button>`:''}
   <button class="btn ghost" onclick="openNotices()">🔔 Notifications<i class="nb">${nbText()}</i></button>
   <button class="btn ghost" onclick="openPKHistory()">⚔️ My PK history</button>
+  <button class="btn ghost" onclick="openRoomSafety()">🛡 My room admins & blocked</button>
   <button class="btn ghost" onclick="openInvite()">🔗 Invite · ${fmt(m.inv||0)}</button>
   <button class="btn gold" onclick="openShop()">✨ VIP & Frames${m.vip?' · '+vipLeft(m)+'d':''}</button>
   <button class="btn ghost" onclick="editProfile()">✏️ Edit profile</button>
@@ -860,7 +937,9 @@ async function renderMe(){
   ${String(m.tg_id).startsWith('p_')?`<button class="btn ghost" onclick="changePassword()">🔑 Change password</button>`:''}
   <button class="btn ghost" onclick="copyTxt('${esc(m.tg_id)}')">🆔 My ID: ${esc(m.tg_id)}</button>
   ${tgInit()?'':`<button class="btn ghost" onclick="confirm('${String(m.tg_id).startsWith('g_')?'Leave guest mode?':'Log out?'}')&&logout()">🚪 Log out</button>`}
+  ${m.mod||m.is_admin?`<button class="btn gold" onclick="openModPanel()">👮 Moderator panel</button>`:''}
   ${m.is_admin?`<button class="btn gold" onclick="openAdmin()">🛡 Admin</button>`:''}
+  ${m.is_admin?'':'<button class="btn ghost danger" onclick="openCloseAccount()">🗑 Delete my account</button>'}
   </div>${footbar()}`;loadMyStats();loadUnread()}
 function editProfile(){const m=S.me;const o=modal(`<h3>✏️ Edit profile</h3><div class="col"><input id="e-p" type="file" accept="image/*"><input id="e-n" value="${esc(m.name)}" maxlength="30"><input id="e-b" value="${esc(m.bio)}" maxlength="160"><input id="e-t" value="${esc(m.phone)}" maxlength="10" placeholder="09xxxxxxxx"><button class="btn" id="e-go">Save</button></div>`);
   $('#e-go',o).onclick=e=>run(e.target,async()=>{const f=$('#e-p',o).files[0];if(f){const fd=new FormData();fd.append('file',await shrink(f,320,.85),'p.jpg');setMe((await api('/api/profile/photo',fd)).me)}
@@ -869,7 +948,7 @@ function openAdmin(){const o=modal(`<div class="chips" id="at">${['overview','pu
   const load=async x=>{$$('#at .chip',o).forEach(c=>c.classList.toggle('on',c.dataset.t===x));const b=$('#ab',o);b.innerHTML='…';
    try{if(x==='overview'){const d=await api('/api/admin/overview');b.innerHTML=`<div class="grid2">${Object.entries(d).map(([k,v])=>`<div class="card" style="margin:0"><div class="mut">${k}</div><b>${fmt(v)}</b></div>`).join('')}</div>`}
    else if(x==='purchases'||x==='withdraws'){const d=await api('/api/admin/'+x);b.innerHTML=d.items.map(y=>`<div class="card"><b>${esc(y.name)}</b> · ${fmt(y.coins)} 🪙 · ${fmt(y.birr)} Birr ${y.method==='usdt'?'· <span class="usdt">USDT '+(y.usdt||'')+'</span>':'· Telebirr'}<div class="mut" style="word-break:break-all">${esc(y.ref||y.address||y.phone||'')} · ${ago(y.ts)}</div><div class="row" style="margin-top:8px">${x==='purchases'?`<button class="btn ghost sm" onclick="viewShot(${y.id})">🖼</button><button class="btn sm" onclick="admAct('purchase',${y.id},'approve')">✅</button><button class="btn bad sm" onclick="admAct('purchase',${y.id},'reject')">❌</button>`:`<button class="btn sm" onclick="admAct('withdraw',${y.id},'paid')">💰</button><button class="btn bad sm" onclick="admAct('withdraw',${y.id},'reject')">❌</button>`}</div></div>`).join('')||'<div class="empty">—</div>'}
-   else{b.innerHTML=`<input id="uq" placeholder="Search name / phone / ID"><div id="pnd" style="margin-top:8px"></div><div id="ul" style="margin-top:8px"></div>`;admPending(o);const ld=async()=>{const d=await api('/api/admin/users?q='+encodeURIComponent($('#uq',o).value));$('#ul',o).innerHTML=d.items.map(u=>`<div class="card"><b>${esc(u.name)}</b> ${u.banned?'🚫':''} ${u.vip?'<span class="vip">VIP</span>':''} ${u.host==='host'?'<span class="hbadge">HOST</span>':''} ${u.ag?'<span class="abadge">AGENT</span>':''}<div class="mut">${u.login_phone?'📱 '+esc(u.login_phone)+' · ':''}ID:${esc(u.tg)} · 🪙${fmt(u.coins)} · 💰${fmt(u.earn)} · 🤝${fmt(u.comm)}</div><div class="row" style="margin-top:6px;flex-wrap:wrap"><button class="btn sm ghost" onclick="admUser(${u.id},'${u.banned?'unban':'ban'}')">${u.banned?'Unban':'Ban'}</button><button class="btn sm gold" onclick="admGrant(${u.id})">+🪙</button>${u.login_phone?`<button class="btn sm ghost" onclick="admReset(${u.id})">🔑</button>`:''}<button class="btn sm ghost" onclick="admVip(${u.id})">+VIP</button><button class="btn sm ${u.host==='host'?'bad':'gold'}" onclick="admUser(${u.id},'host',${u.host==='host'?0:1})">${u.host==='host'?'-Host':'+Host'}</button>${u.host==='host'?`<button class="btn sm ghost" onclick="admUser(${u.id},'agent')">${u.ag?'-Agent':'+Agent'}</button>`:''}<button class="btn sm bad" onclick="confirm('Delete?')&&admUser(${u.id},'delete')">🗑</button></div></div>`).join('')};$('#uq',o).oninput=()=>{clearTimeout(window._uq);window._uq=setTimeout(ld,350)};ld()}}catch(e){b.innerHTML=esc(e.message)}};
+   else{b.innerHTML=`<button class="btn ghost sm" onclick="openModLog()" style="margin-bottom:8px">📋 Moderator activity</button><input id="uq" placeholder="Search name / phone / ID"><div id="pnd" style="margin-top:8px"></div><div id="ul" style="margin-top:8px"></div>`;admPending(o);const ld=async()=>{const d=await api('/api/admin/users?q='+encodeURIComponent($('#uq',o).value));$('#ul',o).innerHTML=d.items.map(u=>`<div class="card"><b>${esc(u.name)}</b> ${u.banned?'🚫':''} ${u.vip?'<span class="vip">VIP</span>':''} ${u.host==='host'?'<span class="hbadge">HOST</span>':''} ${u.ag?'<span class="abadge">AGENT</span>':''}<div class="mut">${u.login_phone?'📱 '+esc(u.login_phone)+' · ':''}ID:${esc(u.tg)} · 🪙${fmt(u.coins)} · 💰${fmt(u.earn)} · 🤝${fmt(u.comm)}</div><div class="row" style="margin-top:6px;flex-wrap:wrap"><button class="btn sm ghost" onclick="admUser(${u.id},'${u.banned?'unban':'ban'}')">${u.banned?'Unban':'Ban'}</button><button class="btn sm gold" onclick="admGrant(${u.id})">+🪙</button>${u.login_phone?`<button class="btn sm ghost" onclick="admReset(${u.id})">🔑</button>`:''}<button class="btn sm ghost" onclick="admVip(${u.id})">+VIP</button><button class="btn sm ${u.host==='host'?'bad':'gold'}" onclick="admUser(${u.id},'host',${u.host==='host'?0:1})">${u.host==='host'?'-Host':'+Host'}</button>${u.host==='host'?`<button class="btn sm ghost" onclick="admUser(${u.id},'agent')">${u.ag?'-Agent':'+Agent'}</button>`:''}<button class="btn sm ${u.mod?'bad':'ghost'}" onclick="admMod(${u.id},${u.mod?0:1})">${u.mod?'-Mod':'+Mod'}</button><button class="btn sm bad" onclick="confirm('Delete?')&&admUser(${u.id},'delete')">🗑</button></div></div>`).join('')};$('#uq',o).oninput=()=>{clearTimeout(window._uq);window._uq=setTimeout(ld,350)};ld()}}catch(e){b.innerHTML=esc(e.message)}};
   $$('#at .chip',o).forEach(c=>c.onclick=()=>load(c.dataset.t));window._admLoad=load;window._admTab=()=>$('#at .chip.on',o).dataset.t;load('overview')}
 const admAct=(k,id,a)=>run(null,async()=>{await api('/api/admin/'+k,{id,action:a});window._admLoad(window._admTab())});
 const admUser=(id,a,amount)=>run(null,async()=>{await api('/api/admin/user',{id,action:a,amount});window._admLoad(window._admTab())});

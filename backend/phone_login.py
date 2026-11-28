@@ -124,6 +124,15 @@ def init_auth(app, db, d):
     def session_reply(u):
         return jsonify(token=sign(u.id), me=me_dict(u), cfg=cfg())
 
+    release = {'check': None, 'recent': None}      # set by moderation.py: accounts closed by their owner
+
+    def telegram_taken(sender):
+        link = db.session.get(TgLink, sender)
+        if not link: return False
+        if release['check'] and release['check'](link.user_id):
+            db.session.delete(link); db.session.flush(); return False
+        return True
+
     dummy_hash = generate_password_hash(secrets.token_hex(16))
 
     def verify_on():
@@ -169,12 +178,15 @@ def init_auth(app, db, d):
         elif start.startswith('ag_'):
             a = User.query.filter_by(tg_id=start[3:]).first(); ag = a.id if a and a.is_agent else None
         # random public id: never exposes the phone number and cannot be guessed
-        u = User(tg_id='p_' + secrets.token_hex(8), username=name, phone=phone, coins=welcome, referrer_id=ref, agent_id=ag)
+        # no second welcome bonus for a number whose account was closed recently
+        recent = release['recent']
+        bonus = 0 if recent and recent(hkey('cl', phone)) else welcome
+        u = User(tg_id='p_' + secrets.token_hex(8), username=name, phone=phone, coins=bonus, referrer_id=ref, agent_id=ag)
         try:
             db.session.add(u); db.session.flush()
             db.session.add(Credential(user_id=u.id, phone=phone, pw_hash=pw_hash))
             if tg_user: db.session.add(TgLink(tg_user=tg_user, user_id=u.id))
-            tx(u.id, 'welcome', welcome, 'Welcome bonus')
+            tx(u.id, 'welcome', bonus, 'Welcome bonus')
             if ref: referral_register(ref, u.id)
             if ag: referral_register(ag, u.id)
             PendingSignup.query.filter(PendingSignup.phone == phone).delete(synchronize_session=False)
@@ -220,7 +232,7 @@ def init_auth(app, db, d):
         if r.rowcount != 1: return err('Too many wrong codes. Sign up again', 429)
         p = PendingSignup.query.filter_by(token=token).first()
         if not p or not hmac.compare_digest(p.otp_hash or '', otp_digest(p.id, otp)): return err('Wrong code')
-        if db.session.get(TgLink, p.tg_user): return err('This Telegram account was already used for another account', 409)
+        if telegram_taken(p.tg_user): return err('This Telegram account was already used for another account', 409)
         u = create_account(p.phone, p.name, p.pw_hash, p.ref, p.tg_user)
         return session_reply(u) if u else err('This number already has an account. Please log in', 409)
 
@@ -247,7 +259,7 @@ def init_auth(app, db, d):
             p = PendingSignup.query.filter(PendingSignup.code == words[1][2:], PendingSignup.created > now() - LINK_TTL).first()
             if not p or (p.tg_user and p.tg_user != sender):
                 return reply('⌛ ይህ link ጊዜው አልፏል። ወደ app ተመልሰህ እንደገና ተመዝገብ።\nThis link has expired. Sign up again in the app.')
-            if db.session.get(TgLink, sender):
+            if telegram_taken(sender):
                 return reply('⛔ በዚህ Telegram አስቀድሞ account ተከፍቷል።\nThis Telegram account was already used to verify an account.')
             PendingSignup.query.filter(PendingSignup.tg_user == sender, PendingSignup.id != p.id).update(
                 {'tg_user': None, 'otp_hash': None}, synchronize_session=False)
@@ -332,6 +344,23 @@ def init_auth(app, db, d):
         TgLink.query.filter(TgLink.user_id == uid).delete(synchronize_session=False)
         Credential.query.filter(Credential.user_id == uid).delete(synchronize_session=False)
 
+    def has_password(uid):
+        return db.session.get(Credential, uid) is not None
+
+    def check_password(uid, pw):
+        c = db.session.get(Credential, uid)
+        return bool(c and isinstance(pw, str) and 0 < len(pw) <= MAX_PASS and check_password_hash(c.pw_hash, pw))
+
+    def close_login(uid):
+        # the phone number is freed; the Telegram link stays for a while so a new account cannot be opened at once
+        c = db.session.get(Credential, uid)
+        if not c: return ''
+        key = hkey('cl', c.phone); db.session.delete(c)
+        return key
+
+    def set_release(check, recent):
+        release.update(check=check, recent=recent)
+
     def phones_for(ids):
         return {c.user_id: c.phone for c in Credential.query.filter(Credential.user_id.in_(ids or [0])).all()}
 
@@ -339,4 +368,4 @@ def init_auth(app, db, d):
         p = normalize_phone(q)
         return [c.user_id for c in Credential.query.filter(Credential.phone == p).all()] if p else []
 
-    return dict(verify_on=verify_on, stored_secret=stored_secret, hit=hit, hkey=hkey, delete_login=delete_login, phones_for=phones_for, ids_by_phone=ids_by_phone)
+    return dict(verify_on=verify_on, stored_secret=stored_secret, hit=hit, hkey=hkey, delete_login=delete_login, has_password=has_password, check_password=check_password, close_login=close_login, set_release=set_release, phones_for=phones_for, ids_by_phone=ids_by_phone)

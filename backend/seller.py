@@ -290,7 +290,7 @@ def init_seller(app, db, deps):
     def seller_page():
         return Response(SELLER_HTML, mimetype='text/html', headers={'Cache-Control': 'no-cache'})
 
-    return dict(tier_for=tier_for, TIERS=TIERS, TIER_MAP=TIER_MAP)
+    return dict(tier_for=tier_for, TIERS=TIERS, TIER_MAP=TIER_MAP, Seller=Seller, SellerOrder=SellerOrder)
 
 
 SELLER_HTML = """<!DOCTYPE html><html lang="en"><head>

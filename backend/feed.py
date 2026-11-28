@@ -57,7 +57,8 @@ def init_feed(app, db, d):
         host_ids = list({r.host_id for r in rs})
         hosts = {u.id: u for u in User.query.filter(User.id.in_(host_ids or [0]), User.banned == False).all()}
         followed = my_following(host_ids)
-        out = [dict(id=r.id, kind=r.kind or 'voice', name=r.name, topic=r.topic, online=online.get(r.id, 0), seated=seated.get(r.id, 0),
+        private = d['locked_rooms'](ids) if d.get('locked_rooms') else set()
+        out = [dict(id=r.id, private=r.id in private, kind=r.kind or 'voice', name=r.name, topic=r.topic, online=online.get(r.id, 0), seated=seated.get(r.id, 0),
                     host=pub(hosts[r.host_id]), following=r.host_id in followed) for r in rs if r.host_id in hosts]
         if tab != 'new':   # video lives first, then the busiest rooms
             out.sort(key=lambda x: (x['kind'] != 'live', -x['online']))

@@ -39,6 +39,13 @@
 - ስክሪኖቹ በአስመሳይ server ተሞክረዋል። Backend ከ database ጋር **አልተሞከረም።**
 - ዙር 2 የቀረ፦ chat block፣ room admins፣ private room፣ account መሰረዝ፣ Moderator።
 
+## ደረጃ A፣ ዙር 2 (2026-11-28፣ `phase4`)
+- room admin፣ chat mute፣ remove/block፣ private room (password)፣ report፣ Moderator፣ ተጠቃሚው account-ውን መዝጋት ተጽፈዋል (`backend/moderation.py`፣ `backend/roomrules.py`፤ አዲስ table ብቻ `mod_*`)።
+- Super Admin = በ `ADMIN_IDS` ያሉት። Moderator ወደ coin፣ ክፍያ እና ስልክ ቁጥር መድረሻ የለውም።
+- የተዘጋ account አይሰረዝም፤ ይደበቃል፣ balance-ው ታግዶ ይቆያል፣ የክፍያ መዝገብ ይቀመጣል።
+- ፈቃድ ደንቦች በ unit test ተፈትሸዋል፤ ስክሪኖች በአስመሳይ server። Backend ከ database ጋር **አልተሞከረም።**
+- የሚታወቅ ገደብ (ደረጃ D)፦ block የተደረገ ሰው የተቀየረ app ከተጠቀመ ቀድሞ የወሰደው Agora token እስከ 1 ሰዓት ሊሠራ ይችላል (Agora kicking-rule API ያስፈልጋል)።
+
 ## 4. ቅደም ተከተል
 - **A. App ማሟላት፦** notifications፣ ተመልካች ዝርዝር፣ like፣ room moderation እና privacy፣ PK history፣ account መሰረዝ፣ Moderator
 - **B. Host activity፦** server የሚቆጥረው ጊዜ፣ ሽልማት፣ የ7 ቀን welcome፣ የተግባር ገጽ። ሐሰተኛ እንቅስቃሴን ሙሉ በሙሉ ለመከላከል በ D ተጨማሪ ማረጋገጫ ያስፈልጋል።

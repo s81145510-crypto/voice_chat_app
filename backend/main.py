@@ -301,7 +301,7 @@ def pub(u):
     return dict(id=u.id, name=u.username, photo=photo_url(u), lv=lv, lvn=LEVELS[lv][1], lvi=LEVELS[lv][2], bio=u.bio or '', vip=vip_active(u), fr=frame_of(u), host=u.host_status or 'none', ag=bool(u.is_agent))
 def me_dict(u):
     d = pub(u); nxt = LEVELS[d['lv'] + 1][0] if d['lv'] + 1 < len(LEVELS) else None
-    d.update(coins=u.coins, earnings=u.earnings, spent=u.spent, phone=u.phone or '', tg_id=u.tg_id, is_admin=u.tg_id in ADMIN_IDS, sent=u.gifts_sent, recv=u.gifts_recv,
+    d.update(coins=u.coins, earnings=u.earnings, spent=u.spent, phone=u.phone or '', tg_id=u.tg_id, is_admin=u.tg_id in ADMIN_IDS, mod=MOD['is_mod'](u.id), sent=u.gifts_sent, recv=u.gifts_recv,
              next=nxt, base=LEVELS[d['lv']][0], streak=u.streak, daily_ready=u.last_daily != today(), vip_until=u.vip_until or 0, comm=u.commission or 0)
     return d
 def today(): return (datetime.utcnow() + timedelta(hours=3)).strftime('%Y-%m-%d')
@@ -574,7 +574,7 @@ def gc_rooms():
     for (rid,) in db.session.query(Room.id).filter(Room.last_active < t - 3 * 86400).all(): delete_room(rid)
 def delete_room(rid):
     for M in (Seat, Presence, Message, LiveGuest): M.query.filter(M.room_id == rid).delete(synchronize_session=False)
-    SOCIAL['drop_room'](rid)
+    SOCIAL['drop_room'](rid); MOD['drop_room'](rid)
     Room.query.filter(Room.id == rid).delete(synchronize_session=False); db.session.commit()
 @app.get('/api/rooms')
 @auth
@@ -585,7 +585,8 @@ def rooms():
     st = dict(db.session.query(Seat.room_id, func.count()).group_by(Seat.room_id).all())
     gu = dict(db.session.query(LiveGuest.room_id, func.count()).filter(LiveGuest.status == 'live').group_by(LiveGuest.room_id).all())
     hosts = {u.id: u for u in User.query.filter(User.id.in_([r.host_id for r in rs] or [0])).all()}
-    out = [dict(id=r.id, kind=r.kind or 'voice', name=r.name, topic=r.topic, online=on.get(r.id, 0), seated=st.get(r.id, 0), guests=gu.get(r.id, 0), host=pub(hosts[r.host_id]) if r.host_id in hosts else None) for r in rs]
+    private = MOD['locked_ids']([r.id for r in rs])
+    out = [dict(id=r.id, private=r.id in private, kind=r.kind or 'voice', name=r.name, topic=r.topic, online=on.get(r.id, 0), seated=st.get(r.id, 0), guests=gu.get(r.id, 0), host=pub(hosts[r.host_id]) if r.host_id in hosts else None) for r in rs]
     out.sort(key=lambda x: -x['online']); return jsonify(rooms=out)
 @app.post('/api/rooms/create')
 @auth
@@ -593,17 +594,25 @@ def room_create():
     b = body(); name = str(b.get('name', '')).strip()[:40]
     if len(name) < 2: return err('Enter room name')
     kind = 'live' if b.get('kind') == 'live' else 'voice'
+    room_pw = str(b.get('password') or '').strip()
+    if room_pw and MOD['password_problem'](room_pw): return err(MOD['password_problem'](room_pw))
     if kind == 'live':
         for (old,) in db.session.query(Room.id).filter(Room.host_id == g.user.id, Room.kind == 'live').all(): delete_room(old)
     elif Room.query.filter(Room.host_id == g.user.id, Room.kind != 'live').count() >= (VIP_ROOMS if vip_active(g.user) else FREE_ROOMS):
         return err('Max rooms reached')
     r = Room(id=secrets.token_hex(4), name=name, topic=str(b.get('topic', '')).strip()[:100], host_id=g.user.id, kind=kind)
-    db.session.add(r); db.session.commit(); room_id = r.id
+    db.session.add(r); room_id = r.id
+    if room_pw: MOD['lock_room'](room_id, room_pw)       # locked from the first moment
+    db.session.commit()
     if kind == 'live': SOCIAL['host_live'](g.user.id, room_id, name)
     return jsonify(id=room_id)
 @app.post('/api/rooms/<rid>/join')
 @auth
 def room_join(rid):
+    r = get_room(rid)
+    if not r: return err('ROOM_GONE', 404)
+    blocked = MOD['join_check'](r, g.user, body().get('password'))
+    if blocked: return blocked
     r = get_room(rid)
     if not r: return err('ROOM_GONE', 404)
     uid = g.user.id
@@ -627,7 +636,7 @@ def room_state(rid):
     r = db.session.get(Room, rid)
     if not r: return err('ROOM_GONE', 404)
     cv, mid = num(request.args.get('v'), -1), num(request.args.get('mid'))
-    out = dict(v=r.version, online=online_count(rid), guests=guests_payload(rid), likes=SOCIAL['likes'](rid))
+    out = dict(v=r.version, online=online_count(rid), guests=guests_payload(rid), likes=SOCIAL['likes'](rid), my=MOD['view'](r, g.user))
     if cv != r.version: out['seats'] = seats_payload(rid)
     q = Message.query.filter(Message.room_id == rid)
     ms = list(reversed(q.order_by(Message.id.desc()).limit(30).all())) if mid <= 0 else q.filter(Message.id > mid).order_by(Message.id).limit(60).all()
@@ -669,9 +678,9 @@ def room_exit(rid):
 def seat_action(rid):
     r = get_room(rid)
     if not r: return err('ROOM_GONE', 404)
-    if g.user.id != r.host_id and g.user.tg_id not in ADMIN_IDS: return err('Host only', 403)
     b = body(); uid, act = num(b.get('uid')), b.get('action')
     if uid == r.host_id: return err('Cannot act on host')
+    if not MOD['may_touch_seat'](r, g.user, uid, act): return err('Not allowed', 403)
     s = Seat.query.filter_by(room_id=rid, user_id=uid).first()
     if not s: return err('User not on seat')
     if act == 'kick': db.session.delete(s)
@@ -683,6 +692,7 @@ def seat_action(rid):
 def invite_candidates(rid):
     r = get_room(rid)
     if not r: return err('ROOM_GONE', 404)
+    if r.host_id != g.user.id and g.user.tg_id not in ADMIN_IDS: return err('Host only', 403)
     t = now()
     inroom = {x.user_id for x in Presence.query.filter_by(room_id=rid).all()} | {r.host_id}
     taken = {x.user_id for x in LiveGuest.query.filter_by(room_id=rid).all()}
@@ -707,6 +717,7 @@ def live_invite(rid):
     t = db.session.get(User, uid)
     if not t: return err('User not found')
     if t.banned: return err('User is banned')
+    if MOD['is_banned'](r.host_id, uid): return err('This person is blocked from your rooms')
     ex = LiveGuest.query.filter_by(room_id=rid, user_id=uid).first()
     if ex:
         if ex.status == 'live': return err('Already on stage')
@@ -718,6 +729,7 @@ def live_invite(rid):
     try: db.session.commit()
     except IntegrityError:
         db.session.rollback(); return err('Already invited')
+    MOD['grant'](rid, uid); r = get_room(rid); t = db.session.get(User, uid)
     notify(t.tg_id, f'🎥 {g.user.username} invited you on stage in "{r.name}". Open the app to join!')
     bump(rid); return jsonify(ok=1)
 @app.get('/api/my-invites')
@@ -745,8 +757,8 @@ def guest_leave(rid):
 def guest_action(rid):
     r = get_room(rid)
     if not r: return err('ROOM_GONE', 404)
-    if r.host_id != g.user.id and g.user.tg_id not in ADMIN_IDS: return err('Host only', 403)
     b = body(); uid = num(b.get('uid')); act = b.get('action')
+    if not MOD['may_touch_seat'](r, g.user, uid, act): return err('Not allowed', 403)
     gv = LiveGuest.query.filter_by(room_id=rid, user_id=uid).first()
     if not gv: return err('Not on stage')
     if act == 'kick': db.session.delete(gv)
@@ -756,7 +768,9 @@ def guest_action(rid):
 @app.post('/api/rooms/<rid>/chat')
 @auth
 def room_chat(rid):
-    if not get_room(rid): return err('ROOM_GONE', 404)
+    r = get_room(rid)
+    if not r: return err('ROOM_GONE', 404)
+    if MOD['muted_until'](r.host_id, g.user.id): return err('You are muted in this room', 403)
     t = str(body().get('text', '')).strip()[:200]
     if not t: return err('empty')
     if limited('chat', 0.8): return err('Slow down', 429)
@@ -807,8 +821,9 @@ def room_gift(rid):
 @app.post('/api/agora-token')
 @auth
 def agora_token():
-    rid = body().get('room_id'); r = get_room(rid)
+    rid = str(body().get('room_id') or '')[:16]; r = get_room(rid)
     if not r: return err('ROOM_GONE', 404)
+    if not MOD['allowed_in'](r, g.user): return err('You cannot enter this room', 403)
     if not AGORA_APP_ID: return err('Agora not configured', 500)
     seated = bool(Seat.query.filter_by(room_id=rid, user_id=g.user.id).first())
     guest = bool(LiveGuest.query.filter_by(room_id=rid, user_id=g.user.id, status='live').first())
@@ -1005,7 +1020,7 @@ def withdraw():
         phone = str(b.get('phone') or g.user.phone or '').strip()
         if not (phone.isdigit() and len(phone) == 10): return err('Enter valid phone number')
     min_c = case((User.commission <= coins, User.commission), else_=coins)
-    r = db.session.execute(update(User).where(User.id == g.user.id, User.earnings + User.commission >= coins).values(commission=User.commission - min_c, earnings=User.earnings - (coins - min_c)), execution_options={'synchronize_session': False})
+    r = db.session.execute(update(User).where(User.id == g.user.id, User.banned == False, User.earnings + User.commission >= coins).values(commission=User.commission - min_c, earnings=User.earnings - (coins - min_c)), execution_options={'synchronize_session': False})
     if r.rowcount != 1:
         db.session.rollback(); return err('Not enough income')
     w = Withdraw(user_id=g.user.id, username=g.user.username, coins=coins, birr=int(coins * COIN_BIRR), phone=phone, method=method, usdt_address=address); db.session.add(w)
@@ -1062,8 +1077,10 @@ def post_like(pid):
 @auth
 def post_delete(pid):
     p = db.session.get(Post, pid)
-    if p and (p.user_id == g.user.id or g.user.tg_id in ADMIN_IDS):
-        PostLike.query.filter_by(post_id=pid).delete(); db.session.delete(p); db.session.commit()
+    if p and (p.user_id == g.user.id or MOD['is_staff'](g.user)):
+        if p.user_id != g.user.id: MOD['log']('delete_post', p.user_id, p.text)
+        PostLike.query.filter_by(post_id=pid).delete(); PostImage.query.filter_by(post_id=pid).delete()
+        db.session.delete(p); db.session.commit()
     return jsonify(ok=1)
 @app.get('/api/jobs')
 @auth
@@ -1097,7 +1114,10 @@ def job_create():
 @auth
 def job_delete(jid):
     j = db.session.get(Job, jid)
-    if j and (j.user_id == g.user.id or g.user.tg_id in ADMIN_IDS): db.session.delete(j); db.session.commit()
+    if j and (j.user_id == g.user.id or MOD['is_staff'](g.user)):
+        if j.user_id != g.user.id: MOD['log']('delete_job', j.user_id, j.title)
+        JobImage.query.filter_by(job_id=jid).delete()
+        db.session.delete(j); db.session.commit()
     return jsonify(ok=1)
 
 
@@ -1222,6 +1242,7 @@ def pk_gift():
     if to_host == 1 and pk.host1_id: score, paid = 'host1_gifts', 'host1_real'
     elif to_host == 2 and pk.host2_id: score, paid = 'host2_gifts', 'host2_real'
     else: return err('Invalid host')
+    if MOD['is_banned'](pk.host1_id if to_host == 1 else pk.host2_id, u.id): return err('This host has blocked you', 403)
     if now() > pk.started_at + pk.duration:
         finalize_pk(pk); return err('PK has ended', 409)
     real_used = spend_split(u.id, total)
@@ -1298,7 +1319,9 @@ def pk_state(pid):
 def pk_token():
     pk = db.session.get(PKBattle, num(body().get('pk_id')))
     if not pk: return err('PK not found', 404)
-    is_host = g.user.id in (pk.host1_id, pk.host2_id); channel = f'pk_{pk.id}'; token = None
+    is_host = g.user.id in (pk.host1_id, pk.host2_id); channel = f'pk_{pk.id}'
+    if not is_host and not MOD['is_staff'](g.user) and any(h and MOD['is_banned'](h, g.user.id) for h in (pk.host1_id, pk.host2_id)):
+        return err('You cannot watch this PK', 403); token = None
     if AGORA_APP_CERT: token = RtcTokenBuilder.buildTokenWithUid(AGORA_APP_ID, AGORA_APP_CERT, channel, g.user.id, 1 if is_host else 2, now() + 3600)
     return jsonify(app_id=AGORA_APP_ID, channel=channel, token=token, uid=g.user.id, publisher=is_host, host1=pk.host1_id, host2=pk.host2_id)
 
@@ -1356,8 +1379,8 @@ def adm_users():
     q = (request.args.get('q') or '').strip(); qs = User.query
     if q: qs = qs.filter(or_(User.username.ilike(f'%{q}%'), User.tg_id == q, User.id.in_(AUTH['ids_by_phone'](q) or [0])))
     us = qs.order_by(User.id.desc()).limit(40).all()
-    phones = AUTH['phones_for']([u.id for u in us])
-    return jsonify(items=[dict(id=u.id, login_phone=phones.get(u.id, ''), tg=u.tg_id, name=u.username, coins=u.coins, earn=u.earnings, banned=u.banned, vip=vip_active(u), host=u.host_status, ag=u.is_agent, comm=u.commission or 0) for u in us])
+    phones = AUTH['phones_for']([u.id for u in us]); mods = MOD['mod_ids']([u.id for u in us])
+    return jsonify(items=[dict(id=u.id, login_phone=phones.get(u.id, ''), tg=u.tg_id, name=u.username, coins=u.coins, earn=u.earnings, banned=u.banned, vip=vip_active(u), host=u.host_status, ag=u.is_agent, comm=u.commission or 0, mod=u.id in mods) for u in us])
 @app.get('/api/admin/shot/<int:pid>')
 @admin_only
 def adm_shot(pid):
@@ -1416,7 +1439,9 @@ def adm_user():
     if not u: return err('not found', 404)
     if u.tg_id in ADMIN_IDS and act in ('ban', 'delete'): return err('Cannot act on admin')
     if act == 'ban': u.banned = True
-    elif act == 'unban': u.banned = False
+    elif act == 'unban':
+        if MOD['is_closed'](uid): return err('The owner deleted this account. It cannot be re-opened with Unban')
+        u.banned = False
     elif act == 'grant':
         n = num(b.get('amount'))
         if not -1000000 <= n <= 1000000 or n == 0: return err('bad amount')
@@ -1435,6 +1460,7 @@ def adm_user():
         AUTH['delete_login'](uid)
         FEED['delete_follows'](uid)
         SOCIAL['delete_user'](uid)
+        MOD['delete_user'](uid)
         db.session.delete(u)
     else: return err('bad action')
     db.session.commit(); return jsonify(ok=1)
@@ -1461,7 +1487,27 @@ except ImportError:
 
 FEED = init_feed(app, db, dict(
     User=User, Room=Room, Seat=Seat, Presence=Presence, Tx=Tx, now=now, err=err, body=body, num=num,
-    auth=auth, pub=pub, limited=limited, gc_rooms=gc_rooms, on_follow=SOCIAL['follow']))
+    auth=auth, pub=pub, limited=limited, gc_rooms=gc_rooms, on_follow=SOCIAL['follow'],
+    locked_rooms=lambda ids: MOD['locked_ids'](ids)))
+
+
+def _cleanup_closed(uid):
+    FEED['delete_follows'](uid); SOCIAL['delete_user'](uid)
+
+
+try:
+    from .moderation import init_moderation
+except ImportError:
+    from moderation import init_moderation
+
+MOD = init_moderation(app, db, dict(
+    User=User, Room=Room, Seat=Seat, LiveGuest=LiveGuest, Presence=Presence, Message=Message, Post=Post,
+    PostImage=PostImage, PostLike=PostLike, Job=Job, JobImage=JobImage, Photo=Photo, Purchase=Purchase,
+    Withdraw=Withdraw, P2P=P2P, PKBattle=PKBattle, Seller=SELLER['Seller'],
+    SellerOrder=SELLER['SellerOrder'], now=now, err=err, body=body, num=num,
+    auth=auth, admin_only=admin_only, pub=pub, parse_token=parse_token, is_admin=lambda u: u.tg_id in ADMIN_IDS,
+    bump=bump, delete_room=delete_room, login=AUTH, notify_admins=notify_admins, cleanup=_cleanup_closed))
+AUTH['set_release'](MOD['telegram_released'], MOD['recently_closed'])
 
 
 if __name__ == '__main__':
