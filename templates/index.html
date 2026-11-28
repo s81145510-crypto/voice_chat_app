@@ -262,6 +262,29 @@ nav button.on i{transform:translateY(-1px) scale(1.08);filter:none}
 @media(min-width:600px){.page{max-width:620px;margin:0 auto;left:0;right:0;padding-left:22px;padding-right:22px}nav{justify-content:center;gap:8px}nav button{max-width:94px}}
 @media(prefers-reduced-motion:reduce){*,*:before,*:after{animation-duration:.01ms!important;animation-iteration-count:1!important;scroll-behavior:auto!important;transition-duration:.01ms!important}}
 
+
+/* Home discovery: clearer hierarchy, richer live cards, and thumb-friendly controls. */
+#p-home .hm-top{position:sticky;top:0;z-index:12;margin:-12px -14px 12px;padding:10px 14px 11px;background:linear-gradient(180deg,rgba(12,8,31,.97),rgba(12,8,31,.88));border-bottom:1px solid rgba(218,205,255,.1);backdrop-filter:blur(22px);-webkit-backdrop-filter:blur(22px)}
+#p-home .hm-tabs{gap:18px;align-items:center}
+#p-home .hm-tabs button{padding:8px 1px 9px;font-size:13px;letter-spacing:.1px;transition:color .18s,transform .18s}
+#p-home .hm-tabs button.on{font-size:15px;font-weight:800;color:#fff}
+#p-home .hm-quick{gap:9px;margin:0 0 15px}
+#p-home .hm-quick button{min-height:48px;border-radius:15px;padding:10px 6px;background:linear-gradient(145deg,rgba(49,42,91,.86),rgba(25,22,54,.9));border:1px solid rgba(211,195,255,.15);box-shadow:0 7px 18px rgba(0,0,0,.16);font-size:11.5px;font-weight:750;transition:transform .16s,border-color .16s}
+#p-home .hm-quick button:active{transform:scale(.96);border-color:rgba(255,214,107,.42)}
+#p-home .fgrid{gap:11px}
+#p-home .fcard{border:1px solid rgba(224,211,255,.19);border-radius:19px;box-shadow:0 12px 28px rgba(0,0,0,.24);isolation:isolate;transition:transform .2s,border-color .2s,box-shadow .2s}
+#p-home .fcard:after{content:"";position:absolute;inset:0;z-index:0;background:linear-gradient(180deg,rgba(9,5,22,.08) 0%,transparent 38%,rgba(7,4,18,.84) 100%);pointer-events:none}
+#p-home .fcard .tg,#p-home .fcard .vw,#p-home .fcard .inf{z-index:1}
+#p-home .fcard .tg{border:1px solid rgba(255,255,255,.22);box-shadow:0 4px 12px rgba(0,0,0,.22);padding:4px 8px}
+#p-home .fcard .vw{padding:4px 8px;border:1px solid rgba(255,255,255,.14);backdrop-filter:blur(8px)}
+#p-home .fcard .inf{padding:34px 10px 10px}
+#p-home .fcard .inf>div:first-child{font-size:13px;letter-spacing:.1px}
+#p-home .fcard:active{transform:scale(.975);border-color:rgba(255,214,107,.55)}
+#p-home .empty{padding:34px 16px;border:1px dashed rgba(205,190,255,.17);border-radius:18px;background:rgba(255,255,255,.025)}
+.golive{border:1px solid rgba(255,255,255,.22);box-shadow:0 10px 30px rgba(153,65,209,.38),0 0 0 5px rgba(157,91,255,.08);padding:14px 21px}
+@media(min-width:600px){#p-home .hm-top{margin-left:-22px;margin-right:-22px;padding-left:22px;padding-right:22px}}
+@media(prefers-reduced-motion:reduce){#p-home .fcard,#p-home .hm-quick button{transition:none}}
+
 </style>
 </head>
 <body>
