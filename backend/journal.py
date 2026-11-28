@@ -295,6 +295,41 @@ def init_journal(app, db, deps):
                               memo='Platform retained PK pool share'))
         return lines
 
+    @app.get('/api/fin/withdrawals/reconciliation')
+    @admin_only
+    def withdrawal_reconciliation():
+        Withdraw = deps.get('Withdraw')
+        if Withdraw is None:
+            return jsonify(ok=False, error='withdrawal model unavailable'), 500
+        # Only rows created with the split-tracking fields participate. Legacy
+        # withdrawals predate journal reserves and are reported separately.
+        tracked = Withdraw.query.filter(
+            (Withdraw.commission_coins + Withdraw.earnings_coins) == Withdraw.coins
+        )
+        active = tracked.filter(Withdraw.status.in_(('pending', 'paid'))).all()
+        expected_coin = sum(int(w.coins or 0) for w in active)
+        legacy_count = Withdraw.query.filter(
+            (Withdraw.commission_coins + Withdraw.earnings_coins) != Withdraw.coins
+        ).count()
+        pending_liability = db.session.query(
+            func.coalesce(func.sum(JournalLine.credit - JournalLine.debit), 0)
+        ).join(JournalEntry, JournalEntry.id == JournalLine.entry_id).filter(
+            JournalLine.account_code == 'liability.withdrawal_pending',
+            JournalLine.currency == 'COIN'
+        ).scalar() or 0
+        by_status = {
+            status: dict(count=tracked.filter_by(status=status).count(),
+                         coins=int(tracked.filter_by(status=status).with_entities(
+                             func.coalesce(func.sum(Withdraw.coins), 0)).scalar() or 0))
+            for status in ('pending', 'paid', 'rejected')
+        }
+        return jsonify(ok=(int(pending_liability) == expected_coin),
+                       currency='COIN', journal_pending_liability=int(pending_liability),
+                       expected_active_withdrawals=expected_coin,
+                       difference=int(pending_liability) - expected_coin,
+                       tracked_by_status=by_status, legacy_untracked_count=legacy_count,
+                       note='Paid withdrawals remain in pending liability until cross-currency settlement is implemented and reconciled.')
+
     def withdrawal_reserve_lines(user_id, earnings_coins, commission_coins):
         """Move withdrawable COIN balances into a pending-withdrawal liability."""
         values = (earnings_coins, commission_coins)
