@@ -155,6 +155,30 @@ class JournalValidationTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "whole integers"):
             JOURNAL["gift_lines"](1, 10, True, 0)
 
+    def test_pk_gift_separates_purchased_prize_pool_and_promo_spend(self):
+        lines = JOURNAL["pk_gift_lines"](sender_id=21, total=100, real_used=70)
+        self.assertEqual(sum(x["debit"] for x in lines), 100)
+        self.assertEqual(sum(x["credit"] for x in lines), 100)
+        self.assertEqual({x["account_code"] for x in lines},
+                         {"liability.user_coin_balance", "liability.pk_prize_pool",
+                          "liability.promo_coin_balance", "revenue.platform_pk_gift"})
+
+    def test_pk_gift_with_only_promo_coins_does_not_fund_prize_pool(self):
+        lines = JOURNAL["pk_gift_lines"](sender_id=22, total=25, real_used=0)
+        self.assertEqual(sum(x["debit"] for x in lines), 25)
+        self.assertEqual(sum(x["credit"] for x in lines), 25)
+        self.assertNotIn("liability.pk_prize_pool", {x["account_code"] for x in lines})
+
+    def test_pk_payout_settles_pool_and_retains_unpaid_share(self):
+        lines = JOURNAL["pk_payout_lines"](100, [(31, 70, "pk_win"), (32, 20, "pk_lose")])
+        self.assertEqual(sum(x["debit"] for x in lines), 100)
+        self.assertEqual(sum(x["credit"] for x in lines), 100)
+        self.assertIn("revenue.platform_pk", {x["account_code"] for x in lines})
+
+    def test_pk_payout_rejects_overpayment(self):
+        with self.assertRaisesRegex(ValueError, "exceed prize pool"):
+            JOURNAL["pk_payout_lines"](100, [(31, 80, "pk_win"), (32, 30, "pk_lose")])
+
     def test_invalid_account_and_invalid_idempotency_key_are_rejected(self):
         lines = self.lines()
         lines[0]["account_code"] = "bad account!"
