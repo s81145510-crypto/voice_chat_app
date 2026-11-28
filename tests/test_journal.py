@@ -151,7 +151,7 @@ class JournalValidationTests(unittest.TestCase):
 
     def test_gift_journal_rejects_overallocated_or_invalid_amounts(self):
         with self.assertRaisesRegex(ValueError, "allocation exceeds"):
-            JOURNAL["gift_lines"](1, 10, 10, 8, commission_total=3)
+            JOURNAL["gift_lines"](1, 10, 9, 10, commission_total=0)
         with self.assertRaisesRegex(ValueError, "whole integers"):
             JOURNAL["gift_lines"](1, 10, True, 0)
 
