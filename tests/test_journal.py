@@ -133,6 +133,14 @@ class JournalValidationTests(unittest.TestCase):
         self.assertIn("expense.lucky_payout", {x["account_code"] for x in lines})
         self.assertNotIn("liability.host_earnings", {x["account_code"] for x in lines})
 
+    def test_lucky_gift_with_zero_multiplier_is_still_booked_as_lucky(self):
+        lines = JOURNAL["gift_lines"](sender_id=13, total=20, real_used=20,
+                                      host_earning=0, is_lucky=True)
+        self.assertEqual(sum(x["debit"] for x in lines), 20)
+        self.assertEqual(sum(x["credit"] for x in lines), 20)
+        self.assertIn("revenue.lucky_gift_sales", {x["account_code"] for x in lines})
+        self.assertNotIn("revenue.platform_gift", {x["account_code"] for x in lines})
+
     def test_gift_journal_rejects_overallocated_or_invalid_amounts(self):
         with self.assertRaisesRegex(ValueError, "allocation exceeds"):
             JOURNAL["gift_lines"](1, 10, 10, 8, commission_total=3)
