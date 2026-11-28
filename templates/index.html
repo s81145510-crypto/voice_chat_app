@@ -694,18 +694,22 @@ function clearFx(){FXGEN++;BIGQ=[];BIGBUSY=false;COMBO.forEach(c=>clearTimeout(c
 function renderLiveHost(){const h=R&&R.seats[0];if(h)lvLoadFollow(h.u.id);$('#lv-host').innerHTML=h?`${av(h.u,'s')}<div style="line-height:1.2"><b class="ell" style="display:block;max-width:110px">${esc(h.u.name)}</b><span class="mut ell" style="color:#ddd;display:block;max-width:110px">${esc(R.name)}</span></div>`:'…'}
 async function flipCam(){try{const c=await AgoraRTC.getCameras();if(c.length<2||!V.vtrack)return;V.camI=((V.camI||0)+1)%c.length;await V.vtrack.setDevice(c[V.camI].deviceId)}catch(e){toast('Camera switch failed')}}
 async function liveMic(){if(!V.track||!R)return;R.selfMute=!R.selfMute;await V.track.setEnabled(!R.selfMute);$('#lv-mic').textContent=R.selfMute?'🔇':'🎤'}
-let GF={to:0,gift:null,qty:1};
+function newGiftRequestId(){
+  const bytes=new Uint8Array(16);crypto.getRandomValues(bytes);
+  return Array.from(bytes,b=>b.toString(16).padStart(2,'0')).join('');
+}
+let GF={to:0,gift:null,qty:1,requestId:''};
 function openGift(to){if(!R)return;const r=R;
   const rec=Object.values(r.seats).filter(s=>s.u.id!==S.me.id);if(!rec.length)return toast('No one to gift');
-  GF={to:to||rec[0].u.id,gift:S.cfg.gifts[0].key,qty:1};
+  GF={to:to||rec[0].u.id,gift:S.cfg.gifts[0].key,qty:1,requestId:newGiftRequestId()};
   const m=modal('');const draw=()=>{const g=S.cfg.gifts.find(x=>x.key===GF.gift);
    m.firstChild.innerHTML=`<div class="row"><h3 class="sp" style="margin:0">🎁 Gift</h3><span class="pill">🪙 <span class="coins-n">${fmt(S.me.coins)}</span></span></div>
    <div class="chips" style="margin:10px 0">${rec.map(s=>`<div class="chip ${GF.to===s.u.id?'on':''}" onclick="GF.to=${s.u.id};this.parentNode.querySelectorAll('.chip').forEach(c=>c.classList.remove('on'));this.classList.add('on')">${esc(s.u.name.slice(0,12))}</div>`).join('')}</div>
    <div class="gg">${S.cfg.gifts.map(x=>`<div class="gi tier-${x.tier} ${GF.gift===x.key?'on':''}" data-k="${x.key}"><b>${x.emoji}</b>${esc(x.name)}<div class="gold">🪙${fmt(x.price)}</div>${x.tier==='lucky'?'<div class="mut" style="color:var(--ok)">LUCKY</div>':''}</div>`).join('')}</div>
    <div class="row" style="margin-top:12px"><div class="chips sp">${[1,5,10,20,50].map(q=>`<div class="chip ${GF.qty===q?'on':''}" data-q="${q}">×${q}</div>`).join('')}</div><button class="btn gold" id="g-send">Send · ${fmt(g.price*GF.qty)}</button></div>`;
    $$('.gi',m).forEach(e=>e.onclick=()=>{GF.gift=e.dataset.k;draw()});$$('[data-q]',m).forEach(e=>e.onclick=()=>{GF.qty=+e.dataset.q;draw()});
-   $('#g-send',m).onclick=e=>run(e.target,async()=>{const d=await api('/api/rooms/'+r.id+'/gift',{to:GF.to,gift:GF.gift,qty:GF.qty});S.me.coins=d.coins;setMe(S.me);
-     if(d.lucky>0)toast('🍀 LUCKY ×'+d.lucky+'! +'+fmt(d.refund)+' coins');else toast('✅ Sent');
+   $('#g-send',m).onclick=e=>run(e.target,async()=>{const requestId=GF.requestId;const d=await api('/api/rooms/'+r.id+'/gift',{to:GF.to,gift:GF.gift,qty:GF.qty,request_id:requestId});GF.requestId=newGiftRequestId();S.me.coins=d.coins;setMe(S.me);
+     if(d.duplicate)toast('✅ This gift was already processed');else if(d.lucky>0)toast('🍀 LUCKY ×'+d.lucky+'! +'+fmt(d.refund)+' coins');else toast('✅ Sent');
      hap('medium');poll()})};draw()}
 const GM={dice:{n:'Dice',i:'🎲',x:'4.2x',pick:[1,2,3,4,5,6],hint:'Guess the number'},flip:{n:'Coin flip',i:'🪙',x:'1.4x',pick:[1,2],lab:['Heads','Tails'],hint:'Pick'},wheel:{n:'Lucky wheel',i:'🎡',x:'5x'},race:{n:'Horse race',i:'🐎',x:'4.5x',pick:[1,2,3,4,5,6],hint:'Pick a horse'},box:{n:'Mystery box',i:'🎁',x:'10x',pick:[1,2,3],hint:'Pick a box'}};
 async function renderGames(){
