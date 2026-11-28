@@ -49,11 +49,11 @@ def reward_api():
         user_ids = [u.id for u in users]
         m.MissionProgress.query.filter(m.MissionProgress.user_id.in_(user_ids)).delete(synchronize_session=False)
         m.Tx.query.filter(m.Tx.user_id.in_(user_ids)).delete(synchronize_session=False)
-        entries = m.JOURNAL["JournalEntry"].query.filter(
-            m.JOURNAL["JournalEntry"].idempotency_key.like("daily:%")
-            | m.JOURNAL["JournalEntry"].idempotency_key.like("mission:%")
-            | m.JOURNAL["JournalEntry"].idempotency_key.like("reward-test:%")
-        ).all()
+        patterns = [f"daily:{uid}:%" for uid in user_ids] + [f"mission:{uid}:%" for uid in user_ids]
+        query = m.JOURNAL["JournalEntry"].query
+        entries = query.filter(m.or_(*[
+            m.JOURNAL["JournalEntry"].idempotency_key.like(pattern) for pattern in patterns
+        ])).all()
         entry_ids = [e.id for e in entries]
         if entry_ids:
             m.JOURNAL["JournalLine"].query.filter(
