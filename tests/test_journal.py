@@ -175,6 +175,13 @@ class JournalValidationTests(unittest.TestCase):
         self.assertEqual(sum(x["credit"] for x in lines), 100)
         self.assertIn("revenue.platform_pk", {x["account_code"] for x in lines})
 
+    def test_pk_payout_without_second_host_keeps_missing_share_with_platform(self):
+        lines = JOURNAL["pk_payout_lines"](100, [(31, 70, "pk_win"), (None, 20, "pk_lose")])
+        self.assertEqual(sum(x["debit"] for x in lines), 100)
+        self.assertEqual(sum(x["credit"] for x in lines), 100)
+        platform = [x for x in lines if x["account_code"] == "revenue.platform_pk"]
+        self.assertEqual(platform[0]["credit"], 30)
+
     def test_pk_payout_rejects_overpayment(self):
         with self.assertRaisesRegex(ValueError, "exceed prize pool"):
             JOURNAL["pk_payout_lines"](100, [(31, 80, "pk_win"), (32, 30, "pk_lose")])
