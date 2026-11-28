@@ -1556,7 +1556,7 @@ except ImportError:
 
 FEED = init_feed(app, db, dict(
     User=User, Room=Room, Seat=Seat, Presence=Presence, Tx=Tx, now=now, err=err, body=body, num=num,
-    auth=auth, pub=pub, limited=limited, gc_rooms=gc_rooms))
+    auth=auth, pub=pub, limited=limited, gc_rooms=gc_rooms, admin_only=admin_only))
 
 
 if __name__ == '__main__':
