@@ -220,8 +220,8 @@ def init_journal(app, db, deps):
                               memo='Lucky gift coin spend'))
             lines.append(dict(account_code='expense.lucky_payout', debit=lucky_refund, credit=0,
                               memo='Lucky gift payout'))
-            lines.append(dict(account_code='liability.user_coin_balance', user_id=sender_id,
-                              debit=0, credit=lucky_refund, memo='Lucky payout credited to sender'))
+            lines.append(dict(account_code='liability.promo_coin_balance', user_id=sender_id,
+                              debit=0, credit=lucky_refund, memo='Lucky payout credited as promotional coins'))
         else:
             if host_earning:
                 lines.append(dict(account_code='liability.host_earnings', debit=0, credit=host_earning,
@@ -240,6 +240,31 @@ def init_journal(app, db, deps):
             if retained:
                 lines.append(dict(account_code='revenue.platform_gift', debit=0, credit=retained,
                                   memo='Platform retained gift value'))
+        return lines
+
+    def purchase_coin_lines(purchase_user_id, purchased_coins, referral_user_id=None,
+                            referral_coins=0, invite_user_id=None, invite_coins=0):
+        """Journal purchased coins separately from promotional referral/invite rewards."""
+        values = (purchased_coins, referral_coins, invite_coins)
+        if any(isinstance(v, bool) or not isinstance(v, int) or v < 0 for v in values):
+            raise ValueError('purchase coin amounts must be non-negative whole integers')
+        if purchased_coins <= 0:
+            raise ValueError('purchased coin amount must be positive')
+        if referral_coins and (isinstance(referral_user_id, bool) or not isinstance(referral_user_id, int) or referral_user_id <= 0):
+            raise ValueError('referral recipient is required for referral coins')
+        if invite_coins and (isinstance(invite_user_id, bool) or not isinstance(invite_user_id, int) or invite_user_id <= 0):
+            raise ValueError('invite recipient is required for invite coins')
+        total = purchased_coins + referral_coins + invite_coins
+        lines = [dict(account_code='expense.coin_issuance', debit=total, credit=0,
+                      memo='Purchased and promotional coin issuance')]
+        lines.append(dict(account_code='liability.user_coin_balance', user_id=purchase_user_id,
+                          debit=0, credit=purchased_coins, memo='Purchased coins'))
+        if referral_coins:
+            lines.append(dict(account_code='liability.promo_coin_balance', user_id=referral_user_id,
+                              debit=0, credit=referral_coins, memo='Purchase referral bonus coins'))
+        if invite_coins:
+            lines.append(dict(account_code='liability.promo_coin_balance', user_id=invite_user_id,
+                              debit=0, credit=invite_coins, memo='First-purchase invite reward coins'))
         return lines
 
     def pk_gift_lines(sender_id, total, real_used):
@@ -367,4 +392,4 @@ def init_journal(app, db, deps):
                               debit=0, credit=commission_coins, memo='Restore agent commission'))
         return lines
 
-    return dict(JournalEntry=JournalEntry, JournalLine=JournalLine, serialize=serialize, post_internal=post_internal, gift_lines=gift_lines, pk_gift_lines=pk_gift_lines, pk_payout_lines=pk_payout_lines, withdrawal_reserve_lines=withdrawal_reserve_lines, withdrawal_release_lines=withdrawal_release_lines)
+    return dict(JournalEntry=JournalEntry, JournalLine=JournalLine, serialize=serialize, post_internal=post_internal, gift_lines=gift_lines, purchase_coin_lines=purchase_coin_lines, pk_gift_lines=pk_gift_lines, pk_payout_lines=pk_payout_lines, withdrawal_reserve_lines=withdrawal_reserve_lines, withdrawal_release_lines=withdrawal_release_lines)
