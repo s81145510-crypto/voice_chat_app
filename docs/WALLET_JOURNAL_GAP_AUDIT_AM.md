@@ -23,7 +23,7 @@ Do not merge or deploy on the strength of this document. Before historical migra
 | Mission rewards | `POST /api/missions/claim` | Adds coins; `real_coins` unchanged (promo) | **Journal-integrated:** promo issuance entry commits atomically with claim, wallet credit and `Tx`; stable per-user/day/mission idempotency key |
 | Single-player games | `POST /api/games/<name>` | Bet is spent; payout is added as promo coins | **Journal-integrated:** purchased/promo stake liabilities are debited; payout is credited to promo liability; stake retained is platform game revenue, and payout above stake is game-payout expense. Wallet, `Tx` and journal commit atomically |
 | P2P create/cancel/join | `POST /api/games/p2p/*` | Stakes are spent; cancellation and winner prize are credited as promo coins | **Journal-integrated for new battles:** creator stake enters escrow; cancel returns the exact purchased/promo split; join settles both stakes, winner promo prize and platform margin atomically. Legacy open battles created before this field was added retain the old unjournaled settlement path and must be cleared before historical migration |
-| Admin wallet grant | `POST /api/admin/user` with `action=grant` | Positive grants increase `coins` only (promo); negative grants subtract total `coins` through `add_coins()` without adjusting `real_coins` | **Not journaled.** Negative grants can make `real_coins > coins`; needs a guarded purchased/promo allocation and approved adjustment account before enabling negative adjustments |
+| Admin wallet grant | `POST /api/admin/user` with `action=grant` | Positive grants add promo coins; negative grants remove promo coins first, then purchased coins | **Journal-integrated:** positive grants debit coin-issuance expense / credit promo liability; negative adjustments debit the exact promo and purchased liabilities and credit `equity.admin_wallet_adjustment`. Negative changes require a reason and are blocked if balances are inconsistent or insufficient |
 | Wallet / seller operations | finance module and related admin routes | Legacy wallet/ledger tables are maintained separately | Must be traced end-to-end before migration; do not infer journal coverage from `FinLedger` rows alone |
 
 ## Important implementation details
@@ -34,7 +34,7 @@ Do not merge or deploy on the strength of this document. Before historical migra
 - `add_coins()` increases `User.coins` only. Credits made through it are therefore promo balance unless the caller separately increases `real_coins` (purchase approval does so explicitly).
 - Daily wallet credit, claim marker, `Tx`, and COIN journal posting now share one transaction. The legacy reward-budget spend and `FinLedger` are still recorded afterward in a separate commit; that operational budget trail is not yet fully atomic with the wallet/journal transaction.
 - `FinLedger`, `FinWallet`, and `FinGiftTx` are legacy operational finance records. They are not substitutes for a balanced journal entry.
-- The admin `grant` action is still a financial gap: positive amounts are promo credits but have no journal entry; negative amounts call `add_coins()` and can reduce the total below `real_coins`. Do not use negative grants as a production correction until the purchased/promo split and contra-account policy are implemented and tested.
+- Admin `grant` now posts a balanced journal entry atomically with the wallet and `Tx` mutation. Positive grants are promo coins; negative grants require an admin reason, consume promo balance before purchased balance, and use the `equity.admin_wallet_adjustment` account. Automated tests cover positive grants, mixed-balance reductions, missing reasons and journal-failure rollback. This account mapping still needs owner/accountant review before production.
 
 ## Required next steps before implementation
 1. **Completed for reward issuance:** welcome, daily and mission promo coin credits now post balanced COIN journal entries in the same transaction as their wallet mutations; tests cover daily/mission posting and rollback.
@@ -42,7 +42,8 @@ Do not merge or deploy on the strength of this document. Before historical migra
 3. Complete client-request idempotency for single-player game submissions so a network retry replays the original result rather than starting another game.
 4. Decide whether games and P2P remain enabled and obtain appropriate legal/payment-policy review for the relevant jurisdictions. The current journal mapping classifies net game/P2P margin as platform revenue and winner payouts as promo liabilities; this is a technical accounting model, not legal approval.
 5. Resolve or explicitly migrate pre-existing open P2P battles before enabling the new escrow journal path in production.
-6. Only after a production snapshot and signed-off opening-balance mapping, design a dry-run historical migration report. Do not write historical journal entries until the owner reviews and approves that report.
+6. Review and approve the admin adjustment equity account mapping with the owner/accountant.
+7. Only after a production snapshot and signed-off opening-balance mapping, design a dry-run historical migration report. Do not write historical journal entries until the owner reviews and approves that report.
 
 
 ## Seller / reseller route trace (source review completed)
