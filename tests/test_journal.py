@@ -16,6 +16,9 @@ class JournalValidationTests(unittest.TestCase):
         self.ctx = app.app_context()
         self.ctx.push()
         db.create_all()
+        JOURNAL["JournalLine"].query.delete()
+        JOURNAL["JournalEntry"].query.delete()
+        db.session.commit()
 
     def tearDown(self):
         db.session.rollback()
