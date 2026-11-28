@@ -34,13 +34,25 @@ def seller_api():
         headers = {"Authorization": "Bearer " + m.sign(seller_user.id)}
         yield client, headers, seller_user, buyer
         m.db.session.rollback()
+        transfers = m.SELLER["SellerTransfer"].query.filter_by(from_id=seller_user.id).all()
+        refs = [str(t.id) for t in transfers]
+        entries = m.JOURNAL["JournalEntry"].query.filter(
+            m.JOURNAL["JournalEntry"].source == "seller_transfer",
+            m.JOURNAL["JournalEntry"].reference.in_(refs or ["__none__"])
+        ).all()
+        entry_ids = [e.id for e in entries]
+        if entry_ids:
+            m.db.session.query(m.JOURNAL["JournalLine"]).filter(
+                m.JOURNAL["JournalLine"].entry_id.in_(entry_ids)
+            ).delete(synchronize_session=False)
+            m.db.session.query(m.JOURNAL["JournalEntry"]).filter(
+                m.JOURNAL["JournalEntry"].id.in_(entry_ids)
+            ).delete(synchronize_session=False)
         m.db.session.query(m.SELLER["SellerTransfer"]).filter(
             m.SELLER["SellerTransfer"].from_id == seller_user.id
         ).delete(synchronize_session=False)
         m.db.session.query(m.SELLER["Seller"]).filter_by(user_id=seller_user.id).delete()
         m.db.session.query(m.Tx).filter(m.Tx.user_id.in_([seller_user.id, buyer.id])).delete(synchronize_session=False)
-        m.db.session.query(m.JOURNAL["JournalLine"]).delete(synchronize_session=False)
-        m.db.session.query(m.JOURNAL["JournalEntry"]).delete(synchronize_session=False)
         m.db.session.query(m.User).filter(m.User.id.in_([seller_user.id, buyer.id])).delete(synchronize_session=False)
         m.db.session.commit()
 
