@@ -443,9 +443,12 @@ def init_finance(app, db, deps):
         activity_30 = db.session.query(func.coalesce(func.sum(Tx.amount), 0)).filter(
             Tx.user_id == uid, Tx.kind == 'host_activity', Tx.amount > 0, Tx.ts >= since_30
         ).scalar() or 0
-        follow_table = db.metadata.tables.get('user_follow')
-        followers = 0
-        if follow_table is not None:
+        # This repository currently has no authoritative follow table/model.
+        # Return an explicit unavailable state rather than showing a misleading zero.
+        follower_tracking_enabled = 'user_follow' in db.metadata.tables
+        followers = None
+        if follower_tracking_enabled:
+            follow_table = db.metadata.tables['user_follow']
             followers = db.session.query(func.count()).select_from(follow_table).filter(
                 follow_table.c.target_id == uid
             ).scalar() or 0
@@ -458,7 +461,8 @@ def init_finance(app, db, deps):
                               host_earned_coins=int(gifts[2] or 0),
                               commission_earned_coins=int(commission_30),
                               activity_reward_coins=int(activity_30)),
-            followers=int(followers),
+            followers=int(followers) if followers is not None else None,
+            follower_tracking_enabled=follower_tracking_enabled,
             withdrawals=[dict(id=w.id, coins=int(w.coins or 0), birr=int(w.birr or 0),
                                status=w.status, method=w.method, ts=w.ts,
                                earnings_coins=int(w.earnings_coins or 0),
