@@ -29,3 +29,21 @@ jobs:
           pip install -r requirements.txt
       - name: Run unit tests
         run: python -m unittest discover -s tests -v
+      - name: Set up Node for PWA syntax check
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Check inline PWA JavaScript syntax
+        run: |
+          python - <<'PY'
+          import re
+          from pathlib import Path
+          html = Path("templates/index.html").read_text(encoding="utf-8")
+          scripts = re.findall(r'<script(?![^>]*\\bsrc=)[^>]*>(.*?)</script>', html, re.S | re.I)
+          if not scripts:
+              raise SystemExit("No inline scripts found")
+          for i, script in enumerate(scripts):
+              Path(f"/tmp/pwa-{i}.js").write_text(script, encoding="utf-8")
+          print(f"Extracted {len(scripts)} inline scripts")
+          PY
+          for file in /tmp/pwa-*.js; do node --check "$file"; done
