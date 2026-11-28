@@ -657,6 +657,8 @@ def room_state(rid):
     out = dict(v=r.version, online=online_count(rid), guests=guests_payload(rid))
     if cv != r.version: out['seats'] = seats_payload(rid)
     q = Message.query.filter(Message.room_id == rid)
+    hidden = FEED['hidden_user_ids'](g.user.id) if 'FEED' in globals() else set()
+    if hidden: q = q.filter(~Message.user_id.in_(hidden))
     ms = list(reversed(q.order_by(Message.id.desc()).limit(30).all())) if mid <= 0 else q.filter(Message.id > mid).order_by(Message.id).limit(60).all()
     vips = {i for (i,) in db.session.query(User.id).filter(User.id.in_({m.user_id for m in ms} or {0}), User.vip_until > now())} if ms else set()
     out['msgs'] = [dict(id=m.id, u=m.user_id, n=m.name, t=m.text, k=m.kind, v=m.user_id in vips, meta=json.loads(m.meta) if m.meta else None) for m in ms]
@@ -668,9 +670,12 @@ def room_audience(rid):
     if not r: return err('ROOM_GONE', 404)
     touch(rid, g.user.id); clean_room(rid)
     t = now()
+    hidden = FEED['hidden_user_ids'](g.user.id) if 'FEED' in globals() else set()
     q = db.session.query(Presence, User).join(User, User.id == Presence.user_id).filter(
         Presence.room_id == rid, Presence.seen > t - 20
-    ).order_by(Presence.seen.desc())
+    )
+    if hidden: q = q.filter(~User.id.in_(hidden))
+    q = q.order_by(Presence.seen.desc())
     total = q.count()
     rows = q.limit(100).all()
     seat_ids = {x.user_id for x in Seat.query.filter_by(room_id=rid).all()}
@@ -820,6 +825,8 @@ def room_gift(rid):
     if not on_stage: return err('Recipient must be on stage')
     target = db.session.get(User, to)
     if not target: return err('user not found')
+    if 'FEED' in globals() and to in FEED['hidden_user_ids'](g.user.id):
+        return err('This interaction is unavailable', 403)
     if limited('gift', 0.4): return err('Slow down', 429)
     total = gift['price'] * qty
     bought_used = spend_split(g.user.id, total)
