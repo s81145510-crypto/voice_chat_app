@@ -87,6 +87,27 @@ class AppSmokeTests(unittest.TestCase):
                 PKGiftRequest.query.filter_by(sender_id=7001, request_id="pk-smoke-req-001").delete()
                 db.session.commit()
 
+    def test_purchase_reference_indexes_are_case_insensitive_and_unique(self):
+        from sqlalchemy import inspect, func
+        from sqlalchemy.exc import IntegrityError
+        from backend.main import Purchase
+        with app.app_context():
+            indexes = {x["name"]: x for x in inspect(db.engine).get_indexes("purchase")}
+            self.assertIn("uq_purchase_ref_ci", indexes)
+            self.assertIn("uq_purchase_txhash_ci", indexes)
+            db.session.add(Purchase(user_id=8101, username="smoke", coins=100, birr=50,
+                                    ref="TEL-REF-001", method="telebirr", txhash=""))
+            db.session.commit()
+            try:
+                db.session.add(Purchase(user_id=8102, username="smoke2", coins=100,
+                                        birr=50, ref="tel-ref-001", method="telebirr", txhash=""))
+                with self.assertRaises(IntegrityError):
+                    db.session.commit()
+            finally:
+                db.session.rollback()
+                Purchase.query.filter(func.lower(Purchase.ref) == "tel-ref-001").delete(synchronize_session=False)
+                db.session.commit()
+
     def test_financial_reconciliation_runs_on_empty_database(self):
         with app.app_context():
             result = FIN["reconcile"]()
