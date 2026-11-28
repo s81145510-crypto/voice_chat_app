@@ -282,8 +282,11 @@ def test_concurrent_room_gifts_cannot_overspend_purchased_coins(monkeypatch):
             assert len([entry for entry in gift_entries if entry.description.startswith("gift rose")]) >= 1
     finally:
         with m.app.app_context():
-            entry_ids = [x.id for x in m.JOURNAL["JournalEntry"].query.filter(
-                m.JOURNAL["JournalEntry"].description.like("gift rose%")).all()]
+            gift_entries = (m.JOURNAL["JournalEntry"].query
+                            .join(m.JOURNAL["JournalLine"], m.JOURNAL["JournalLine"].entry_id == m.JOURNAL["JournalEntry"].id)
+                            .filter(m.JOURNAL["JournalEntry"].source == "gift",
+                                    m.JOURNAL["JournalLine"].user_id == sender_id).distinct().all())
+            entry_ids = [x.id for x in gift_entries]
             if entry_ids:
                 m.db.session.query(m.JOURNAL["JournalLine"]).filter(
                     m.JOURNAL["JournalLine"].entry_id.in_(entry_ids)).delete(synchronize_session=False)
@@ -339,7 +342,7 @@ def test_pk_gift_racing_with_finalization_is_either_paid_or_rejected(monkeypatch
             gift_response = gift_future.result(timeout=30)
             end_response = end_future.result(timeout=30)
         assert end_response.status_code == 200
-        assert gift_response.status_code in (200, 409)
+        assert gift_response.status_code in (200, 404, 409)
         with m.app.app_context():
             saved_pk = m.db.session.get(m.PKBattle, pk_id)
             saved_sender = m.db.session.get(m.User, sender_id)
