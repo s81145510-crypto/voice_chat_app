@@ -14,16 +14,16 @@ class WithdrawalPolicyTests(unittest.TestCase):
 
     def test_genuine_gift_earnings_must_be_at_least_half(self):
         with self.assertRaisesRegex(ValueError, "50%"):
-            rules.withdrawal_source_split(10000, 4999, 6000)
+            rules.withdrawal_source_split(10000, 4999, 1000, 1000)
 
     def test_split_keeps_at_least_half_from_gift_earnings(self):
-        split = rules.withdrawal_source_split(10001, 6000, 5000)
-        self.assertEqual(split, {"earnings": 5001, "commission": 5000})
-        self.assertGreaterEqual(split["earnings"], (10001 + 1) // 2)
+        split = rules.withdrawal_source_split(10001, 6000, 1000, 4000)
+        self.assertEqual(split, {"gift_earnings": 5001, "pk_earnings": 1000, "earnings": 6001, "commission": 4000})
+        self.assertGreaterEqual(split["gift_earnings"], (10001 + 1) // 2)
 
     def test_not_enough_total_withdrawable_balance(self):
         with self.assertRaisesRegex(ValueError, "not enough"):
-            rules.withdrawal_source_split(10000, 6000, 3000)
+            rules.withdrawal_source_split(10000, 6000, 1000, 2000)
 
     def test_withdrawal_state_machine_rejects_skipped_steps(self):
         self.assertEqual(rules.withdrawal_next_status("pending", "under_review"), "under_review")
@@ -41,7 +41,7 @@ class WithdrawalPolicyTests(unittest.TestCase):
 
     def test_activity_and_promo_coins_are_not_cashout_sources(self):
         with self.assertRaises(ValueError):
-            rules.withdrawal_source_split(10000, 4000, 5000)
+            rules.withdrawal_source_split(10000, 4000, 5000, 0)
 
 
 if __name__ == "__main__":
