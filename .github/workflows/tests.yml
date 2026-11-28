@@ -27,3 +27,40 @@ jobs:
         run: python -m compileall -q backend tests
       - name: Run regression tests
         run: python -m pytest -q
+
+  test-postgresql:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: twentyone_test
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d twentyone_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      DATABASE_URL: postgresql+psycopg2://postgres:postgres@localhost:5432/twentyone_test
+      DATA_DIR: /tmp/twentyone-postgres-test-data
+      SECRET_KEY: postgres-ci-test-secret
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt pytest
+      - name: Compile Python files
+        run: python -m compileall -q backend tests
+      - name: Run regression tests on PostgreSQL
+        run: python -m pytest -q
