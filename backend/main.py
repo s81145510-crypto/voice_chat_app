@@ -1587,7 +1587,9 @@ def adm_purchase():
         db.session.rollback()
         return err('Already processed', 409)
 
-    u = db.session.get(User, p.user_id)
+    # Serialize approvals for the same customer so first-purchase rewards
+    # cannot be issued twice when separate pending purchases are approved in parallel.
+    u = db.session.query(User).filter(User.id == p.user_id).with_for_update().populate_existing().first()
     if act == 'approve':
         add_coins(p.user_id, p.coins)
         db.session.execute(update(User).where(User.id == p.user_id)
@@ -1650,6 +1652,7 @@ def adm_purchase():
         if u and u.agent_id:
             FIN['wallet_sync'](u.agent_id)
         if u and u.referrer_id:
+            FIN['wallet_sync'](u.referrer_id)
             ru = db.session.get(User, u.referrer_id)
             notify(ru.tg_id if ru else None, f'🎁 Referral +{p.coins // 10} coins')
     if u:
