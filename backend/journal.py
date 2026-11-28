@@ -140,9 +140,9 @@ def init_journal(app, db, deps):
             existing = JournalEntry.query.filter_by(idempotency_key=idem).first()
             if existing:
                 prior = serialize(existing)
-                requested = [(x['account_code'], x['user_id'], x['debit'], x['credit'], x['currency']) for x in lines]
-                recorded = [(x['account_code'], x['user_id'], x['debit'], x['credit'], x['currency']) for x in prior['lines']]
-                if (existing.source, existing.currency, existing.reference, recorded) != (source, currency, reference, requested):
+                requested = [(x['account_code'], x['user_id'], x['debit'], x['credit'], x['currency'], x['memo']) for x in lines]
+                recorded = [(x['account_code'], x['user_id'], x['debit'], x['credit'], x['currency'], x['memo']) for x in prior['lines']]
+                if (existing.source, existing.currency, existing.reference, existing.description, recorded) != (source, currency, reference, description, requested):
                     return jsonify(ok=False, error='idempotency key already used with different journal data'), 409
                 return jsonify(ok=True, duplicate=True, entry=prior), 200
             entry = JournalEntry(source=source, reference=reference, idempotency_key=idem,
