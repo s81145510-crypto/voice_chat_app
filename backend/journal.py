@@ -193,7 +193,7 @@ def init_journal(app, db, deps):
         return jsonify(currency=currency, accounts=accounts, total_debit=debit_total,
                        total_credit=credit_total, balanced=(debit_total == credit_total))
 
-    def gift_lines(sender_id, total, real_used, host_earning, commission_total=0, lucky_refund=0):
+    def gift_lines(sender_id, total, real_used, host_earning, commission_total=0, lucky_refund=0, is_lucky=False):
         """Build balanced COIN journal lines for a normal or Lucky gift.
 
         total is the full coin spend; real_used is the purchased-coin portion.
@@ -213,7 +213,7 @@ def init_journal(app, db, deps):
         if promo:
             lines.append(dict(account_code='liability.promo_coin_balance', user_id=sender_id,
                               debit=promo, credit=0, memo='Promotional coins spent on gift'))
-        if lucky_refund:
+        if is_lucky:
             # Lucky payouts are funded from the prize reserve; the gift sale and
             # the payout are shown gross so a multiplier payout remains balanced.
             lines.append(dict(account_code='revenue.lucky_gift_sales', debit=0, credit=total,
