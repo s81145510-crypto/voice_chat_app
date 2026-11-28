@@ -216,3 +216,28 @@ def test_receipt_image_endpoint_is_admin_only(purchase_api):
     allowed = client.get(f"/api/admin/shot/{purchase.id}", headers=headers)
     assert allowed.status_code == 200
     assert allowed.data.startswith(b"\\xff\\xd8\\xff")
+
+
+def test_failed_journal_rolls_back_purchase_and_sends_no_referral_notice(purchase_api, monkeypatch):
+    m, client, admin, customer, _, headers, _ = purchase_api
+    customer.referrer_id = admin.id
+    m.db.session.commit()
+    purchase = _new_purchase(m, customer)
+    monkeypatch.setitem(m.FIN, "ledger", lambda *args, **kwargs: None)
+    monkeypatch.setitem(m.FIN, "wallet_sync", lambda *args, **kwargs: None)
+    sent = []
+    monkeypatch.setattr(m, "notify", lambda *args, **kwargs: sent.append(args))
+    def fail_journal(**kwargs):
+        raise RuntimeError("simulated journal failure")
+    monkeypatch.setitem(m.JOURNAL, "post_internal", fail_journal)
+
+    response = client.post("/api/admin/purchase", json={
+        "id": purchase.id, "action": "approve", "manual_verified": True
+    }, headers=headers)
+    assert response.status_code == 500
+    m.db.session.expire_all()
+    assert m.db.session.get(m.Purchase, purchase.id).status == "pending"
+    assert m.db.session.get(m.User, customer.id).coins == 0
+    assert m.db.session.get(m.User, admin.id).coins == 0
+    assert m.PurchaseReview.query.filter_by(purchase_id=purchase.id).count() == 0
+    assert sent == []
