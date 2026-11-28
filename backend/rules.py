@@ -89,6 +89,36 @@ WELCOME_REWARDS = (100, 120, 140, 160, 180, 200, 250)
 LEVEL_REWARDS = ((5, 50), (10, 65), (20, 80), (30, 100), (50, 125))
 TOP_LEVEL_REWARD = 150
 
+# Cash-out policy: reference value only; actual payout remains subject to admin approval.
+WITHDRAW_ETB_PER_COIN = Decimal('0.10')  # 1,000 coins = 100 ETB
+MIN_WITHDRAW_ETB = 1000
+MIN_WITHDRAW_COINS = int((Decimal(MIN_WITHDRAW_ETB) / WITHDRAW_ETB_PER_COIN).to_integral_value(rounding='ROUND_UP'))
+MIN_GIFT_EARNINGS_SHARE = Decimal('0.50')
+
+
+def withdrawal_quote(coins):
+    coins = _int_amount(coins)
+    if coins < MIN_WITHDRAW_COINS:
+        raise ValueError(f'minimum withdrawal is {MIN_WITHDRAW_ETB} ETB ({MIN_WITHDRAW_COINS} coins)')
+    birr = int((Decimal(coins) * WITHDRAW_ETB_PER_COIN).to_integral_value(rounding=ROUND_DOWN))
+    return dict(coins=coins, birr=birr, rate=str(WITHDRAW_ETB_PER_COIN))
+
+
+def withdrawal_source_split(coins, gift_earnings, commission):
+    coins = _int_amount(coins)
+    gift_earnings = _int_amount(gift_earnings)
+    commission = _int_amount(commission)
+    min_gift = (coins + 1) // 2
+    if gift_earnings < min_gift:
+        raise ValueError('at least 50% of the withdrawal must come from genuine gift earnings')
+    if gift_earnings + commission < coins:
+        raise ValueError('not enough withdrawable income')
+    commission_part = min(commission, coins - min_gift)
+    earnings_part = coins - commission_part
+    if earnings_part > gift_earnings:
+        raise ValueError('not enough genuine gift earnings')
+    return dict(earnings=earnings_part, commission=commission_part)
+
 
 def merge_intervals(intervals):
     """Joins overlapping (start, end) times so no second is counted twice."""
