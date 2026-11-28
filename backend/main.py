@@ -462,7 +462,7 @@ except ImportError:
 SELLER = init_seller(app, db, dict(
     User=User, Tx=Tx, now=now, tx=tx, err=err, body=body, num=num,
     auth=auth, admin_only=admin_only, notify=notify, notify_admins=notify_admins,
-    sniff_image=sniff_image, coin_birr=lambda: COIN_BIRR))
+    sniff_image=sniff_image, coin_birr=lambda: COIN_BIRR, JOURNAL=JOURNAL))
 
 GIFTS_PUB = [GIFT_MAP[k] for k, *_ in GIFTS]
 FRAMES_PUB = list(FRAME_MAP.values())
