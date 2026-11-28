@@ -802,7 +802,7 @@ async function renderMe(){
 function editProfile(){const m=S.me;const o=modal(`<h3>✏️ Edit profile</h3><div class="col"><input id="e-p" type="file" accept="image/*"><input id="e-n" value="${esc(m.name)}" maxlength="30"><input id="e-b" value="${esc(m.bio)}" maxlength="160"><input id="e-t" value="${esc(m.phone)}" maxlength="10" placeholder="09xxxxxxxx"><button class="btn" id="e-go">Save</button></div>`);
   $('#e-go',o).onclick=e=>run(e.target,async()=>{const f=$('#e-p',o).files[0];if(f){const fd=new FormData();fd.append('file',await shrink(f,320,.85),'p.jpg');setMe((await api('/api/profile/photo',fd)).me)}
    setMe((await api('/api/profile',{name:$('#e-n',o).value,bio:$('#e-b',o).value,phone:$('#e-t',o).value})).me);o.close();renderMe()})}
-function openAdmin(){const o=modal(`<div class="chips" id="at">${['overview','purchases','reviews','withdraws','users'].map((x,i)=>`<div class="chip ${i?'':'on'}" data-t="${x}">${x}</div>`).join('')}</div><div id="ab" style="margin-top:10px"></div>`);
+function openAdmin(){const o=modal(`<div class="chips" id="at">${['overview','purchases','reviews','seller-orders','seller-reviews','withdraws','users'].map((x,i)=>`<div class="chip ${i?'':'on'}" data-t="${x}">${x}</div>`).join('')}</div><div id="ab" style="margin-top:10px"></div>`);
   const load=async x=>{$$('#at .chip',o).forEach(c=>c.classList.toggle('on',c.dataset.t===x));const b=$('#ab',o);b.innerHTML='…';
    try{if(x==='overview'){const d=await api('/api/admin/overview');b.innerHTML=`<div class="grid2">${Object.entries(d).map(([k,v])=>`<div class="card" style="margin:0"><div class="mut">${k}</div><b>${fmt(v)}</b></div>`).join('')}</div>`}
    else if(x==='reviews'){
@@ -814,6 +814,26 @@ function openAdmin(){const o=modal(`<div class="chips" id="at">${['overview','pu
      <div class="mut">Admin: ${esc(y.reviewer_tg_id)} · ${ago(y.reviewed_at)}</div>
      ${y.note?`<div style="margin-top:5px">Reason / note: ${esc(y.note)}</div>`:''}
     </div>`).join('')||'<div class="empty">No review records yet.</div>';
+   }
+   else if(x==='seller-orders'){
+    const d=await api('/api/seller/admin/orders?status=pending');
+    window._sellerOrderRows=d.items||[];
+    b.innerHTML=(d.items||[]).map(y=>`<div class="card">
+     <div class="row"><b>Seller order #${y.id}</b><span class="sp"></span><span class="badge">${esc(y.method||'')}</span></div>
+     <div style="margin:6px 0"><b>${esc(y.name||'Seller')}</b> · User #${y.seller}</div>
+     <div><b>${fmt(y.birr)} Birr</b> · ${fmt(y.coins)} trade + ${fmt(y.bonus)} promo coins</div>
+     <div class="mut" style="word-break:break-all;margin-top:5px">Reference: ${esc(y.ref||'MISSING')} · ${ago(y.ts)}</div>
+     <div class="row" style="margin-top:8px"><button class="btn ghost sm" onclick="viewSellerShot(${Number(y.id)})">🖼 View receipt</button><button class="btn sm gold" onclick="openSellerOrderReview(${Number(y.id)})">Review & decide</button></div>
+    </div>`).join('')||'<div class="empty">No seller wholesale orders waiting for review.</div>';
+   }
+   else if(x==='seller-reviews'){
+    const d=await api('/api/seller/admin/reviews');
+    b.innerHTML=(d.items||[]).map(y=>`<div class="card">
+     <div class="row"><b>Seller order #${y.order_id}</b><span class="sp"></span><span class="badge">${esc(y.action)}</span></div>
+     <div class="mut">Admin: ${esc(y.reviewer_tg_id)} · ${ago(y.reviewed_at)}</div>
+     <div class="mut" style="word-break:break-all">Payment reference: ${esc(y.reference||'—')}</div>
+     ${y.note?`<div style="margin-top:5px">Note: ${esc(y.note)}</div>`:''}
+    </div>`).join('')||'<div class="empty">No seller review records yet.</div>';
    }
    else if(x==='purchases'||x==='withdraws'){
     const d=await api('/api/admin/'+x);
@@ -864,6 +884,46 @@ async function openPurchaseReview(purchaseId){
   if(!reason.trim())throw new Error('A rejection reason is required');
   await api('/api/admin/purchase',{id:y.id,action:'reject',reason:reason.trim()});
   o.close();toast('Purchase rejected');window._admLoad('purchases');
+ });
+}
+async function viewSellerShot(id){
+ try{const r=await fetch('/api/seller/admin/shot/'+id,{headers:{Authorization:'Bearer '+TOKEN}});
+  if(!r.ok)throw new Error('Seller payment screenshot is not available');
+  const u=URL.createObjectURL(await r.blob());const o=modal(`<img src="${u}" alt="Seller payment receipt" style="width:100%;max-height:65vh;object-fit:contain;border-radius:12px;background:#111">`);
+  const close=o.close;o.close=()=>{URL.revokeObjectURL(u);close()};
+ }catch(e){toast(e.message)}
+}
+async function openSellerOrderReview(orderId){
+ const y=(window._sellerOrderRows||[]).find(item=>Number(item.id)===Number(orderId));
+ if(!y){toast('Seller order details are no longer loaded. Refresh Seller Orders.');return}
+ let imageUrl='';
+ try{const response=await fetch('/api/seller/admin/shot/'+y.id,{headers:{Authorization:'Bearer '+TOKEN}});
+  if(!response.ok)throw new Error('Seller payment screenshot is not available');
+  imageUrl=URL.createObjectURL(await response.blob());
+ }catch(e){toast(e.message);return}
+ const isTelebirr=y.method==='telebirr';
+ const o=modal(`<h3>Review seller order #${y.id}</h3>
+  <div class="card"><b>${esc(y.name||'Seller')}</b> · User #${y.seller}
+   <div style="margin-top:5px">${fmt(y.birr)} Birr · ${fmt(y.coins)} trade + ${fmt(y.bonus)} promo coins</div>
+   <div class="mut" style="word-break:break-all;margin-top:6px">Method: ${esc(y.method)}<br>Transaction reference: ${esc(y.ref||'MISSING')}</div></div>
+  <p class="mut">${isTelebirr?'Compare the receipt with the actual incoming payment in your Telebirr account. A screenshot alone is not proof of receipt.':'USDT approval is verified against the TRON network and configured receiving address; do not approve based on the screenshot alone.'}</p>
+  <img src="${imageUrl}" alt="Seller payment receipt" style="width:100%;max-height:50vh;object-fit:contain;border-radius:12px;background:#111">
+  ${isTelebirr?`<label class="row" style="margin:12px 0;align-items:flex-start"><input id="seller-manual-pay-check" type="checkbox" style="width:20px;height:20px"><span>I independently checked my Telebirr account and confirmed the exact amount and transaction reference were received.</span></label>`:''}
+  <div class="row" style="margin-top:12px"><button class="btn bad" id="seller-reject">Reject</button><span class="sp"></span><button class="btn gold" id="seller-approve" ${isTelebirr?'disabled':''}>Approve</button></div>`);
+ const close=o.close;o.close=()=>{URL.revokeObjectURL(imageUrl);close()};
+ const approve=$('#seller-approve',o);
+ if(isTelebirr)$('#seller-manual-pay-check',o).onchange=e=>approve.disabled=!e.target.checked;
+ approve.onclick=e=>run(e.target,async()=>{
+  if(isTelebirr&&!$('#seller-manual-pay-check',o).checked)throw new Error('Confirm manual Telebirr verification first');
+  await api('/api/seller/admin/order',{id:y.id,action:'approve',...(isTelebirr?{manual_verified:true}:{})});
+  o.close();toast('Seller wholesale order approved');window._admLoad('seller-orders');
+ });
+ $('#seller-reject',o).onclick=e=>run(e.target,async()=>{
+  const reason=prompt('Enter the reason for rejecting this seller payment:');
+  if(reason===null)return;
+  if(!reason.trim())throw new Error('A rejection reason is required');
+  await api('/api/seller/admin/order',{id:y.id,action:'reject',reason:reason.trim()});
+  o.close();toast('Seller wholesale order rejected');window._admLoad('seller-orders');
  });
 }
 const admAct=(k,id,a)=>run(null,async()=>{await api('/api/admin/'+k,{id,action:a});window._admLoad(window._admTab())});
