@@ -1483,17 +1483,20 @@ def adm_withdraw():
         # Legacy withdrawals did not store the original earnings/commission split.
         commission_back = max(0, int(w.commission_coins or 0))
         earnings_back = max(0, int(w.earnings_coins or 0))
-        if commission_back + earnings_back != int(w.coins or 0):
+        tracked_split = commission_back + earnings_back == int(w.coins or 0)
+        if not tracked_split:
+            # Pre-journal legacy withdrawals had no reserve entry to reverse.
             commission_back, earnings_back = 0, int(w.coins or 0)
         db.session.execute(update(User).where(User.id == w.user_id).values(
             earnings=User.earnings + earnings_back, commission=User.commission + commission_back),
             execution_options={'synchronize_session': False})
-        try:
-            lines = JOURNAL['withdrawal_release_lines'](w.user_id, earnings_back, commission_back)
-            JOURNAL['post_internal']('withdrawal_rejection', str(w.id), f'withdrawal:{w.id}:reject:COIN',
-                                     'COIN', f'Withdrawal #{w.id} rejected and refunded', lines)
-        except Exception:
-            db.session.rollback(); return err('Withdrawal refund accounting failed; status was not changed', 500)
+        if tracked_split:
+            try:
+                lines = JOURNAL['withdrawal_release_lines'](w.user_id, earnings_back, commission_back)
+                JOURNAL['post_internal']('withdrawal_rejection', str(w.id), f'withdrawal:{w.id}:reject:COIN',
+                                         'COIN', f'Withdrawal #{w.id} rejected and refunded', lines)
+            except Exception:
+                db.session.rollback(); return err('Withdrawal refund accounting failed; status was not changed', 500)
         tx(w.user_id, 'refund', w.coins, f'withdraw #{w.id} rejected')
     # Paid status does not assert a reconciled ETB/USDT settlement. The COIN reserve
     # remains recorded until a separate cross-currency settlement model is implemented.
