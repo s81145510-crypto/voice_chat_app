@@ -395,7 +395,7 @@ except ImportError:
     from journal import init_journal
 
 JOURNAL = init_journal(app, db, dict(
-    now=now, admin_only=admin_only, jsonify=jsonify, request=request, body=body))
+    now=now, admin_only=admin_only, jsonify=jsonify, request=request, body=body, Withdraw=Withdraw))
 
 
 try:
