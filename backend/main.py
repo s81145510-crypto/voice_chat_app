@@ -764,6 +764,8 @@ def live_invite(rid):
     try: db.session.commit()
     except IntegrityError:
         db.session.rollback(); return err('Already invited')
+    feed_notify = globals().get('FEED', {}).get('notify_user')
+    if feed_notify: feed_notify(uid, g.user.id, 'room_invite', 'Live stage invitation', f'{g.user.username} invited you to join {r.name}', f'room:{rid}')
     notify(t.tg_id, f'🎥 {g.user.username} invited you on stage in "{r.name}". Open the app to join!')
     bump(rid); return jsonify(ok=1)
 @app.get('/api/my-invites')
@@ -1246,6 +1248,13 @@ def finalize_pk(pk):
             if uid and amount:
                 db.session.execute(update(User).where(User.id == uid).values(earnings=User.earnings + amount)); tx(uid, kind, amount, f'PK #{pk.id}')
     db.session.commit()
+    feed_notify = globals().get('FEED', {}).get('notify_user')
+    if feed_notify and pk.host2_id:
+        for uid in (pk.host1_id, pk.host2_id):
+            if pk.winner_id == uid: result = 'You won the PK battle'
+            elif pk.winner_id is None: result = 'Your PK battle ended in a draw or without a winner'
+            else: result = 'Your PK battle has ended'
+            feed_notify(uid, None, 'pk_result', 'PK battle result', result, f'pk:{pk.id}')
 @app.post('/api/pk/create')
 @auth
 def pk_create():
