@@ -70,7 +70,8 @@ class AppSmokeTests(unittest.TestCase):
         from backend.main import PKGiftRequest
         from sqlalchemy.exc import IntegrityError
         with app.app_context():
-            self.assertTrue(PKGiftRequest.__table__.exists(db.engine))
+            from sqlalchemy import inspect
+            self.assertTrue(inspect(db.engine).has_table('pk_gift_request'))
             db.session.add(PKGiftRequest(sender_id=7001, request_id="pk-smoke-req-001",
                                          pk_id=81, to_host=1, gift_key="rose",
                                          qty=2, total=20, real_used=20))
