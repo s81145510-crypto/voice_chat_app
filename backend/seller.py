@@ -321,28 +321,144 @@ def init_seller(app, db, deps):
     @admin_only
     def seller_admin_order():
         b = body(); oid = num(b.get('id')); act = b.get('action')
+        if act not in ('approve', 'reject'):
+            return err('Action must be approve or reject')
+        review_note = str(b.get('reason') or b.get('note') or '').strip()[:240]
+        if act == 'reject' and not review_note:
+            return err('A rejection reason is required')
         o = db.session.get(SellerOrder, oid)
         if not o: return err('not found', 404)
-        new = 'approved' if act == 'approve' else 'rejected'
-        r = db.session.execute(update(SellerOrder).where(SellerOrder.id == oid, SellerOrder.status == 'pending')
-                               .values(status=new), execution_options={'synchronize_session': False})
-        if r.rowcount != 1:
-            db.session.rollback(); return err('Already processed')
-        u = db.session.get(User, o.seller_id); s = db.session.get(Seller, o.seller_id)
-        if act == 'approve':
-            total = o.coins + o.bonus
-            db.session.execute(update(User).where(User.id == o.seller_id)
-                               .values(coins=User.coins + total, real_coins=User.real_coins + o.coins),
-                               execution_options={'synchronize_session': False})
-            tx(o.seller_id, 'wholesale', o.coins, f'order #{o.id} {o.birr} Birr')
-            if o.bonus: tx(o.seller_id, 'wholesale_bonus', o.bonus, f'order #{o.id} promo')
-            if s:
-                s.total_birr = (s.total_birr or 0) + o.birr
-                s.bought_coins = (s.bought_coins or 0) + o.coins
-                s.tier = tier_for(s.total_birr)
-        db.session.commit()
-        if u: notify(u.tg_id, f'✅ {o.coins} trade coins +{o.bonus} promo added!' if act == 'approve' else '❌ Wholesale order rejected.')
-        return jsonify(ok=1)
+        if o.status != 'pending':
+            return err('Already processed', 409)
+        shot = db.session.get(SellerShot, oid)
+        if not shot:
+            return err('Payment screenshot is missing; this order cannot be reviewed', 422)
+
+        if o.method == 'telebirr':
+            try:
+                normalized_ref = normalize_payment_reference('telebirr', o.ref)
+            except ValueError as e:
+                return err(str(e), 422)
+            if act == 'approve' and b.get('manual_verified') is not True:
+                return err('Confirm manual Telebirr verification before approving (manual_verified=true)', 400)
+        elif o.method == 'usdt':
+            try:
+                normalized_ref = normalize_payment_reference('usdt', o.ref)
+            except ValueError as e:
+                return err(str(e), 422)
+            if act == 'approve':
+                verify_facts = (o.method, normalized_ref, int(o.birr))
+                db.session.rollback()
+                try:
+                    verify_usdt_trc20_payment(
+                        tx_hash=verify_facts[1],
+                        receiving_address=usdt_address,
+                        expected_usdt=round(verify_facts[2] / float(usdt_birr()), 2),
+                        api_url=os.environ.get('TRONGRID_API_URL', 'https://api.trongrid.io'),
+                        api_key=os.environ.get('TRONGRID_API_KEY', ''),
+                    )
+                except TronVerificationPending as e:
+                    return err(str(e), 409)
+                except TronVerificationError as e:
+                    return err(str(e), 422)
+                o = db.session.get(SellerOrder, oid)
+                if not o or o.status != 'pending':
+                    db.session.rollback()
+                    return err('Already processed', 409)
+                if (o.method, o.ref, int(o.birr)) != verify_facts:
+                    db.session.rollback()
+                    return err('Seller order payment details changed during verification; reload and review again', 409)
+        else:
+            return err('Unsupported seller payment method', 422)
+
+        new_status = 'approved' if act == 'approve' else 'rejected'
+        claim = db.session.execute(
+            update(SellerOrder).where(
+                SellerOrder.id == oid, SellerOrder.status == 'pending'
+            ).values(status=new_status),
+            execution_options={'synchronize_session': False}
+        )
+        if claim.rowcount != 1:
+            db.session.rollback()
+            return err('Already processed', 409)
+
+        u = db.session.get(User, o.seller_id)
+        seller = db.session.get(Seller, o.seller_id)
+        reviewed_at = now()
+        db.session.add(SellerOrderReview(
+            order_id=o.id, action=act, reviewer_tg_id=str(g.user.tg_id),
+            reviewed_at=reviewed_at, reference_snapshot=str(o.ref or ''),
+            note=review_note
+        ))
+        try:
+            if act == 'approve':
+                if not u:
+                    raise ValueError('seller account no longer exists')
+                total = int(o.coins) + int(o.bonus or 0)
+                db.session.execute(update(User).where(User.id == o.seller_id)
+                                   .values(coins=User.coins + total,
+                                           real_coins=User.real_coins + int(o.coins)),
+                                   execution_options={'synchronize_session': False})
+                tx(o.seller_id, 'wholesale', int(o.coins), f'order #{o.id} {o.birr} Birr')
+                if o.bonus:
+                    tx(o.seller_id, 'wholesale_bonus', int(o.bonus), f'order #{o.id} promo')
+                if seller:
+                    seller.total_birr = (seller.total_birr or 0) + o.birr
+                    seller.bought_coins = (seller.bought_coins or 0) + o.coins
+                    seller.tier = tier_for(seller.total_birr)
+
+                if JOURNAL:
+                    JOURNAL['post_internal'](
+                        source='seller_wholesale', reference=str(o.id),
+                        idempotency_key=f'seller-wholesale:{o.id}:ETB',
+                        currency='ETB',
+                        description=f'Verified seller wholesale payment order #{o.id}',
+                        lines=[
+                            dict(account_code='asset.payment_clearing', debit=int(o.birr), credit=0,
+                                 memo=f'{o.method} seller payment received'),
+                            dict(account_code='liability.coin_purchase_deferred', debit=0, credit=int(o.birr),
+                                 memo='Seller wholesale proceeds'),
+                        ])
+                    coin_lines = [
+                        dict(account_code='expense.coin_issuance', debit=total, credit=0,
+                             memo='Seller wholesale trade and promotional coin issuance'),
+                        dict(account_code='liability.user_coin_balance', user_id=int(o.seller_id),
+                             debit=0, credit=int(o.coins), memo='Seller purchased trade coins'),
+                    ]
+                    if o.bonus:
+                        coin_lines.append(dict(account_code='liability.promo_coin_balance',
+                                               user_id=int(o.seller_id), debit=0, credit=int(o.bonus),
+                                               memo='Seller wholesale promotional bonus coins'))
+                    JOURNAL['post_internal'](
+                        source='seller_wholesale', reference=str(o.id),
+                        idempotency_key=f'seller-wholesale:{o.id}:COIN',
+                        currency='COIN',
+                        description=f'Coin issuance for verified seller wholesale order #{o.id}',
+                        lines=coin_lines)
+
+            db.session.commit()
+        except IntegrityError:
+            db.session.rollback()
+            return err('Seller order review was already recorded; no duplicate approval was applied', 409)
+        except Exception:
+            db.session.rollback()
+            return err('Seller order approval failed; all wallet and journal changes were rolled back', 500)
+
+        if u:
+            if act == 'approve':
+                notify(u.tg_id, f'✅ {o.coins} trade coins +{o.bonus} promo added!')
+            else:
+                notify(u.tg_id, f'❌ Wholesale order rejected: {review_note}')
+        return jsonify(ok=1, status=new_status, reviewed_by=str(g.user.tg_id),
+                       reviewed_at=reviewed_at)
+
+    @app.get('/api/seller/admin/reviews')
+    @admin_only
+    def seller_admin_reviews():
+        rows = SellerOrderReview.query.order_by(SellerOrderReview.reviewed_at.desc()).limit(100).all()
+        return jsonify(items=[dict(order_id=r.order_id, action=r.action,
+                                   reviewer_tg_id=r.reviewer_tg_id, reviewed_at=r.reviewed_at,
+                                   reference=r.reference_snapshot, note=r.note) for r in rows])
 
     @app.get('/api/seller/admin/stats')
     @admin_only
@@ -360,7 +476,7 @@ def init_seller(app, db, deps):
     def seller_page():
         return Response(SELLER_HTML, mimetype='text/html', headers={'Cache-Control': 'no-cache'})
 
-    return dict(tier_for=tier_for, TIERS=TIERS, TIER_MAP=TIER_MAP, Seller=Seller, SellerOrder=SellerOrder, SellerShot=SellerShot, SellerTransfer=SellerTransfer)
+    return dict(tier_for=tier_for, TIERS=TIERS, TIER_MAP=TIER_MAP, Seller=Seller, SellerOrder=SellerOrder, SellerShot=SellerShot, SellerTransfer=SellerTransfer, SellerOrderReview=SellerOrderReview)
 
 
 SELLER_HTML = """<!DOCTYPE html><html lang="en"><head>
