@@ -241,13 +241,13 @@ body:has(.mini.on) .golive{bottom:calc(136px + var(--sb))}
 <button data-p="wallet"><i>👛</i>Wallet</button><button data-p="community"><i>💬</i>Community</button><button data-p="me"><i>👤</i>Me</button>
 </nav>
 <div id="room">
-  <div class="rh"><button onclick="minimize()">⌄</button><div class="t"><div class="ell" id="r-name" style="font-weight:700"></div><div class="mut"><span class="live"></span><span id="r-on">0</span> online · <span class="vs" id="r-vs">🔇</span></div></div><button onclick="exitRoom()">✕</button></div>
+  <div class="rh"><button onclick="minimize()">⌄</button><div class="t"><div class="ell" id="r-name" style="font-weight:700"></div><div class="mut"><span class="live"></span><span id="r-on" onclick="openAudience()" style="cursor:pointer;text-decoration:underline">0</span> online · <span class="vs" id="r-vs">🔇</span></div></div><button onclick="exitRoom()">✕</button></div>
   <div class="seats"><div class="hostrow" id="r-host"></div><div class="sg" id="r-seats"></div></div>
   <div class="chat" id="r-chat"></div>
   <div class="bar"><button class="rb mic" id="r-mic" onclick="toggleMic()">🎤</button><input id="r-in" placeholder="Message…" maxlength="200" onkeydown="if(event.key==='Enter')sendChat()"><button class="rb" onclick="openGift()">🎁</button><button class="rb" style="background:linear-gradient(135deg,var(--pri),var(--pri2))" onclick="sendChat()">➤</button></div>
 </div>
 <div id="live"><div id="lv-video"></div><div id="lv-hint">⬆️ Swipe up for the next live</div>
-  <div class="lv-top"><div class="row sp" id="lv-host" style="background:#0007;border-radius:24px;padding:4px 12px 4px 4px;flex:0 1 auto"></div><button id="lv-follow" style="display:none" onclick="lvFollow()">＋ Follow</button><span class="lv-tag">LIVE</span><span class="vs">👁 <span id="lv-on">0</span></span><span class="vs" id="lv-vs">⏳</span><span class="sp"></span><button class="rb" id="lv-pk" style="width:36px;height:36px;font-size:15px;display:none" onclick="startPKFromLive()">⚔️</button><button class="rb" style="width:36px;height:36px;font-size:15px" onclick="exitRoom()">✕</button></div>
+  <div class="lv-top"><div class="row sp" id="lv-host" style="background:#0007;border-radius:24px;padding:4px 12px 4px 4px;flex:0 1 auto"></div><button id="lv-follow" style="display:none" onclick="lvFollow()">＋ Follow</button><span class="lv-tag">LIVE</span><span class="vs">👁 <span id="lv-on" onclick="openAudience()" style="cursor:pointer;text-decoration:underline">0</span></span><span class="vs" id="lv-vs">⏳</span><span class="sp"></span><button class="rb" id="lv-pk" style="width:36px;height:36px;font-size:15px;display:none" onclick="startPKFromLive()">⚔️</button><button class="rb" style="width:36px;height:36px;font-size:15px" onclick="exitRoom()">✕</button></div>
   <div class="lv-bot"><div id="lv-chat"></div><div class="row"><input id="lv-in" placeholder="Message…" maxlength="200" style="background:#0007" onkeydown="if(event.key==='Enter')sendChat()"><button class="rb" id="lv-flip" style="display:none" onclick="flipCam()">🔄</button><button class="rb" id="lv-mic" style="display:none" onclick="liveMic()">🎤</button><button class="rb" onclick="openGift()">🎁</button><button class="rb" style="background:linear-gradient(135deg,var(--pri),var(--pri2))" onclick="sendChat()">➤</button></div></div>
 </div>
 <div id="gfx" aria-hidden="true"><div id="gfx-lane"></div></div>
@@ -508,6 +508,15 @@ async function seatTap(i){const r=R;if(!r)return;const s=r.seats[i];
   ${amHost&&!mine&&u.id!==r.host?`<button class="btn ghost sm" onclick="seatAct(${u.id},'${s.m?'unmute':'mute'}')">${s.m?'🔊':'🔇'}</button><button class="btn bad sm" onclick="seatAct(${u.id},'kick')">⛔</button>`:''}</div>`)}
 async function seatLeave(){closeModal();await run(null,async()=>{await api('/api/rooms/'+R.id+'/leave-seat',{});poll()})}
 async function seatAct(uid,a){closeModal();await run(null,async()=>{await api('/api/rooms/'+R.id+'/seat-action',{uid,action:a});poll()})}
+async function openAudience(){
+  if(!R)return;
+  const rid=R.id,o=modal('<div class="empty">Loading audience…</div>');
+  try{
+    const d=await api('/api/rooms/'+rid+'/audience');
+    if(!o.isConnected)return;
+    o.firstChild.innerHTML=`<h3>👥 Audience · ${fmt(d.total)} online</h3>${d.truncated?'<div class="mut">Showing the first 100 active users</div>':''}${d.users.length?d.users.map(u=>userRow(u,`<span class="badge">${esc(u.role)}</span>`)).join(''):'<div class="empty">No active audience</div>'}`;
+  }catch(e){if(o.isConnected)o.firstChild.innerHTML=`<div class="empty">${esc(e.message)}</div>`}
+}
 async function sendChat(){const i=$(R&&R.kind==='live'?'#lv-in':'#r-in'),t=i.value.trim();if(!t||!R)return;i.value='';try{await api('/api/rooms/'+R.id+'/chat',{text:t});poll()}catch(e){toast(e.message)}}
 function addMsg(m,anim){const c=$(R&&R.kind==='live'?'#lv-chat':'#r-chat'),near=c.scrollHeight-c.scrollTop-c.clientHeight<90,d=document.createElement('div');
   if(m.k==='gift'){const g=m.meta||{};
@@ -573,7 +582,7 @@ const GM={dice:{n:'Dice',i:'🎲',x:'4.2x',pick:[1,2,3,4,5,6],hint:'Guess the nu
 async function renderGames(){
   $('#p-games').innerHTML=topbar()+`<h2>🎮 Games</h2><div class="grid2">${Object.entries(GM).map(([k,g])=>`<div class="game" onclick="openGame('${k}')"><b>${g.i}</b>${g.n}<br><span>up to ${g.x}</span></div>`).join('')}</div>
   <h3>⚔️ P2P battles (${S.cfg.p2p_mult}x)</h3><button class="btn gold" style="width:100%;margin-bottom:10px" onclick="p2pNew()">＋ Open battle</button><div id="p2p"><div class="empty">…</div></div>
-  <h3>⚔️ Live PK Battle</h3><button class="btn bad" style="width:100%;margin-bottom:10px" onclick="openPKArena()">⚔️ PK Arena</button>
+  <h3>⚔️ Live PK Battle</h3><button class="btn bad" style="width:100%;margin-bottom:10px" onclick="openPKArena()">⚔️ PK Arena</button><button class="btn ghost" style="width:100%;margin-bottom:10px" onclick="openPKHistory()">📜 My PK History</button>
   <h3>🍀 Lucky Gift</h3><button class="btn gold" style="width:100%;margin-bottom:10px" onclick="openLucky()">🍀 Lucky odds & stats</button>${footbar()}`;loadP2P()}
 async function loadP2P(){try{const d=await api('/api/games');const el=$('#p2p');if(!el)return;el.innerHTML=d.p2p.length?d.p2p.map(x=>`<div class="card row"><div class="sp"><b>${esc(x.name)}</b><div class="gold">🪙 ${fmt(x.bet)}</div></div>${x.mine?`<button class="btn bad sm" onclick="p2pCancel(${x.id})">Cancel</button>`:`<button class="btn sm" onclick="p2pJoin(${x.id},${x.bet})">⚔️ Join</button>`}</div>`).join(''):'<div class="empty">No open battles</div>'}catch(e){}}
 function p2pNew(){const m=modal(`<h3>⚔️ Open battle</h3><input id="pb" type="number" inputmode="numeric" placeholder="Bet (${S.cfg.min_bet}–${S.cfg.max_bet})"><button class="btn gold" id="pbb" style="width:100%;margin-top:10px">Open</button>`);
@@ -609,6 +618,19 @@ async function openPKArena(){const m=modal('<div class="empty">…</div>');
   m.firstChild.innerHTML=`<h3>⚔️ PK Arena</h3>${myHost?`<button class="btn bad" style="width:100%;margin-bottom:12px" onclick="pkCreate()">＋ Create PK Match</button>`:'<div class="mut" style="margin-bottom:10px;text-align:center">Become a host to create PK matches</div>'}
   ${d.pks.length?d.pks.map(pk=>`<div class="card" style="border-color:rgba(255,45,85,.3)"><div class="row"><div class="sp" style="text-align:center">${av(pk.host1,'s')}<b>${esc(pk.host1?pk.host1.name:'?')}</b><div class="gold">${fmt(pk.host1_gifts)}</div></div><b class="gold">VS</b><div class="sp" style="text-align:center">${pk.host2?av(pk.host2,'s')+'<b>'+esc(pk.host2.name)+'</b><div class="gold">'+fmt(pk.host2_gifts)+'</div>':'<div class="mut">Waiting…</div>'}</div></div>
    <div class="row" style="margin-top:8px"><button class="btn sm sp" onclick="closeModal();enterPK(${pk.id})">👁 Watch</button>${myHost&&!pk.host2?`<button class="btn sm bad sp" onclick="pkJoin(${pk.id})">⚔️ Join as Host 2</button>`:''}</div></div>`).join(''):'<div class="empty">No active PK matches</div>'}`}catch(e){m.close();toast(e.message)}}
+async function openPKHistory(){
+  const o=modal('<div class="empty">Loading PK history…</div>');
+  try{
+    const d=await api('/api/pk/history');
+    if(!o.isConnected)return;
+    const dateFmt=new Intl.DateTimeFormat('en-ET',{dateStyle:'medium',timeStyle:'short',timeZone:'Africa/Addis_Ababa'});
+    o.firstChild.innerHTML=`<h3>📜 My PK History</h3>${d.items.length?d.items.map(x=>{
+      const label=x.outcome==='win'?'🏆 Victory':x.outcome==='loss'?'Defeat':x.outcome==='draw'?'🤝 Draw':'No winner';
+      const cls=x.outcome==='win'?'win':x.outcome==='loss'?'lose':'mut';
+      return `<div class="card"><div class="row">${av(x.opponent,'s')}<div class="sp"><b>${esc(x.opponent?x.opponent.name:'Opponent unavailable')}</b><div class="mut">PK #${x.id} · ${x.ended_at?dateFmt.format(new Date(x.ended_at*1000)):'—'}</div></div><b class="${cls}">${label}</b></div><div class="row" style="justify-content:space-around;margin-top:10px"><span>Us <b class="gold">${fmt(x.my_gifts)}</b></span><b>VS</b><span>Them <b class="gold">${fmt(x.opponent_gifts)}</b></span></div></div>`;
+    }).join(''):'<div class="empty">No completed PK matches yet</div>'}`;
+  }catch(e){if(o.isConnected)o.firstChild.innerHTML=`<div class="empty">${esc(e.message)}</div>`}
+}
 async function pkCreate(){try{const d=await api('/api/pk/create',{});toast('⚔️ PK created');closeModal();enterPK(d.pk_id)}catch(e){toast(e.message)}}
 async function pkJoin(id){try{await api('/api/pk/join',{pk_id:id});toast('⚔️ Joined!');closeModal();enterPK(id)}catch(e){toast(e.message)}}
 async function startPKFromLive(){try{const d=await api('/api/pk/create',{});await exitRoom(true);enterPK(d.pk_id)}catch(e){toast(e.message)}}
