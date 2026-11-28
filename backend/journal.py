@@ -275,10 +275,14 @@ def init_journal(app, db, deps):
             if not isinstance(payout, (tuple, list)) or len(payout) != 3:
                 raise ValueError('invalid PK payout')
             user_id, amount, kind = payout
-            if isinstance(user_id, bool) or not isinstance(user_id, int) or user_id <= 0:
-                raise ValueError('invalid PK payout user')
             if isinstance(amount, bool) or not isinstance(amount, int) or amount < 0:
                 raise ValueError('invalid PK payout amount')
+            # A PK may finish before a second host joins; the missing side's
+            # nominal share remains with the platform rather than becoming payable.
+            if user_id is None:
+                continue
+            if isinstance(user_id, bool) or not isinstance(user_id, int) or user_id <= 0:
+                raise ValueError('invalid PK payout user')
             if amount:
                 lines.append(dict(account_code='liability.host_earnings', user_id=user_id,
                                   debit=0, credit=amount, memo=f'{kind} PK earnings'))
