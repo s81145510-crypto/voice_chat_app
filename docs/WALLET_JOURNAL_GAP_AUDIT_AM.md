@@ -45,7 +45,7 @@ Reviewed `backend/seller.py` at the current branch head. The following live path
 | Route | Mutation | Accounting requirement |
 |---|---|---|
 | `POST /api/seller/order` | Creates a pending wholesale order with Birr, payment reference and screenshot | No wallet mutation until approval; needs payment-review evidence and duplicate-safe decision |
-| `POST /api/seller/admin/order` approve | Credits `coins` with trade coins + bonus; increases `real_coins` only by trade coins; updates seller lifetime purchase totals | Must post a COIN purchased-liability issuance and separate promo-liability issuance in the same transaction. Birr cash/clearing side must not be posted as settled cash until manual payment verification is evidenced |
+| `POST /api/seller/admin/order` approve | Reviews payment evidence, conditionally approves/rejects, credits trade + promo coins and updates seller lifetime purchase totals | **Now hardened:** receipt required; Telebirr approval requires explicit manual confirmation; USDT approval uses the read-only TRON verifier; reviewer/action/reference/reason are audited; ETB clearing/deferred proceeds and COIN trade/promo issuance journal entries commit atomically with wallet changes |
 | `POST /api/seller/transfer` | Debits seller trade balance by gross amount, credits buyer by net amount, removes fee; records `SellerTransfer` and two `Tx` rows | **Now journal-integrated:** debit seller purchased-coin liability by gross; credit buyer purchased-coin liability by net; credit COIN-denominated transfer-fee revenue by fee. Journal and wallet changes commit in the same transaction |
 | `POST /api/seller/admin/seller` | Approve/reject/suspend/tier changes | No wallet movement; should have admin audit trail but is not itself a journal transaction |
 
@@ -63,8 +63,17 @@ Reviewed `backend/seller.py` at the current branch head. The following live path
 1. Add seller-order review parity: evidence record, manual Telebirr verification, and reuse the read-only TRON verification path for USDT; preserve conditional pending-to-final status transition.
 2. **Completed:** stable client transfer request IDs, unique DB index, exact retry replay, mismatched payload rejection, and persisted client retry key. Integration tests cover exact retry without double debit, mismatched payload rejection, and missing key rejection.
 3. **Completed:** transfer journal lines in the same transaction as both wallet updates and `SellerTransfer` insertion. Regression tests validate gross/net/fee allocation and reject invalid splits.
-4. Add wholesale issuance journal entries only after an explicit approved payment-control design. Keep Birr cash-clearing and COIN liability ledgers separate; never imply that a screenshot itself proves settlement.
+4. **Completed:** seller wholesale issuance journal entries after payment-control checks. Keep Birr cash-clearing and COIN liability ledgers separate; a screenshot alone is not treated as proof of settlement.
 5. Add tests for seller-to-buyer transfer split (gross/net/fee), promo-balance exclusion, concurrent duplicate transfer, exact retry, journal failure rollback, and seller wholesale duplicate approval / payment-verification gating.
 
 ## UI verification boundary
 The purchase-review modal has been code-inspected and its inline JavaScript syntax is checked in CI. No real browser interaction test has been performed yet; receipt loading, checkbox gating, approval/rejection, and review-history rendering still need manual or browser-automation verification.
+
+
+### Seller wholesale review implementation notes
+- `POST /api/seller/admin/order` accepts only `approve` or `reject`; rejection requires a reason.
+- Every decision requires the uploaded receipt. Telebirr approval requires `manual_verified=true`; the admin must compare the reference against the actual incoming Telebirr payment.
+- USDT order references are normalized as 64-character lowercase transaction hashes. Approval calls the existing read-only TRON verifier with the configured receiving address and expected amount; pending chain confirmation returns a retryable conflict, invalid evidence is rejected.
+- A new `SellerOrderReview` record stores reviewer, timestamp, action, reference snapshot and note. The status claim, audit record, wallet credits, and ETB/COIN journal postings are atomic.
+- No live external Telebirr or TRON payment was verified during CI. Manual production verification remains required.
+- API regression tests are present; no browser-based seller-admin review interface test has been performed.
