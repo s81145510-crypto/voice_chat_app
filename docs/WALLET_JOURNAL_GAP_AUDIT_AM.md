@@ -46,12 +46,12 @@ Reviewed `backend/seller.py` at the current branch head. The following live path
 |---|---|---|
 | `POST /api/seller/order` | Creates a pending wholesale order with Birr, payment reference and screenshot | No wallet mutation until approval; needs payment-review evidence and duplicate-safe decision |
 | `POST /api/seller/admin/order` approve | Credits `coins` with trade coins + bonus; increases `real_coins` only by trade coins; updates seller lifetime purchase totals | Must post a COIN purchased-liability issuance and separate promo-liability issuance in the same transaction. Birr cash/clearing side must not be posted as settled cash until manual payment verification is evidenced |
-| `POST /api/seller/transfer` | Debits seller trade balance by gross amount, credits buyer by net amount, removes fee; records `SellerTransfer` and two `Tx` rows | Clear double-entry mapping exists: debit seller's purchased-coin liability by gross; credit buyer's purchased-coin liability by net; credit seller-transfer-fee revenue by fee. Must be same transaction and idempotent to the transfer row |
+| `POST /api/seller/transfer` | Debits seller trade balance by gross amount, credits buyer by net amount, removes fee; records `SellerTransfer` and two `Tx` rows | **Now journal-integrated:** debit seller purchased-coin liability by gross; credit buyer purchased-coin liability by net; credit COIN-denominated transfer-fee revenue by fee. Journal and wallet changes commit in the same transaction |
 | `POST /api/seller/admin/seller` | Approve/reject/suspend/tier changes | No wallet movement; should have admin audit trail but is not itself a journal transaction |
 
 ### Seller-specific safety findings
 - Seller transfer currently uses a conditional SQL update requiring both `User.coins >= amount` and `User.real_coins >= amount`; promo coins cannot be transferred. It credits the recipient's `coins` and `real_coins` by net and stores the 2% fee.
-- The current transfer route has no double-entry journal post and no explicit stable idempotency token from the client. Retrying after an uncertain network response may create a second transfer if the first request actually committed.
+- Seller transfer now posts a balanced COIN journal entry atomically with wallet changes, the `SellerTransfer` row and `Tx` rows. The journal idempotency key is derived from the newly created transfer row ID; it protects journal posting for that row but **does not** make the client request retry-safe. There is still no stable client request token / unique request record, so retrying after an uncertain network response may create a second transfer.
 - The seller wholesale approval route conditionally changes order status from pending, but its approval credits trade and promo coins without journal entries or a payment-review audit record equivalent to the main customer purchase review.
 - Seller wholesale order methods currently accept `telebirr` or `usdt`, but this route is not shown using the main Telebirr manual-verification / TRON verifier policy. This is a release-blocking payment-control gap; do not approve seller USDT orders as if chain-verified.
 - Seller transfer fee is a platform fee in COIN units, not ETB cash received. It must not be mixed into Birr revenue without a real settlement/conversion event.
@@ -59,7 +59,7 @@ Reviewed `backend/seller.py` at the current branch head. The following live path
 ### Seller implementation order
 1. Add seller-order review parity: evidence record, manual Telebirr verification, and reuse the read-only TRON verification path for USDT; preserve conditional pending-to-final status transition.
 2. Add stable client transfer request IDs and a unique database constraint; return the original result on an exact retry and reject an idempotency-key payload mismatch.
-3. Add transfer journal lines in the same transaction as both wallet updates and `SellerTransfer` insertion.
+3. **Completed:** add transfer journal lines in the same transaction as both wallet updates and `SellerTransfer` insertion. Regression tests validate gross/net/fee allocation and reject invalid splits.
 4. Add wholesale issuance journal entries only after an explicit approved payment-control design. Keep Birr cash-clearing and COIN liability ledgers separate; never imply that a screenshot itself proves settlement.
 5. Add tests for seller-to-buyer transfer split (gross/net/fee), promo-balance exclusion, concurrent duplicate transfer, exact retry, journal failure rollback, and seller wholesale duplicate approval / payment-verification gating.
 
