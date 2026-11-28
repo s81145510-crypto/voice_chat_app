@@ -840,7 +840,7 @@ def room_gift(rid):
     bought_used = spend_split(g.user.id, total)
     if bought_used is None:
         db.session.rollback(); return err('Not enough coins', 402)
-    lucky_m, refund = 0, 0; earn = 0; real_used = 0
+    lucky_m, refund = 0, 0; earn = 0; real_used = bought_used
     if gift['tier'] == 'lucky':
         lucky_m = pick_weighted(LUCKY_TABLE); refund = lucky_m * total
         if refund: add_coins(g.user.id, refund); tx(g.user.id, 'lucky_win', refund, f'x{lucky_m} {gift["key"]}')
@@ -1616,19 +1616,15 @@ def adm_purchase():
                     dict(account_code='asset.payment_clearing', debit=int(p.birr), credit=0, memo=f"{p.method or 'payment'} received; ETB equivalent"),
                     dict(account_code='liability.coin_purchase_deferred', debit=0, credit=int(p.birr), memo='Customer purchase proceeds'),
                 ])
-            coin_credits = [dict(account_code='liability.user_coin_balance', user_id=p.user_id,
-                                 debit=0, credit=int(p.coins), memo='Purchased coins')]
-            if u and u.referrer_id:
-                referral_bonus = int(p.coins) // 10
-                if referral_bonus > 0:
-                    coin_credits.append(dict(account_code='liability.user_coin_balance', user_id=u.referrer_id,
-                                             debit=0, credit=referral_bonus, memo='Purchase referral bonus'))
-            if invite_awarded and int(INVITE_REWARD) > 0:
-                coin_credits.append(dict(account_code='liability.user_coin_balance', user_id=u.agent_id,
-                                         debit=0, credit=int(INVITE_REWARD), memo='First purchase invite reward'))
-            issued_total = sum(x['credit'] for x in coin_credits)
-            coin_lines = [dict(account_code='expense.coin_issuance', debit=issued_total, credit=0,
-                               memo='Coin issuance cost')] + coin_credits
+            referral_bonus = int(p.coins) // 10 if u and u.referrer_id else 0
+            invite_bonus = int(INVITE_REWARD) if invite_awarded else 0
+            coin_lines = JOURNAL['purchase_coin_lines'](
+                purchase_user_id=int(p.user_id), purchased_coins=int(p.coins),
+                referral_user_id=int(u.referrer_id) if referral_bonus else None,
+                referral_coins=referral_bonus,
+                invite_user_id=int(u.agent_id) if invite_bonus else None,
+                invite_coins=invite_bonus,
+            )
             JOURNAL['post_internal'](
                 source='coin_purchase', reference=str(p.id),
                 idempotency_key=f'purchase:{p.id}:COIN', currency='COIN',
