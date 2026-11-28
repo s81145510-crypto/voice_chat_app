@@ -44,6 +44,22 @@ class JournalValidationTests(unittest.TestCase):
         self.assertEqual(saved["total_credit"], 100)
         self.assertEqual(len(saved["lines"]), 2)
 
+    def test_journal_reconciliation_detects_corrupt_entry_totals(self):
+        entry, _ = JOURNAL["post_internal"](
+            "test_purchase", "purchase-reconcile", "journal-test-reconcile-0001",
+            "ETB", "Reconciliation target", self.lines()
+        )
+        db.session.commit()
+        clean = JOURNAL["reconcile"]()
+        self.assertTrue(clean["ok"])
+        line = JOURNAL["JournalLine"].query.filter_by(entry_id=entry.id).first()
+        line.debit += 1
+        db.session.commit()
+        report = JOURNAL["reconcile"]()
+        self.assertFalse(report["ok"])
+        self.assertEqual(report["unbalanced_or_incomplete_count"], 1)
+        self.assertEqual(report["unbalanced_or_incomplete"][0]["entry_id"], entry.id)
+
     def test_unbalanced_entry_is_rejected_before_insert(self):
         with self.assertRaisesRegex(ValueError, "unbalanced journal"):
             JOURNAL["post_internal"](
