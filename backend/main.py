@@ -1301,7 +1301,21 @@ def pk_join():
     if pk.host1_id == u.id: return err('Cannot challenge yourself')
     if pk.host2_id: return err('PK full', 409)
     if PKBattle.query.filter(or_(PKBattle.host1_id == u.id, PKBattle.host2_id == u.id), PKBattle.status == 'active').first(): return err('Already in a PK', 409)
-    pk.host2_id = u.id; pk.started_at = now(); db.session.commit(); return jsonify(ok=1, pk_id=pk.id)
+    # Claim the empty challenger slot atomically. Two hosts may read the same
+    # empty slot concurrently; only one conditional UPDATE may fill it.
+    claimed = db.session.execute(
+        update(PKBattle).where(
+            PKBattle.id == pk.id,
+            PKBattle.status == 'active',
+            PKBattle.host2_id.is_(None),
+        ).values(host2_id=u.id, started_at=now()),
+        execution_options={'synchronize_session': False},
+    )
+    if claimed.rowcount != 1:
+        db.session.rollback()
+        return err('PK full or already started by another host', 409)
+    db.session.commit()
+    return jsonify(ok=1, pk_id=pk.id)
 @app.post('/api/pk/gift')
 @auth
 def pk_gift():
