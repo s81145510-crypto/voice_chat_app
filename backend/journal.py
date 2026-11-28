@@ -295,4 +295,41 @@ def init_journal(app, db, deps):
                               memo='Platform retained PK pool share'))
         return lines
 
-    return dict(JournalEntry=JournalEntry, JournalLine=JournalLine, serialize=serialize, post_internal=post_internal, gift_lines=gift_lines, pk_gift_lines=pk_gift_lines, pk_payout_lines=pk_payout_lines)
+    def withdrawal_reserve_lines(user_id, earnings_coins, commission_coins):
+        """Move withdrawable COIN balances into a pending-withdrawal liability."""
+        values = (earnings_coins, commission_coins)
+        if any(isinstance(v, bool) or not isinstance(v, int) or v < 0 for v in values):
+            raise ValueError('withdrawal amounts must be non-negative whole integers')
+        total = earnings_coins + commission_coins
+        if total <= 0:
+            raise ValueError('withdrawal reserve must be positive')
+        lines = []
+        if earnings_coins:
+            lines.append(dict(account_code='liability.host_earnings', user_id=user_id,
+                              debit=earnings_coins, credit=0, memo='Host earnings reserved for withdrawal'))
+        if commission_coins:
+            lines.append(dict(account_code='liability.agent_commission', user_id=user_id,
+                              debit=commission_coins, credit=0, memo='Agent commission reserved for withdrawal'))
+        lines.append(dict(account_code='liability.withdrawal_pending', user_id=user_id,
+                          debit=0, credit=total, memo='Pending withdrawal payable in COIN'))
+        return lines
+
+    def withdrawal_release_lines(user_id, earnings_coins, commission_coins):
+        """Reverse a rejected withdrawal and restore its original liability buckets."""
+        values = (earnings_coins, commission_coins)
+        if any(isinstance(v, bool) or not isinstance(v, int) or v < 0 for v in values):
+            raise ValueError('withdrawal amounts must be non-negative whole integers')
+        total = earnings_coins + commission_coins
+        if total <= 0:
+            raise ValueError('withdrawal refund must be positive')
+        lines = [dict(account_code='liability.withdrawal_pending', user_id=user_id,
+                      debit=total, credit=0, memo='Release rejected withdrawal reserve')]
+        if earnings_coins:
+            lines.append(dict(account_code='liability.host_earnings', user_id=user_id,
+                              debit=0, credit=earnings_coins, memo='Restore host earnings'))
+        if commission_coins:
+            lines.append(dict(account_code='liability.agent_commission', user_id=user_id,
+                              debit=0, credit=commission_coins, memo='Restore agent commission'))
+        return lines
+
+    return dict(JournalEntry=JournalEntry, JournalLine=JournalLine, serialize=serialize, post_internal=post_internal, gift_lines=gift_lines, pk_gift_lines=pk_gift_lines, pk_payout_lines=pk_payout_lines, withdrawal_reserve_lines=withdrawal_reserve_lines, withdrawal_release_lines=withdrawal_release_lines)
