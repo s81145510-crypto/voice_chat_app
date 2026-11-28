@@ -836,8 +836,8 @@ async function renderWallet(){
   try{const w=await api('/api/wallet');setMe(w.me);const m=w.me,u=U();
   el.innerHTML=topbar()+`<div class="ratebar">💱 <span class="sp">Live rate</span><b class="usdt">1 USDT = ${fmt(u.birr_per_usdt)} Birr</b></div>
   <div class="grid2"><div class="card"><div class="mut">🪙 Coins</div><div style="font-size:26px;font-weight:800" class="gold coins-n">${fmt(m.coins)}</div><button class="btn gold sm" style="width:100%;margin-top:8px" onclick="buyModal()">Buy</button></div>
-  <div class="card"><div class="mut">💰 Income</div><div style="font-size:26px;font-weight:800;color:var(--ok)">${fmt(m.earnings)}</div><div class="mut">≈ ${fmt(Math.floor(m.earnings*S.cfg.rate))} Birr · ${u2(m.earnings*u.coin_usdt)} USDT</div><button class="btn sm" style="width:100%;margin-top:4px" onclick="withModal()">Withdraw</button></div>
-  <div class="card"><div class="mut">🤝 Commission</div><div style="font-size:26px;font-weight:800;color:var(--pri2)">${fmt(m.comm)}</div><div class="mut">≈ ${fmt(Math.floor(m.comm*S.cfg.rate))} Birr · ${u2(m.comm*u.coin_usdt)} USDT</div></div>
+  <div class="card"><div class="mut">💰 Income</div><div style="font-size:26px;font-weight:800;color:var(--ok)">${fmt(m.earnings)}</div><div class="mut">≈ ${fmt(Math.floor(m.earnings*(S.cfg.withdraw_rate||0.1)))} Birr reference value</div><button class="btn sm" style="width:100%;margin-top:4px" onclick="withModal()">Withdraw</button></div>
+  <div class="card"><div class="mut">🤝 Commission</div><div style="font-size:26px;font-weight:800;color:var(--pri2)">${fmt(m.comm)}</div><div class="mut">≈ ${fmt(Math.floor(m.comm*(S.cfg.withdraw_rate||0.1)))} Birr reference value</div></div>
   <div class="card"><div class="mut">🔗 Invited</div><div style="font-size:26px;font-weight:800">${fmt(m.inv||0)}</div><button class="btn ghost sm" style="width:100%;margin-top:4px" onclick="openInvite()">Invite</button></div></div>
   <h3>Purchase history</h3>${w.purchases.map(p=>`<div class="card row"><div class="sp"><b>${fmt(p.coins)} 🪙</b> <span class="mut">${p.birr} Birr · ${p.method==='usdt'?'USDT '+u2(p.birr/u.birr_per_usdt):'Telebirr'}</span></div><span class="badge">${{pending:'⏳',approved:'✅',rejected:'❌'}[p.status]}</span></div>`).join('')||'<div class="empty">—</div>'}
   <h3>Withdrawal history</h3>${w.withdraws.map(p=>`<div class="card row"><div class="sp"><b>${fmt(p.coins)}</b> <span class="mut">${p.birr} Birr · ${p.method==='usdt'?'USDT '+u2(p.coins*u.coin_usdt):'Telebirr'}</span></div><span class="badge">${{pending:'⏳',paid:'✅',rejected:'❌'}[p.status]}</span></div>`).join('')||'<div class="empty">—</div>'}
@@ -856,22 +856,19 @@ function buyModal(){let pk=S.cfg.packages[0];let method='telebirr';
    $('#b-go',m).onclick=e=>run(e.target,async()=>{const f=$('#b-f',m).files[0];if(!f)throw new Error('Attach screenshot');const fd=new FormData();fd.append('coins',pk.coins);fd.append('ref',$('#b-ref',m).value);fd.append('method',method);fd.append('file',await shrink(f),'s.jpg');
     await api('/api/coins/buy',fd);m.close();toast('✅ Sent — credited after approval');renderWallet()})};
   draw()}
-function withModal(){let method='telebirr';const m=modal('');
-  const draw=()=>{const u=U();const isU=method==='usdt';const avail=(S.me.earnings||0)+(S.me.comm||0);
-   const coins=Math.max(0,+($('#w-c',m)?$('#w-c',m).value:avail)||0);
-   m.firstChild.innerHTML=`<h3>💰 Withdraw</h3>
-  <div class="chips" style="margin-bottom:10px"><div class="chip ${!isU?'on':''}" data-m="telebirr">Telebirr</div><div class="chip ${isU?'onu':''}" data-m="usdt">USDT (TRC20)</div></div>
-  <div class="ratebar">💱 <span class="sp">${isU?'You receive':'You receive'}</span><b class="${isU?'usdt':'gold'}">${isU?u2(coins*u.coin_usdt)+' USDT':fmt(Math.floor(coins*S.cfg.rate))+' Birr'}</b></div>
-  <div class="mut" style="margin-bottom:8px">${isU?`1 coin = ${u.coin_usdt} USDT · 1 USDT = ${fmt(u.birr_per_usdt)} Birr`:`1 coin = ${S.cfg.rate} Birr`} · min ${S.cfg.min_withdraw} coins</div>
-  <div class="col"><input id="w-c" type="number" inputmode="numeric" value="${avail}">
-  ${isU?`<input id="w-a" placeholder="Your USDT TRC20 address (T…)" maxlength="64">`:`<input id="w-p" placeholder="Telebirr 09xxxxxxxx" value="${esc(S.me.phone)}" maxlength="10">`}
-  <button class="btn" id="w-go">Request</button></div>`;
-   $$('[data-m]',m).forEach(c=>c.onclick=()=>{method=c.dataset.m;draw()});
-   $('#w-c',m).oninput=()=>{const v=Math.max(0,+$('#w-c',m).value||0);const b=$('.ratebar b',m);if(b)b.textContent=isU?u2(v*u.coin_usdt)+' USDT':fmt(Math.floor(v*S.cfg.rate))+' Birr'};
-   $('#w-go',m).onclick=e=>run(e.target,async()=>{const bd={coins:+$('#w-c',m).value,method};
-     if(isU)bd.address=$('#w-a',m).value.trim();else bd.phone=$('#w-p',m).value;
-     await api('/api/withdraw',bd);m.close();toast('✅ Request sent');renderWallet()})};
-  draw()}
+function withModal(){const m=modal('');
+   const draw=()=>{const rate=S.cfg.withdraw_rate||0.1;const avail=(S.me.earnings||0)+(S.me.comm||0);
+    const coins=Math.max(0,+($('#w-c',m)?$('#w-c',m).value:avail)||0);
+    m.firstChild.innerHTML=`<h3>💰 Withdraw to Telebirr</h3>
+   <div class="ratebar">💱 <span class="sp">Reference payout value</span><b class="gold">${fmt(Math.floor(coins*rate))} Birr</b></div>
+   <div class="mut" style="margin-bottom:8px">1,000 Coins = 100 ETB · Minimum ${fmt(S.cfg.min_withdraw_etb||1000)} ETB (${fmt(S.cfg.min_withdraw)} Coins). At least 50% must be genuine gift earnings. Activity/bonus coins are not withdrawable.</div>
+   <div class="col"><input id="w-c" type="number" inputmode="numeric" value="${avail}">
+   <input id="w-p" placeholder="Telebirr 09xxxxxxxx" value="${esc(S.me.phone)}" maxlength="10">
+   <button class="btn" id="w-go">Request</button></div>`;
+    $('#w-c',m).oninput=()=>{const v=Math.max(0,+$('#w-c',m).value||0);const b=$('.ratebar b',m);if(b)b.textContent=fmt(Math.floor(v*rate))+' Birr'};
+    $('#w-go',m).onclick=e=>run(e.target,async()=>{const bd={coins:+$('#w-c',m).value,method:'telebirr',phone:$('#w-p',m).value};
+      await api('/api/withdraw',bd);m.close();toast('✅ Request sent');renderWallet()})};
+   draw()}
 function genTable(){const r=(S.cfg.agent&&S.cfg.agent.rates)||[];
   return `<div class="card" style="margin-top:10px"><b>💰 7 Generation Commission</b><div class="mut" style="margin:4px 0 8px">የጋበዝካቸው ሰዎች ስጦታ ሲቀበሉ (በተገዛ coin) ኮሚሽን ታገኛለህ።<br>Earn when people you invited receive gifts bought with purchased coins.</div>${r.map((x,i)=>`<div class="row" style="padding:3px 0"><span class="sp">Generation ${i+1}${i?'':' · የጋበዝካቸው'}</span><b class="gold">${+(x*100).toFixed(2)}%</b></div>`).join('')}</div>`}
 async function openInvite(){const m=modal('<div class="empty">…</div>');
