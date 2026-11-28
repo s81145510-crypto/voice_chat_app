@@ -237,6 +237,20 @@ class PKBattle(db.Model):
 class LuckyStats(db.Model):
     day = db.Column(db.String(10), primary_key=True); volume = db.Column(db.Integer, default=0); returned = db.Column(db.Integer, default=0); house = db.Column(db.Integer, default=0)
 
+class PKGiftRequest(db.Model):
+    """Durable idempotency record for one sender's PK gift action."""
+    id = db.Column(db.Integer, primary_key=True)
+    sender_id = db.Column(db.Integer, nullable=False, index=True)
+    request_id = db.Column(db.String(64), nullable=False)
+    pk_id = db.Column(db.Integer, nullable=False, index=True)
+    to_host = db.Column(db.Integer, nullable=False)
+    gift_key = db.Column(db.String(24), nullable=False)
+    qty = db.Column(db.Integer, nullable=False)
+    total = db.Column(db.Integer, nullable=False)
+    real_used = db.Column(db.Integer, nullable=False)
+    created_at = db.Column(db.Integer, default=now, nullable=False)
+    __table_args__ = (db.UniqueConstraint('sender_id', 'request_id', name='uq_pk_gift_sender_request'),)
+
 
 def ensure_columns():
     from sqlalchemy import inspect
@@ -1413,27 +1427,73 @@ def pk_join():
 @app.post('/api/pk/gift')
 @auth
 def pk_gift():
-    u = g.user; b = body(); pk_id = strict_num(b.get('pk_id')); pk = db.session.get(PKBattle, pk_id) if pk_id and pk_id > 0 else None
-    if not pk or pk.status != 'active': return err('PK not found', 404)
-    to_host = strict_num(b.get('to_host')); gift = GIFT_MAP.get(b.get('gift')); qty = strict_num(b.get('qty'), 1)
-    if to_host not in (1, 2) or qty is None or not 1 <= qty <= 99: return err('Invalid PK gift quantity or host')
+    u = g.user; b = body()
+    request_id = b.get('request_id')
+    if not isinstance(request_id, str) or not 8 <= len(request_id) <= 64 or not all(c.isalnum() or c in '-_' for c in request_id):
+        return err('A valid PK gift request_id is required')
+    pk_id = strict_num(b.get('pk_id'))
+    to_host = strict_num(b.get('to_host'))
+    gift_key = b.get('gift')
+    gift = GIFT_MAP.get(gift_key)
+    qty = strict_num(b.get('qty'), 1)
+    if not pk_id or pk_id <= 0 or to_host not in (1, 2) or qty is None or not 1 <= qty <= 99:
+        return err('Invalid PK gift details')
     if not gift: return err('Gift not found')
     total = gift['price'] * qty
+
+    # Resolve retries before checking whether the PK is still active: a committed
+    # gift remains safely replayable even after the battle has ended.
+    existing = PKGiftRequest.query.filter_by(sender_id=u.id, request_id=request_id).first()
+    if existing:
+        same = (existing.pk_id == pk_id and existing.to_host == to_host and
+                existing.gift_key == gift_key and existing.qty == qty)
+        if not same: return err('request_id already used for a different PK gift', 409)
+        pk = db.session.get(PKBattle, existing.pk_id)
+        if not pk: return err('PK record unavailable', 409)
+        return jsonify(coins=coins_of(u.id), host1_gifts=pk.host1_gifts or 0,
+                       host2_gifts=pk.host2_gifts or 0, duplicate=1)
+
+    pk = db.session.get(PKBattle, pk_id)
+    if not pk or pk.status != 'active': return err('PK not found', 404)
     if to_host == 1 and pk.host1_id: score, paid = 'host1_gifts', 'host1_real'
     elif to_host == 2 and pk.host2_id: score, paid = 'host2_gifts', 'host2_real'
     else: return err('Invalid host')
     if now() > pk.started_at + pk.duration:
         finalize_pk(pk); return err('PK has ended', 409)
+
     real_used = spend_split(u.id, total)
     if real_used is None:
         db.session.rollback(); return err('Not enough coins', 402)
     r = db.session.execute(update(PKBattle).where(PKBattle.id == pk.id, PKBattle.status == 'active').values(
-        {score: func.coalesce(getattr(PKBattle, score), 0) + total, paid: func.coalesce(getattr(PKBattle, paid), 0) + real_used}), execution_options={'synchronize_session': False})
+        {score: func.coalesce(getattr(PKBattle, score), 0) + total,
+         paid: func.coalesce(getattr(PKBattle, paid), 0) + real_used}),
+        execution_options={'synchronize_session': False})
     if r.rowcount != 1:
         db.session.rollback(); return err('PK has ended', 409)
-    db.session.execute(update(User).where(User.id == u.id).values(spent=User.spent + total, gifts_sent=User.gifts_sent + total), execution_options={'synchronize_session': False})
-    tx(u.id, 'pk_gift', -total, f'PK#{pk.id} side{to_host} {gift["key"]} {qty}'); db.session.commit(); db.session.refresh(pk)
-    return jsonify(coins=coins_of(u.id), host1_gifts=pk.host1_gifts, host2_gifts=pk.host2_gifts)
+    db.session.execute(update(User).where(User.id == u.id).values(
+        spent=User.spent + total, gifts_sent=User.gifts_sent + total),
+        execution_options={'synchronize_session': False})
+    db.session.add(PKGiftRequest(sender_id=u.id, request_id=request_id, pk_id=pk.id,
+                                 to_host=to_host, gift_key=gift_key, qty=qty,
+                                 total=total, real_used=real_used))
+    tx(u.id, 'pk_gift', -total, f'PK#{pk.id} side{to_host} {gift_key} {qty}')
+    try:
+        db.session.commit()
+    except IntegrityError:
+        # The failed transaction, including wallet debit and score update, rolls back.
+        db.session.rollback()
+        existing = PKGiftRequest.query.filter_by(sender_id=u.id, request_id=request_id).first()
+        if not existing: raise
+        same = (existing.pk_id == pk_id and existing.to_host == to_host and
+                existing.gift_key == gift_key and existing.qty == qty)
+        if not same: return err('request_id already used for a different PK gift', 409)
+        pk = db.session.get(PKBattle, existing.pk_id)
+        if not pk: return err('PK record unavailable', 409)
+        return jsonify(coins=coins_of(u.id), host1_gifts=pk.host1_gifts or 0,
+                       host2_gifts=pk.host2_gifts or 0, duplicate=1)
+    db.session.refresh(pk)
+    return jsonify(coins=coins_of(u.id), host1_gifts=pk.host1_gifts,
+                   host2_gifts=pk.host2_gifts, duplicate=0)
 @app.post('/api/pk/end')
 @auth
 def pk_end():
