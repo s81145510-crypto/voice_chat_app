@@ -8,10 +8,20 @@ os.environ["DATA_DIR"] = _TEST_DATA
 os.environ["DATABASE_URL"] = "sqlite:///" + os.path.join(_TEST_DATA, "smoke.db")
 os.environ["SECRET_KEY"] = "test-only-secret"
 
-from backend.main import app, db, FIN
+from backend.main import app, db, FIN, strict_num
 
 
 class AppSmokeTests(unittest.TestCase):
+    def test_strict_num_rejects_fractional_and_boolean_inputs(self):
+        self.assertEqual(strict_num(12), 12)
+        self.assertEqual(strict_num("12"), 12)
+        self.assertEqual(strict_num(" 12 "), 12)
+        self.assertIsNone(strict_num(12.5))
+        self.assertIsNone(strict_num(12.0))
+        self.assertIsNone(strict_num(True))
+        self.assertIsNone(strict_num("12.5"))
+        self.assertIsNone(strict_num(""))
+
     def test_app_imports_and_new_routes_are_registered(self):
         rules = {rule.rule for rule in app.url_map.iter_rules()}
         self.assertIn("/api/notifications", rules)
