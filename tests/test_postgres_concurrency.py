@@ -165,3 +165,67 @@ def test_concurrent_lucky_stats_updates_are_not_lost():
         with m.app.app_context():
             m.db.session.query(m.LuckyStats).filter_by(day=m.today()).delete()
             m.db.session.commit()
+
+
+
+def test_two_simultaneous_purchase_approvals_credit_only_once(monkeypatch):
+    """Two concurrent admins cannot approve and credit the same pending purchase twice."""
+    with m.app.app_context():
+        if m.db.engine.dialect.name != "postgresql":
+            pytest.skip("requires PostgreSQL row-level update concurrency")
+    monkeypatch.setitem(m.FIN, "ledger", lambda *args, **kwargs: None)
+    monkeypatch.setitem(m.FIN, "wallet_sync", lambda *args, **kwargs: None)
+    monkeypatch.setitem(m.JOURNAL, "post_internal", lambda **kwargs: (None, False))
+
+    marker = uuid4().hex[:16]
+    admin_tg = "6746329545"
+    customer_tg = "purchase-race-" + marker
+    with m.app.app_context():
+        admin = m.User(tg_id=admin_tg, username="purchase-race-admin", coins=0, real_coins=0)
+        customer = m.User(tg_id=customer_tg, username="purchase-race-customer", coins=0, real_coins=0)
+        m.db.session.add_all([admin, customer])
+        m.db.session.flush()
+        purchase = m.Purchase(
+            user_id=customer.id, username=customer.username, coins=100, birr=50,
+            ref="TB-" + marker.upper(), status="pending", method="telebirr", txhash=""
+        )
+        m.db.session.add(purchase)
+        m.db.session.flush()
+        m.db.session.add(m.Shot(purchase_id=purchase.id, data=b"\\xff\\xd8\\xfftest", mime="image/jpeg"))
+        m.db.session.commit()
+        purchase_id, customer_id, admin_id = purchase.id, customer.id, admin.id
+        token = m.sign(admin.id)
+
+    barrier = Barrier(2)
+
+    def approve():
+        client = m.app.test_client()
+        barrier.wait(timeout=10)
+        return client.post(
+            "/api/admin/purchase",
+            json={"id": purchase_id, "action": "approve", "manual_verified": True},
+            headers={"Authorization": "Bearer " + token},
+        )
+
+    try:
+        with ThreadPoolExecutor(max_workers=2) as pool:
+            futures = [pool.submit(approve) for _ in range(2)]
+            responses = [future.result(timeout=30) for future in futures]
+
+        assert sorted(response.status_code for response in responses) == [200, 409]
+        with m.app.app_context():
+            saved_customer = m.db.session.get(m.User, customer_id)
+            saved_purchase = m.db.session.get(m.Purchase, purchase_id)
+            assert saved_purchase.status == "approved"
+            assert saved_customer.coins == 100
+            assert saved_customer.real_coins == 100
+            assert m.PurchaseReview.query.filter_by(purchase_id=purchase_id).count() == 1
+            assert m.Tx.query.filter_by(user_id=customer_id, kind="buy").count() == 1
+    finally:
+        with m.app.app_context():
+            m.db.session.query(m.PurchaseReview).filter_by(purchase_id=purchase_id).delete()
+            m.db.session.query(m.Shot).filter_by(purchase_id=purchase_id).delete()
+            m.db.session.query(m.Purchase).filter_by(id=purchase_id).delete()
+            m.db.session.query(m.Tx).filter(m.Tx.user_id.in_([customer_id, admin_id])).delete(synchronize_session=False)
+            m.db.session.query(m.User).filter(m.User.id.in_([customer_id, admin_id])).delete(synchronize_session=False)
+            m.db.session.commit()
