@@ -201,5 +201,28 @@ class JournalValidationTests(unittest.TestCase):
             )
 
 
+    def test_withdrawal_reserve_moves_earnings_and_commission_to_pending(self):
+        lines = JOURNAL["withdrawal_reserve_lines"](41, 300, 200)
+        self.assertEqual(sum(x["debit"] for x in lines), 500)
+        self.assertEqual(sum(x["credit"] for x in lines), 500)
+        self.assertEqual({x["account_code"] for x in lines},
+                         {"liability.host_earnings", "liability.agent_commission",
+                          "liability.withdrawal_pending"})
+
+    def test_rejected_withdrawal_restores_original_liability_buckets(self):
+        lines = JOURNAL["withdrawal_release_lines"](42, 350, 150)
+        self.assertEqual(sum(x["debit"] for x in lines), 500)
+        self.assertEqual(sum(x["credit"] for x in lines), 500)
+        self.assertEqual(lines[0]["account_code"], "liability.withdrawal_pending")
+        self.assertEqual({x["account_code"] for x in lines[1:]},
+                         {"liability.host_earnings", "liability.agent_commission"})
+
+    def test_withdrawal_helpers_reject_invalid_amounts(self):
+        with self.assertRaisesRegex(ValueError, "whole integers"):
+            JOURNAL["withdrawal_reserve_lines"](43, True, 10)
+        with self.assertRaisesRegex(ValueError, "must be positive"):
+            JOURNAL["withdrawal_release_lines"](43, 0, 0)
+
+
 if __name__ == "__main__":
     unittest.main()
