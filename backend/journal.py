@@ -202,7 +202,7 @@ def init_journal(app, db, deps):
         values = (total, real_used, host_earning, commission_total, lucky_refund)
         if any(isinstance(v, bool) or not isinstance(v, int) or v < 0 for v in values):
             raise ValueError('gift amounts must be non-negative whole integers')
-        if real_used > total or host_earning + commission_total > real_used:
+        if real_used > total or host_earning > real_used:
             raise ValueError('gift allocation exceeds purchased coin value')
         lines = []
         purchased = real_used
@@ -229,7 +229,14 @@ def init_journal(app, db, deps):
             if commission_total:
                 lines.append(dict(account_code='liability.agent_commission', debit=0, credit=commission_total,
                                   memo='Referral commissions'))
-            retained = total - host_earning - commission_total
+            # Commission carry can release whole coins accrued over earlier gifts.
+            # Any amount above this gift's available coin spend is recognized as
+            # a carry-release expense, rather than rejecting a valid gift.
+            carry_release = max(0, host_earning + commission_total - total)
+            if carry_release:
+                lines.append(dict(account_code='expense.commission_carry_release', debit=carry_release, credit=0,
+                                  memo='Previously accrued fractional commission paid'))
+            retained = max(0, total - host_earning - commission_total)
             if retained:
                 lines.append(dict(account_code='revenue.platform_gift', debit=0, credit=retained,
                                   memo='Platform retained gift value'))
