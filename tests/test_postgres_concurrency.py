@@ -292,6 +292,77 @@ def test_concurrent_room_gifts_cannot_overspend_purchased_coins(monkeypatch):
                     m.JOURNAL["JournalLine"].entry_id.in_(entry_ids)).delete(synchronize_session=False)
                 m.db.session.query(m.JOURNAL["JournalEntry"]).filter(
                     m.JOURNAL["JournalEntry"].id.in_(entry_ids)).delete(synchronize_session=False)
+            gift_model = m.db.Model.registry._class_registry.get("FinGiftTx")
+            ledger_model = m.db.Model.registry._class_registry.get("FinLedger")
+            if gift_model:
+                gift_ids = [x.id for x in gift_model.query.filter_by(sender_id=sender_id).all()]
+                gift_model.query.filter_by(sender_id=sender_id).delete(synchronize_session=False)
+                if ledger_model and gift_ids:
+                    ledger_model.query.filter(ledger_model.ref.in_([str(x) for x in gift_ids])).delete(synchronize_session=False)
+            m.db.session.query(m.Message).filter_by(room_id=room_id).delete()
+            m.db.session.query(m.Room).filter_by(id=room_id).delete()
+            m.db.session.query(m.Tx).filter(m.Tx.user_id.in_([sender_id, host_id])).delete(synchronize_session=False)
+            m.db.session.query(m.User).filter(m.User.id.in_([sender_id, host_id])).delete(synchronize_session=False)
+            m.db.session.commit()
+
+
+def test_lucky_room_gift_tracks_purchased_spend_and_promo_payout(monkeypatch):
+    """Lucky payouts increase promotional balance, while the original spend uses its real source."""
+    monkeypatch.setattr(m, "limited", lambda *args, **kwargs: False)
+    monkeypatch.setattr(m, "pick_weighted", lambda table: 2)
+    monkeypatch.setitem(m.FIN, "wallet_sync", lambda *args, **kwargs: None)
+    marker = uuid4().hex[:10]
+    with m.app.app_context():
+        sender = m.User(tg_id="lucky-sender-" + marker, username="lucky-sender",
+                        coins=10, real_coins=10)
+        host = m.User(tg_id="lucky-host-" + marker, username="lucky-host",
+                      coins=0, real_coins=0, host_status="host")
+        m.db.session.add_all([sender, host])
+        m.db.session.flush()
+        room_id = "l" + marker
+        m.db.session.add(m.Room(id=room_id, name="Lucky audit", host_id=host.id))
+        m.db.session.commit()
+        sender_id, host_id = sender.id, host.id
+        token = m.sign(sender_id)
+
+    try:
+        response = m.app.test_client().post(
+            f"/api/rooms/{room_id}/gift",
+            json={"gift": "lucky1", "qty": 1, "to": host_id},
+            headers={"Authorization": "Bearer " + token},
+        )
+        assert response.status_code == 200
+        with m.app.app_context():
+            saved = m.db.session.get(m.User, sender_id)
+            assert saved.coins == 20
+            assert saved.real_coins == 0
+            entry = m.JOURNAL["JournalEntry"].query.filter_by(
+                source="gift", description="Lucky gift lucky1 x1"
+            ).one()
+            lines = m.JOURNAL["JournalLine"].query.filter_by(entry_id=entry.id).all()
+            assert any(x.account_code == "liability.user_coin_balance" and
+                       x.user_id == sender_id and x.debit == 10 for x in lines)
+            assert any(x.account_code == "liability.promo_coin_balance" and
+                       x.user_id == sender_id and x.credit == 20 for x in lines)
+            stats = m.db.session.get(m.LuckyStats, m.today())
+            assert stats.volume >= 10
+            assert stats.returned >= 20
+    finally:
+        with m.app.app_context():
+            entry_ids = [x.id for x in m.JOURNAL["JournalEntry"].query.filter_by(
+                source="gift", description="Lucky gift lucky1 x1").all()]
+            if entry_ids:
+                m.db.session.query(m.JOURNAL["JournalLine"]).filter(
+                    m.JOURNAL["JournalLine"].entry_id.in_(entry_ids)).delete(synchronize_session=False)
+                m.db.session.query(m.JOURNAL["JournalEntry"]).filter(
+                    m.JOURNAL["JournalEntry"].id.in_(entry_ids)).delete(synchronize_session=False)
+            gift_model = m.db.Model.registry._class_registry.get("FinGiftTx")
+            ledger_model = m.db.Model.registry._class_registry.get("FinLedger")
+            if gift_model:
+                gift_ids = [x.id for x in gift_model.query.filter_by(sender_id=sender_id).all()]
+                gift_model.query.filter_by(sender_id=sender_id).delete(synchronize_session=False)
+                if ledger_model and gift_ids:
+                    ledger_model.query.filter(ledger_model.ref.in_([str(x) for x in gift_ids])).delete(synchronize_session=False)
             m.db.session.query(m.Message).filter_by(room_id=room_id).delete()
             m.db.session.query(m.Room).filter_by(id=room_id).delete()
             m.db.session.query(m.Tx).filter(m.Tx.user_id.in_([sender_id, host_id])).delete(synchronize_session=False)
