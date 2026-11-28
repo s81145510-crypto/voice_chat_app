@@ -165,7 +165,10 @@ def init_feed(app, db, d):
         followers = request.args.get('type') != 'following'
         other = Follow.follower_id if followers else Follow.target_id
         mine = Follow.target_id if followers else Follow.follower_id
-        us = db.session.query(User).join(Follow, other == User.id).filter(mine == uid, User.banned == False).order_by(Follow.ts.desc()).limit(100).all()
+        hidden = hidden_user_ids(g.user.id)
+        q = db.session.query(User).join(Follow, other == User.id).filter(mine == uid, User.banned == False)
+        if hidden: q = q.filter(~User.id.in_(hidden))
+        us = q.order_by(Follow.ts.desc()).limit(100).all()
         return jsonify(users=[pub(u) for u in us])
 
     @app.post('/api/users/<int:uid>/block')
