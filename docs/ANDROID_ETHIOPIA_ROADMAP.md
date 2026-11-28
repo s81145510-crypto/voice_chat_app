@@ -38,9 +38,9 @@ Implementation priorities:
 5. Keep backend business rules server-side. The PWA must not calculate trusted coin purchases, gift splits, commissions, withdrawal eligibility, or payout status.
 6. Consider native Android only if a later, clearly identified requirement cannot be delivered reliably through the PWA, and only after the owner approves that change.
 
-## 4. First Android release scope
+## 4. First installed-PWA release scope
 
-### P0 — Required for a controlled beta
+### P0 — Required for the controlled PWA beta
 - Sign up/login, logout, session expiry, profile and avatar
 - Home/discovery with live and voice rooms
 - Create/join/leave voice rooms, seat requests, mute, host controls
@@ -50,6 +50,7 @@ Implementation priorities:
 - Notifications inbox and reconnect handling
 - Admin moderation tools and audit trail
 - Amharic/English localization, ETB display, Addis Ababa time
+- PWA installation, standalone launch, correct launcher icon, service-worker update and safe offline fallback
 - Crash reporting, privacy notice, terms, account deletion request
 
 ### P1 — After beta feedback
@@ -83,8 +84,8 @@ All state-changing endpoints need authorization checks, input validation, rate l
 1. **Baseline audit:** map existing screens, routes, data models, external services, and test coverage. Keep the current main branch untouched.
 2. **API contract:** document existing endpoints and identify missing/unsafe contracts before creating the Android client.
 3. **Experience completion:** finish the agreed core social/live/voice workflows in the current client where possible, with regression tests.
-4. **Android foundation:** create the Kotlin/Compose app, secure session storage, API client, navigation, localization, and crash reporting.
-5. **Media integration:** integrate Android RTC with server-issued short-lived tokens; test real devices and network transitions.
+4. **PWA hardening:** verify install identity, icon assets, service-worker updates, safe offline behavior, mobile UI, and secure session handling.
+5. **Media integration:** verify the existing browser RTC flow with server-issued short-lived tokens on real Android devices and unstable networks.
 6. **Closed beta in Ethiopia:** invite a small group, monitor crashes, latency, retention, moderation load, and per-user media costs.
 7. **Finance/security gate:** reconcile the ledger, verify payment/payout operations, threat-model critical flows, run load and recovery tests.
 8. **Public launch:** expand gradually only when operational metrics and support capacity are acceptable.
@@ -107,7 +108,7 @@ Do not merge to `main`, enable real-money payouts, or announce production readin
 - Automated tests and migration tests pass on a clean database
 - Financial balances reconcile and all transitions are idempotent
 - Secrets and production configuration fail safely
-- Android device and network tests pass
+- Installed-PWA Android device and network tests pass
 - Backup/restore and incident-response procedures are verified
 - Privacy, safety, age, and local legal/payment requirements have been reviewed
 
@@ -116,5 +117,5 @@ Do not merge to `main`, enable real-money payouts, or announce production readin
 - Existing client: responsive web/PWA in `templates/index.html`
 - Backend: Flask under `backend/`
 - Existing RTC integration: Agora web SDK in the PWA and server-side token builder
-- Native Android project: not present at the time this plan was written
+- Native Android project: not planned; the owner explicitly chose to keep the installed PWA
 - Existing security/withdrawal work: draft PR `#1`, not merged; it still requires review and runtime tests
