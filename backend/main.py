@@ -263,8 +263,8 @@ def ensure_columns():
         # gift balance, but PK rewards are never misclassified as gift earnings.
         try:
             table = User.__tablename__
-            pk_sum = f"(SELECT COALESCE(SUM(amount), 0) FROM tx WHERE tx.user_id = \\"{table}\\".id AND tx.kind IN ('pk_win','pk_lose','pk_draw') AND tx.amount > 0)"
-            db.session.execute(sa_text(f'UPDATE "{table}" SET gift_earnings = CASE WHEN earnings > {pk_sum} THEN earnings - {pk_sum} ELSE 0 END'))
+            pk_sum = "(SELECT COALESCE(SUM(tx.amount), 0) FROM tx WHERE tx.user_id = u.id AND tx.kind IN ('pk_win','pk_lose','pk_draw') AND tx.amount > 0)"
+            db.session.execute(sa_text(f'UPDATE "{table}" AS u SET gift_earnings = CASE WHEN u.earnings > {pk_sum} THEN u.earnings - {pk_sum} ELSE 0 END'))
             db.session.commit()
         except Exception as e:
             db.session.rollback(); print('ensure_columns: gift earnings backfill', e)
