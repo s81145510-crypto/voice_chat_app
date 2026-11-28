@@ -200,21 +200,23 @@ def init_journal(app, db, deps):
             func.coalesce(func.sum(JournalLine.credit), 0).label('credit_total'),
             func.count(JournalLine.id).label('line_count'),
         ).group_by(JournalLine.entry_id).subquery()
-        bad_rows = db.session.query(
+        bad_query = db.session.query(
             JournalEntry.id, JournalEntry.source, JournalEntry.reference, JournalEntry.currency,
             func.coalesce(totals.c.debit_total, 0), func.coalesce(totals.c.credit_total, 0),
             func.coalesce(totals.c.line_count, 0),
         ).outerjoin(totals, totals.c.entry_id == JournalEntry.id).filter(
             or_(totals.c.entry_id.is_(None), totals.c.debit_total != totals.c.credit_total,
                 totals.c.line_count < 2)
-        ).order_by(JournalEntry.id.desc()).limit(100).all()
+        )
+        bad_count = bad_query.count()
+        bad_rows = bad_query.order_by(JournalEntry.id.desc()).limit(100).all()
         currency_mismatches = db.session.query(func.count(JournalLine.id)).join(
             JournalEntry, JournalEntry.id == JournalLine.entry_id
         ).filter(JournalLine.currency != JournalEntry.currency).scalar() or 0
         return dict(
             ok=not bad_rows and not currency_mismatches,
             entries=JournalEntry.query.count(),
-            unbalanced_or_incomplete_count=len(bad_rows),
+            unbalanced_or_incomplete_count=bad_count,
             unbalanced_or_incomplete=[dict(entry_id=row[0], source=row[1], reference=row[2],
                                             currency=row[3], debit=int(row[4]), credit=int(row[5]),
                                             line_count=int(row[6])) for row in bad_rows],
