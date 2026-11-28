@@ -16,6 +16,11 @@ try:
 except ImportError:
     from payment_refs import normalize_payment_reference
 
+try:
+    from .tron_verify import verify_usdt_trc20_payment, TronVerificationError, TronVerificationPending
+except ImportError:
+    from tron_verify import verify_usdt_trc20_payment, TronVerificationError, TronVerificationPending
+
 
 class RtcTokenBuilder:
     @staticmethod
@@ -1460,6 +1465,21 @@ def adm_purchase():
         db.session.rollback(); return err('Already processed')
     u = db.session.get(User, p.user_id)
     if act == 'approve':
+        if p.method == 'usdt':
+            try:
+                verify_usdt_trc20_payment(
+                    tx_hash=p.txhash,
+                    receiving_address=USDT_ADDRESS,
+                    expected_usdt=round(p.birr / USDT_BIRR, 2),
+                    api_url=os.environ.get('TRONGRID_API_URL', 'https://api.trongrid.io'),
+                    api_key=os.environ.get('TRONGRID_API_KEY', ''),
+                )
+            except TronVerificationPending as e:
+                db.session.rollback()
+                return err(str(e), 409)
+            except TronVerificationError as e:
+                db.session.rollback()
+                return err(str(e), 422)
         add_coins(p.user_id, p.coins)
         db.session.execute(update(User).where(User.id == p.user_id).values(real_coins=User.real_coins + p.coins), execution_options={'synchronize_session': False})
         tx(p.user_id, 'buy', p.coins, f'purchase #{p.id}')
