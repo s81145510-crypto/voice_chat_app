@@ -342,6 +342,27 @@ def me_dict(u):
              next=nxt, base=LEVELS[d['lv']][0], streak=u.streak, daily_ready=u.last_daily != today(), vip_until=u.vip_until or 0, comm=u.commission or 0)
     return d
 def today(): return (datetime.utcnow() + timedelta(hours=3)).strftime('%Y-%m-%d')
+def record_lucky_stats(total, refund):
+    """Atomically add Lucky gift totals; concurrent first writes and increments are safe."""
+    values = dict(day=today(), volume=int(total), returned=int(refund), house=int(total) - int(refund))
+    dialect = db.engine.dialect.name
+    if dialect == 'postgresql':
+        from sqlalchemy.dialects.postgresql import insert
+    elif dialect == 'sqlite':
+        from sqlalchemy.dialects.sqlite import insert
+    else:
+        raise RuntimeError(f'LuckyStats atomic upsert is unsupported for database dialect: {dialect}')
+    stmt = insert(LuckyStats).values(**values)
+    stmt = stmt.on_conflict_do_update(
+        index_elements=[LuckyStats.day],
+        set_={
+            'volume': LuckyStats.volume + stmt.excluded.volume,
+            'returned': LuckyStats.returned + stmt.excluded.returned,
+            'house': LuckyStats.house + stmt.excluded.house,
+        },
+    )
+    db.session.execute(stmt)
+
 def coins_of(uid): return db.session.query(User.coins).filter(User.id == uid).scalar() or 0
 def spend(uid, n):
     r = db.session.execute(update(User).where(User.id == uid, User.coins >= n).values(coins=User.coins - n, real_coins=case((User.real_coins > User.coins - n, User.coins - n), else_=User.real_coins)), execution_options={'synchronize_session': False})
@@ -825,9 +846,7 @@ def room_gift(rid):
         if refund: add_coins(g.user.id, refund); tx(g.user.id, 'lucky_win', refund, f'x{lucky_m} {gift["key"]}')
         tx(g.user.id, 'lucky', -total, gift['key'])
         db.session.execute(update(User).where(User.id == to).values(gifts_recv=User.gifts_recv + total), execution_options={'synchronize_session': False})
-        st = db.session.get(LuckyStats, today())
-        if not st: st = LuckyStats(day=today()); db.session.add(st)
-        st.volume = (st.volume or 0) + total; st.returned = (st.returned or 0) + refund; st.house = (st.house or 0) + (total - refund)
+        record_lucky_stats(total, refund)
     else:
         real_used = bought_used
         rate = HOST_SHARE if target.host_status == 'host' else SHARE.get(gift['tier'], DEFAULT_SHARE)
