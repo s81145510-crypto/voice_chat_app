@@ -5,7 +5,7 @@ Wholesale floor 0.40 Birr/coin protects 30% margin.
 """
 import os, json, secrets
 from flask import Response, request, jsonify, g
-from sqlalchemy import update, func, or_
+from sqlalchemy import update, func, or_, inspect, text
 from sqlalchemy.exc import IntegrityError
 
 TIERS = [
@@ -69,8 +69,26 @@ def init_seller(app, db, deps):
         request_id = db.Column(db.String(64), unique=True, nullable=True, index=True)
 
     with app.app_context():
-        try: db.create_all()
-        except Exception as e: print('seller create_all:', e)
+        try:
+            db.create_all()
+            # db.create_all() does not add columns to an existing production table.
+            # Apply this additive, backwards-compatible migration before serving requests.
+            inspector = inspect(db.engine)
+            if 'seller_transfer' in inspector.get_table_names():
+                columns = {c['name'] for c in inspector.get_columns('seller_transfer')}
+                if 'request_id' not in columns:
+                    db.session.execute(text(
+                        'ALTER TABLE seller_transfer ADD COLUMN request_id VARCHAR(64)'
+                    ))
+                    db.session.commit()
+                db.session.execute(text(
+                    'CREATE UNIQUE INDEX IF NOT EXISTS ix_seller_transfer_request_id '
+                    'ON seller_transfer (request_id)'
+                ))
+                db.session.commit()
+        except Exception as e:
+            db.session.rollback()
+            print('seller create_all/migration:', e)
 
     def tier_for(birr_total):
         best = 'starter'
