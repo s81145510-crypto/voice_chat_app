@@ -1504,11 +1504,17 @@ def adm_purchase():
             return err('Confirm manual Telebirr verification before approving (manual_verified=true)', 400)
     elif p.method == 'usdt' and act == 'approve':
         # USDT approval remains chain-verified; it is not a manual bypass.
+        # End the read transaction before network I/O so a slow explorer does
+        # not hold a database transaction open. Re-read and compare the payment
+        # facts after verification, then use the conditional status update below
+        # as the final race-safe claim.
+        verify_facts = (p.method, p.txhash, p.birr)
+        db.session.rollback()
         try:
             verify_usdt_trc20_payment(
-                tx_hash=p.txhash,
+                tx_hash=verify_facts[1],
                 receiving_address=USDT_ADDRESS,
-                expected_usdt=round(p.birr / USDT_BIRR, 2),
+                expected_usdt=round(verify_facts[2] / USDT_BIRR, 2),
                 api_url=os.environ.get('TRONGRID_API_URL', 'https://api.trongrid.io'),
                 api_key=os.environ.get('TRONGRID_API_KEY', ''),
             )
@@ -1516,6 +1522,14 @@ def adm_purchase():
             return err(str(e), 409)
         except TronVerificationError as e:
             return err(str(e), 422)
+
+        p = db.session.get(Purchase, pid)
+        if not p or p.status != 'pending':
+            db.session.rollback()
+            return err('Already processed', 409)
+        if (p.method, p.txhash, p.birr) != verify_facts:
+            db.session.rollback()
+            return err('Purchase payment details changed during verification; reload and review again', 409)
 
     new_status = 'approved' if act == 'approve' else 'rejected'
     r = db.session.execute(
