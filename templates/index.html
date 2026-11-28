@@ -979,7 +979,7 @@ function editProfile(){const m=S.me;const o=modal(`<h3>✏️ Edit profile</h3><
   $('#e-go',o).onclick=e=>run(e.target,async()=>{const f=$('#e-p',o).files[0];if(f){const fd=new FormData();fd.append('file',await shrink(f,320,.85),'p.jpg');setMe((await api('/api/profile/photo',fd)).me)}
    setMe((await api('/api/profile',{name:$('#e-n',o).value,bio:$('#e-b',o).value,phone:$('#e-t',o).value})).me);o.close();renderMe()})}
 function withdrawActions(y){
- const btn=(action,label,cls)=>'<button class="'+(cls||'btn sm')+'" onclick="admAct(\\'withdraw\\','+y.id+',\\''+action+'\\')">'+label+'</button>';
+ const btn=(action,label,cls)=>'<button class="'+(cls||'btn sm')+'" onclick="admAct(\'withdraw\','+y.id+',\''+action+'\')">'+label+'</button>';
  const badge='<span class="badge">'+esc(y.status)+'</span>';
  if(y.status==='pending')return badge+btn('under_review','Review')+btn('reject','Reject','btn bad sm');
  if(y.status==='under_review')return badge+btn('approve','Approve')+btn('reject','Reject','btn bad sm');
