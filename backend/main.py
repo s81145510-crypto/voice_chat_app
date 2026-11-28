@@ -11,6 +11,10 @@ from sqlalchemy import update, func, event, or_, and_, case, text as sa_text
 from sqlalchemy.engine import Engine
 from sqlalchemy.exc import IntegrityError
 import base64, struct, zlib
+try:
+    from . import rules
+except ImportError:
+    import rules
 
 
 class RtcTokenBuilder:
@@ -70,8 +74,9 @@ def _sqlite_pragmas(con, rec):
 
 SEATS = 21
 MAX_LIVE_GUESTS = 3
-MIN_WITHDRAW = 500
-COIN_BIRR = 0.4
+MIN_WITHDRAW = rules.MIN_WITHDRAW_COINS
+WITHDRAW_ETB_PER_COIN = float(rules.WITHDRAW_ETB_PER_COIN)
+COIN_BIRR = 0.4  # internal/seller reference; cash-out uses the separate approved payout rate
 USDT_ADDRESS = os.environ.get('USDT_ADDRESS', 'TUTGyjoRFaqviTtejUnXe92BcU8z3BaTUE')
 USDT_BIRR = float(os.environ.get('USDT_BIRR', '161'))
 COIN_USDT = round(COIN_BIRR / USDT_BIRR, 6)
@@ -443,7 +448,7 @@ GIFTS_PUB = [GIFT_MAP[k] for k, *_ in GIFTS]
 FRAMES_PUB = list(FRAME_MAP.values())
 def cfg():
     return dict(agora_app_id=AGORA_APP_ID, gifts=GIFTS_PUB, packages=[dict(coins=c, birr=b) for c, b in PACKAGES], levels=LEVELS, pay_number=PAY_NUMBER, bot=BOT_USERNAME,
-                min_withdraw=MIN_WITHDRAW, rate=COIN_BIRR, seats=SEATS, max_guests=MAX_LIVE_GUESTS, min_bet=MIN_BET, max_bet=MAX_BET, p2p_mult=P2P_MULT, frames=FRAMES_PUB,
+                min_withdraw=MIN_WITHDRAW, rate=COIN_BIRR, withdraw_rate=WITHDRAW_ETB_PER_COIN, min_withdraw_etb=rules.MIN_WITHDRAW_ETB, seats=SEATS, max_guests=MAX_LIVE_GUESTS, min_bet=MIN_BET, max_bet=MAX_BET, p2p_mult=P2P_MULT, frames=FRAMES_PUB,
                 channel=CHANNEL_URL, support=SUPPORT,
                 host=dict(share=HOST_SHARE), agent=dict(rates=[float(r) for r in rules.GENERATION_RATES], depth=len(rules.GENERATION_RATES)), invite=dict(reward=INVITE_REWARD),
                 vip=dict(price=VIP_PRICE, days=VIP_DAYS, bonus=VIP_DAILY_BONUS, rooms=VIP_ROOMS),
@@ -1071,32 +1076,32 @@ def coins_buy():
 @auth
 def withdraw():
     b = body(); coins = num(b.get('coins')); method = (b.get('method') or 'telebirr').strip()
-    if method not in ('telebirr', 'usdt'): method = 'telebirr'
-    if coins < MIN_WITHDRAW: return err(f'Minimum withdrawal {MIN_WITHDRAW} coins')
-    phone = ''; address = ''
-    if method == 'usdt':
-        address = str(b.get('address') or '').strip()
-        if not (address.startswith('T') and len(address) == 34): return err('Enter a valid TRC20 address (T…, 34 chars)')
-    else:
-        phone = str(b.get('phone') or g.user.phone or '').strip()
-        if not (phone.isdigit() and len(phone) == 10): return err('Enter valid phone number')
-    # Lock and split the debit between the two withdrawable source buckets.
-    # These exact amounts are stored on the request and restored to the same
-    # buckets if an administrator rejects it.
+    if method != 'telebirr': return err('Only Telebirr withdrawals are currently supported')
+    try:
+        quote = rules.withdrawal_quote(coins)
+    except (TypeError, ValueError) as e:
+        return err(str(e))
+    phone = str(b.get('phone') or g.user.phone or '').strip()
+    if not (phone.isdigit() and len(phone) == 10): return err('Enter valid Telebirr phone number')
+    # Lock and validate the two withdrawable buckets. Activity and promo coins
+    # are intentionally not considered as cash-out sources.
     balances = db.session.query(User.earnings, User.commission).filter(User.id == g.user.id).with_for_update().first()
-    if not balances or int(balances[0] or 0) + int(balances[1] or 0) < coins:
-        db.session.rollback(); return err('Not enough income')
-    commission_part = min(max(0, int(balances[1] or 0)), coins)
-    earnings_part = coins - commission_part
+    if not balances:
+        db.session.rollback(); return err('User wallet not found', 404)
+    try:
+        split = rules.withdrawal_source_split(coins, int(balances[0] or 0), int(balances[1] or 0))
+    except (TypeError, ValueError) as e:
+        db.session.rollback(); return err(str(e))
+    earnings_part, commission_part = split['earnings'], split['commission']
     r = db.session.execute(update(User).where(User.id == g.user.id, User.earnings >= earnings_part, User.commission >= commission_part).values(
         commission=User.commission - commission_part, earnings=User.earnings - earnings_part), execution_options={'synchronize_session': False})
     if r.rowcount != 1:
         db.session.rollback(); return err('Balances changed; please retry')
-    w = Withdraw(user_id=g.user.id, username=g.user.username, coins=coins, birr=int(coins * COIN_BIRR), phone=phone, method=method, usdt_address=address,
+    w = Withdraw(user_id=g.user.id, username=g.user.username, coins=coins, birr=quote['birr'], phone=phone, method='telebirr', usdt_address='',
                  earnings_coins=earnings_part, commission_coins=commission_part); db.session.add(w)
-    tx(g.user.id, 'withdraw', -coins, f'{method} withdraw'); db.session.commit()
-    dest = address if method == 'usdt' else phone
-    notify_admins(f'💸 {method.upper()} Withdraw: {g.user.username} — {coins} coins = {w.birr} Birr / {round(coins*COIN_USDT,4)} USDT → {dest}'); return jsonify(ok=1)
+    tx(g.user.id, 'withdraw', -coins, 'telebirr withdraw'); db.session.commit()
+    notify_admins(f'💸 TELEBIRR Withdraw: {g.user.username} — {coins} coins = {w.birr} Birr → {phone}')
+    return jsonify(ok=1, coins=coins, birr=w.birr, method='telebirr')
 
 
 @app.get('/api/posts')
@@ -1435,7 +1440,7 @@ POLICY = {
     'lucky': "LUCKY GIFT POLICY\n1. Lucky gifts are chance games: sending one may return a multiplier to the sender.\n2. 70% of lucky volume returns to players; 30% retained by platform.\n3. Lucky gifts add hype/stage score but do not pay host earnings.\n4. 18+ only. Play responsibly.",
     'pk': "PK BATTLE POLICY\n1. Two hosts battle 5 minutes; viewers gift each side.\n2. Winner 70%, loser 20%, platform 10%. Tie 45/45/10.",
     'stage': "LIVE GUESTS\n1. A LIVE host may invite up to 3 guests on stage.\n2. The host can mute or remove a guest; a guest can leave anytime.\n3. No nudity, harassment or explicit content — instant removal and ban.",
-    'withdraw': f"WITHDRAWAL & PAYMENTS\n1. Telebirr: 1 coin = {COIN_BIRR} ETB, min {MIN_WITHDRAW} coins.\n2. USDT (TRC20): 1 coin = {COIN_USDT} USDT. Provide a valid T… address (34 chars).\n3. Rate: 1 USDT = {USDT_BIRR} ETB.\n4. TX id/hash + screenshot required for purchases.\n5. 24–72h processing after approval.",
+    'withdraw': f"WITHDRAWAL & PAYMENTS\n1. Telebirr only: 1,000 coins = 100 ETB (reference rate).\n2. Minimum withdrawal: {rules.MIN_WITHDRAW_ETB} ETB ({MIN_WITHDRAW} coins).\n3. At least 50% of each withdrawal must come from genuine gift earnings; activity and bonus rewards are not withdrawable.\n4. Admin review, Telebirr ownership verification and payout confirmation are required.\n5. Purchases require a transaction ID and screenshot.",
     'conduct': "COMMUNITY RULES\n1. No hate, harassment, threats.\n2. No minor sexual content — permanent ban + reporting.\n3. No nudity/explicit live content.\n4. No scams, bots, cheating.\n5. Report to @TwentyOneOwner.",
     'privacy': "PRIVACY\n1. We collect Telegram ID, name, optional phone/wallet address, usage data.\n2. Photos stored only for display.\n3. We never sell data.\n4. Account deletion via support."
 }
