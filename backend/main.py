@@ -1370,7 +1370,8 @@ def pk_join():
 def pk_gift():
     u = g.user; b = body(); pk_id = strict_num(b.get('pk_id')); pk = db.session.get(PKBattle, pk_id) if pk_id and pk_id > 0 else None
     if not pk or pk.status != 'active': return err('PK not found', 404)
-    to_host = num(body().get('to_host')); gift = GIFT_MAP.get(body().get('gift')); qty = max(1, min(99, num(body().get('qty'), 1)))
+    to_host = strict_num(b.get('to_host')); gift = GIFT_MAP.get(b.get('gift')); qty = strict_num(b.get('qty'), 1)
+    if to_host not in (1, 2) or qty is None or not 1 <= qty <= 99: return err('Invalid PK gift quantity or host')
     if not gift: return err('Gift not found')
     total = gift['price'] * qty
     if to_host == 1 and pk.host1_id: score, paid = 'host1_gifts', 'host1_real'
