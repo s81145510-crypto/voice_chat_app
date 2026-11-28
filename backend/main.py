@@ -1504,6 +1504,8 @@ def adm_withdraws():
                                phone=w.phone, ts=w.ts, method=w.method, address=w.phone,
                                status=w.status, earnings_coins=int(w.earnings_coins or 0),
                                commission_coins=int(w.commission_coins or 0),
+                               gift_earnings_coins=int(w.gift_earnings_coins or 0),
+                               pk_earnings_coins=int(w.pk_earnings_coins or 0),
                                payout_reference=w.payout_reference or '') for w in ws])
 @app.get('/api/admin/users')
 @admin_only
