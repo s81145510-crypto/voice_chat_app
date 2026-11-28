@@ -455,6 +455,8 @@ def init_finance(app, db, deps):
         withdrawals = Withdraw.query.filter_by(user_id=uid).order_by(Withdraw.id.desc()).limit(20).all()
         return jsonify(
             balances=dict(earnings_coins=int(g.user.earnings or 0),
+                          gift_earnings_coins=int(g.user.gift_earnings or 0),
+                          pk_earnings_coins=max(0, int(g.user.earnings or 0) - int(g.user.gift_earnings or 0)),
                           commission_coins=int(g.user.commission or 0)),
             last_30_days=dict(gift_count=int(gifts[0] or 0),
                               gift_volume_coins=int(gifts[1] or 0),
