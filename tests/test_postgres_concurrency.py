@@ -84,3 +84,48 @@ def test_two_simultaneous_withdrawals_cannot_overdraw_earnings(monkeypatch):
             m.Tx.query.filter_by(user_id=user_id).delete(synchronize_session=False)
             m.db.session.query(m.User).filter_by(id=user_id).delete(synchronize_session=False)
             m.db.session.commit()
+
+
+def test_two_hosts_cannot_claim_the_same_pk_slot(monkeypatch):
+    with m.app.app_context():
+        if m.db.engine.dialect.name != "postgresql":
+            pytest.skip("requires PostgreSQL row-level locking")
+    marker = uuid4().hex[:16]
+    with m.app.app_context():
+        owner = m.User(tg_id="pk-owner-" + marker, username="pk-owner", host_status="host")
+        host_a = m.User(tg_id="pk-a-" + marker, username="pk-a", host_status="host")
+        host_b = m.User(tg_id="pk-b-" + marker, username="pk-b", host_status="host")
+        m.db.session.add_all([owner, host_a, host_b])
+        m.db.session.flush()
+        pk = m.PKBattle(host1_id=owner.id, status="active", host2_id=None, duration=300)
+        m.db.session.add(pk)
+        m.db.session.commit()
+        pk_id = pk.id
+        users = [(host_a.id, m.sign(host_a.id)), (host_b.id, m.sign(host_b.id))]
+        user_ids = [owner.id, host_a.id, host_b.id]
+
+    barrier = Barrier(2)
+
+    def join_pk(token):
+        client = m.app.test_client()
+        barrier.wait(timeout=10)
+        return client.post(
+            "/api/pk/join",
+            json={"pk_id": pk_id},
+            headers={"Authorization": "Bearer " + token},
+        )
+
+    try:
+        with ThreadPoolExecutor(max_workers=2) as pool:
+            futures = [pool.submit(join_pk, token) for _, token in users]
+            responses = [future.result(timeout=30) for future in futures]
+        assert sorted(response.status_code for response in responses) == [200, 409]
+        with m.app.app_context():
+            saved_pk = m.db.session.get(m.PKBattle, pk_id)
+            assert saved_pk.host2_id in {users[0][0], users[1][0]}
+            assert saved_pk.status == "active"
+    finally:
+        with m.app.app_context():
+            m.db.session.query(m.PKBattle).filter_by(id=pk_id).delete()
+            m.db.session.query(m.User).filter(m.User.id.in_(user_ids)).delete(synchronize_session=False)
+            m.db.session.commit()
