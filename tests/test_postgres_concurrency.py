@@ -367,6 +367,7 @@ def test_lucky_room_gift_tracks_purchased_spend_and_promo_payout(monkeypatch):
             m.db.session.query(m.Room).filter_by(id=room_id).delete()
             m.db.session.query(m.Tx).filter(m.Tx.user_id.in_([sender_id, host_id])).delete(synchronize_session=False)
             m.db.session.query(m.User).filter(m.User.id.in_([sender_id, host_id])).delete(synchronize_session=False)
+            m.db.session.query(m.LuckyStats).filter_by(day=m.today()).delete()
             m.db.session.commit()
 
 
