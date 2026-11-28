@@ -180,6 +180,17 @@ class Shot(db.Model):
     purchase_id = db.Column(db.Integer, primary_key=True); data = db.Column(db.LargeBinary); mime = db.Column(db.String(30))
 
 
+class PurchaseReview(db.Model):
+    __tablename__ = 'purchase_review'
+    id = db.Column(db.Integer, primary_key=True)
+    purchase_id = db.Column(db.Integer, db.ForeignKey('purchase.id'), nullable=False, unique=True, index=True)
+    action = db.Column(db.String(10), nullable=False)
+    reviewer_tg_id = db.Column(db.String(32), nullable=False)
+    reviewed_at = db.Column(db.Integer, nullable=False, default=now)
+    reference_snapshot = db.Column(db.String(80), nullable=False, default='')
+    note = db.Column(db.String(240), nullable=False, default='')
+
+
 class Withdraw(db.Model):
     id = db.Column(db.Integer, primary_key=True); user_id = db.Column(db.Integer, index=True); username = db.Column(db.String(60)); coins = db.Column(db.Integer); birr = db.Column(db.Integer)
     phone = db.Column(db.String(20)); status = db.Column(db.String(10), default='pending', index=True); ts = db.Column(db.Integer, default=now)
@@ -1457,42 +1468,71 @@ def adm_shot(pid):
 @app.post('/api/admin/purchase')
 @admin_only
 def adm_purchase():
-    b = body(); pid, act = num(b.get('id')), b.get('action'); p = db.session.get(Purchase, pid)
-    if not p: return err('not found', 404)
-    new = 'approved' if act == 'approve' else 'rejected'
-    r = db.session.execute(update(Purchase).where(Purchase.id == pid, Purchase.status == 'pending').values(status=new), execution_options={'synchronize_session': False})
+    b = body()
+    pid, act = num(b.get('id')), str(b.get('action') or '').strip().lower()
+    if act not in ('approve', 'reject'):
+        return err('action must be approve or reject')
+    p = db.session.get(Purchase, pid)
+    if not p:
+        return err('not found', 404)
+
+    review_note = str(b.get('reason') or b.get('note') or '').strip()[:240]
+    if act == 'reject' and not review_note:
+        return err('A rejection reason is required')
+
+    # Telebirr is deliberately manual: an admin must inspect the uploaded
+    # receipt and compare its transaction ID/reference with the actual payment.
+    shot = db.session.get(Shot, pid)
+    if not shot:
+        return err('Payment screenshot is missing; this purchase cannot be reviewed', 422)
+    if p.method == 'telebirr':
+        if not p.ref or len(p.ref.strip()) < 6:
+            return err('Telebirr transaction reference is missing or invalid', 422)
+    elif p.method == 'usdt' and act == 'approve':
+        # USDT approval remains chain-verified; it is not a manual bypass.
+        try:
+            verify_usdt_trc20_payment(
+                tx_hash=p.txhash,
+                receiving_address=USDT_ADDRESS,
+                expected_usdt=round(p.birr / USDT_BIRR, 2),
+                api_url=os.environ.get('TRONGRID_API_URL', 'https://api.trongrid.io'),
+                api_key=os.environ.get('TRONGRID_API_KEY', ''),
+            )
+        except TronVerificationPending as e:
+            return err(str(e), 409)
+        except TronVerificationError as e:
+            return err(str(e), 422)
+
+    new_status = 'approved' if act == 'approve' else 'rejected'
+    r = db.session.execute(
+        update(Purchase).where(Purchase.id == pid, Purchase.status == 'pending')
+        .values(status=new_status),
+        execution_options={'synchronize_session': False})
     if r.rowcount != 1:
-        db.session.rollback(); return err('Already processed')
+        db.session.rollback()
+        return err('Already processed', 409)
+
     u = db.session.get(User, p.user_id)
     if act == 'approve':
-        if p.method == 'usdt':
-            try:
-                verify_usdt_trc20_payment(
-                    tx_hash=p.txhash,
-                    receiving_address=USDT_ADDRESS,
-                    expected_usdt=round(p.birr / USDT_BIRR, 2),
-                    api_url=os.environ.get('TRONGRID_API_URL', 'https://api.trongrid.io'),
-                    api_key=os.environ.get('TRONGRID_API_KEY', ''),
-                )
-            except TronVerificationPending as e:
-                db.session.rollback()
-                return err(str(e), 409)
-            except TronVerificationError as e:
-                db.session.rollback()
-                return err(str(e), 422)
         add_coins(p.user_id, p.coins)
-        db.session.execute(update(User).where(User.id == p.user_id).values(real_coins=User.real_coins + p.coins), execution_options={'synchronize_session': False})
+        db.session.execute(update(User).where(User.id == p.user_id)
+                           .values(real_coins=User.real_coins + p.coins),
+                           execution_options={'synchronize_session': False})
         tx(p.user_id, 'buy', p.coins, f'purchase #{p.id}')
         FIN['ledger'](p.user_id, 'purchase', p.coins, 'birr', p.id, f'{p.birr} ETB')
         if u and u.referrer_id:
-            bonus = p.coins // 10; add_coins(u.referrer_id, bonus); tx(u.referrer_id, 'referral', bonus, f'from {u.id}')
-            ru = db.session.get(User, u.referrer_id); notify(ru.tg_id if ru else None, f'🎁 Referral +{bonus} coins')
+            bonus = p.coins // 10
+            add_coins(u.referrer_id, bonus)
+            tx(u.referrer_id, 'referral', bonus, f'from {u.id}')
+            ru = db.session.get(User, u.referrer_id)
+            notify(ru.tg_id if ru else None, f'🎁 Referral +{bonus} coins')
         invite_awarded = bool(u and u.agent_id and not Tx.query.filter_by(user_id=p.user_id, kind='invite_reward').count())
         if invite_awarded:
-            add_coins(u.agent_id, INVITE_REWARD); tx(u.agent_id, 'invite', INVITE_REWARD, f'invite {u.id}'); tx(p.user_id, 'invite_reward', 0, f'agent {u.agent_id}')
+            add_coins(u.agent_id, INVITE_REWARD)
+            tx(u.agent_id, 'invite', INVITE_REWARD, f'invite {u.id}')
+            tx(p.user_id, 'invite_reward', 0, f'agent {u.agent_id}')
             FIN['referral_qualify'](p.user_id, 'first_purchase', INVITE_REWARD)
 
-        # Keep cash settlement, coin issuance, referral bonuses and journal rows atomic.
         try:
             JOURNAL['post_internal'](
                 source='coin_purchase', reference=str(p.id),
@@ -1509,10 +1549,9 @@ def adm_purchase():
                 if referral_bonus > 0:
                     coin_credits.append(dict(account_code='liability.user_coin_balance', user_id=u.referrer_id,
                                              debit=0, credit=referral_bonus, memo='Purchase referral bonus'))
-            if invite_awarded:
-                if int(INVITE_REWARD) > 0:
-                    coin_credits.append(dict(account_code='liability.user_coin_balance', user_id=u.agent_id,
-                                             debit=0, credit=int(INVITE_REWARD), memo='First purchase invite reward'))
+            if invite_awarded and int(INVITE_REWARD) > 0:
+                coin_credits.append(dict(account_code='liability.user_coin_balance', user_id=u.agent_id,
+                                         debit=0, credit=int(INVITE_REWARD), memo='First purchase invite reward'))
             issued_total = sum(x['credit'] for x in coin_credits)
             coin_lines = [dict(account_code='expense.coin_issuance', debit=issued_total, credit=0,
                                memo='Coin issuance cost')] + coin_credits
@@ -1524,12 +1563,42 @@ def adm_purchase():
         except Exception:
             db.session.rollback()
             return err('Purchase approval failed; all changes rolled back', 500)
-    db.session.commit()
+
+    db.session.add(PurchaseReview(
+        purchase_id=p.id, action=act, reviewer_tg_id=str(g.user.tg_id),
+        reviewed_at=now(), reference_snapshot=str(p.txhash or p.ref or ''),
+        note=review_note))
+    try:
+        db.session.commit()
+    except IntegrityError:
+        db.session.rollback()
+        return err('Purchase review was already recorded; no duplicate approval was applied', 409)
+
     if act == 'approve':
         FIN['wallet_sync'](p.user_id)
-        if u and u.agent_id: FIN['wallet_sync'](u.agent_id)
-    if u: notify(u.tg_id, f'✅ {p.coins} coins added!' if act == 'approve' else '❌ Purchase rejected.')
-    return jsonify(ok=1)
+        if u and u.agent_id:
+            FIN['wallet_sync'](u.agent_id)
+    if u:
+        if act == 'approve':
+            notify(u.tg_id, f'✅ {p.coins} coins added!')
+        else:
+            notify(u.tg_id, f'❌ Purchase rejected. Reason: {review_note}')
+    return jsonify(ok=1, status=new_status, reviewed_by=str(g.user.tg_id), reviewed_at=now())
+
+
+@app.get('/api/admin/purchase-reviews')
+@admin_only
+def adm_purchase_reviews():
+    rows = (db.session.query(PurchaseReview, Purchase)
+            .join(Purchase, Purchase.id == PurchaseReview.purchase_id)
+            .order_by(PurchaseReview.id.desc()).limit(100).all())
+    return jsonify(items=[dict(
+        purchase_id=p.id, action=r.action, reviewer_tg_id=r.reviewer_tg_id,
+        reviewed_at=r.reviewed_at, reference=r.reference_snapshot, note=r.note,
+        method=p.method, amount_birr=p.birr, coins=p.coins, username=p.username)
+        for r, p in rows])
+
+
 @app.post('/api/admin/withdraw')
 @admin_only
 def adm_withdraw():
