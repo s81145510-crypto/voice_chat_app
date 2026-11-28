@@ -23,6 +23,7 @@ class AppSmokeTests(unittest.TestCase):
         self.assertIn("/api/blocks", rules)
         self.assertIn("/api/admin/reports", rules)
         self.assertIn("/api/admin/report", rules)
+        self.assertIn("/api/creator/dashboard", rules)
 
     def test_notification_table_is_created(self):
         from sqlalchemy import inspect
@@ -33,7 +34,7 @@ class AppSmokeTests(unittest.TestCase):
 
     def test_new_private_endpoints_require_authentication(self):
         client = app.test_client()
-        for path in ("/api/notifications", "/api/rooms/test-room/audience", "/api/pk/history", "/api/blocks", "/api/admin/reports"):
+        for path in ("/api/notifications", "/api/rooms/test-room/audience", "/api/pk/history", "/api/blocks", "/api/admin/reports", "/api/creator/dashboard"):
 
             response = client.get(path)
             self.assertEqual(response.status_code, 401, path)
