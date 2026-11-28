@@ -530,7 +530,9 @@ def journal_p2p_join(creator_id, creator_real_used, joiner_id, joiner_real_used,
     if joiner_promo:
         lines.append(dict(account_code='liability.promo_coin_balance', user_id=int(joiner_id),
                           debit=joiner_promo, credit=0, memo='P2P joiner promo stake settled'))
-    # Add the joiner's stake to escrow and release the full two-player escrow below.
+    # Add the joiner's stake to escrow, then release the full two-player escrow.
+    lines.append(dict(account_code='liability.p2p_escrow', debit=0, credit=bet,
+                      memo=f'P2P battle #{battle_id} joiner stake escrowed'))
     lines.append(dict(account_code='liability.p2p_escrow', debit=bet * 2, credit=0,
                       memo=f'P2P battle #{battle_id} escrow settled'))
     if prize:
