@@ -1394,9 +1394,9 @@ def adm_purchase():
             JOURNAL['post_internal'](
                 source='coin_purchase', reference=str(p.id),
                 idempotency_key=f'purchase:{p.id}:ETB', currency='ETB',
-                description=f'Approved Telebirr/coin purchase #{p.id}',
+                description=f'Approved {str(p.method or \'payment\').upper()} coin purchase #{p.id}',
                 lines=[
-                    dict(account_code='asset.telebirr_clearing', debit=int(p.birr), credit=0, memo='Payment received'),
+                    dict(account_code='asset.payment_clearing', debit=int(p.birr), credit=0, memo=f'{p.method or \'payment\'} received; ETB equivalent'),
                     dict(account_code='liability.coin_purchase_deferred', debit=0, credit=int(p.birr), memo='Customer purchase proceeds'),
                 ])
             coin_credits = [dict(account_code='liability.user_coin_balance', user_id=p.user_id,
