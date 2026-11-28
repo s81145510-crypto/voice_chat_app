@@ -847,19 +847,16 @@ async function renderWallet(){
   <h3>Purchase history</h3>${w.purchases.map(p=>`<div class="card row"><div class="sp"><b>${fmt(p.coins)} 🪙</b> <span class="mut">${p.birr} Birr · ${p.method==='usdt'?'USDT '+u2(p.birr/u.birr_per_usdt):'Telebirr'}</span></div><span class="badge">${{pending:'⏳',approved:'✅',rejected:'❌'}[p.status]}</span></div>`).join('')||'<div class="empty">—</div>'}
   <h3>Withdrawal history</h3>${w.withdraws.map(p=>`<div class="card row"><div class="sp"><b>${fmt(p.coins)}</b> <span class="mut">${p.birr} Birr · ${p.method==='usdt'?'USDT '+u2(p.coins*u.coin_usdt):'Telebirr'}</span></div><span class="badge">${{pending:'⏳',under_review:'🔎',approved:'✅',processing:'💸',paid:'✅',rejected:'❌'}[p.status]||p.status}</span></div>`).join('')||'<div class="empty">—</div>'}
   <h3>Activity</h3>${w.txs.map(x=>`<div class="row mut" style="padding:4px 0"><span class="sp ell">${esc(x.kind)} ${esc(x.note)}</span><b class="${x.amount>=0?'win':'lose'}">${x.amount>=0?'+':''}${fmt(x.amount)}</b><span>${ago(x.ts)}</span></div>`).join('')}${footbar()}`}catch(e){toast(e.message)}}
-function buyModal(){let pk=S.cfg.packages[0];let method='telebirr';
+function buyModal(){let pk=S.cfg.packages[0];
   const m=modal('');
-  const draw=()=>{const u=U();const isU=method==='usdt';
-   m.firstChild.innerHTML=`<h3>🪙 Buy Coins</h3>
-  <div class="chips" style="margin-bottom:10px"><div class="chip ${!isU?'on':''}" data-m="telebirr">Telebirr</div><div class="chip ${isU?'onu':''}" data-m="usdt">USDT (TRC20)</div></div>
-  <div class="ratebar">💱 <span class="sp">Market rate</span><b class="usdt">1 USDT = ${fmt(u.birr_per_usdt)} Birr</b></div>
-  <div class="grid2" id="pkgs">${S.cfg.packages.map(p=>`<div class="card" data-c="${p.coins}" style="text-align:center;margin:0;${p.coins===pk.coins?'border-color:var(--gold)':''}"><b>${fmt(p.coins)} 🪙</b><div class="mut">${fmt(p.birr)} Birr</div><div class="usdt" style="font-size:12px;font-weight:700">${u2(p.birr/u.birr_per_usdt)} USDT</div></div>`).join('')}</div>
-  ${isU?`<div class="card" style="margin-top:10px;border-color:rgba(38,161,123,.35)">1️⃣ Send <b class="usdt">${u2(pk.birr/u.birr_per_usdt)} USDT</b> (TRC20) to:<div class="addr"><b id="uaddr">${esc(u.address)}</b><button class="btn sm" style="background:linear-gradient(135deg,#26a17b,#3ddc97);color:#04231a" onclick="copyTxt('${esc(u.address)}')">Copy</button></div><div class="mut" style="margin-top:6px">2️⃣ Enter TX hash + screenshot</div></div>`:`<div class="card" style="margin-top:10px">1️⃣ Send <b class="gold">${fmt(pk.birr)} Birr</b> to Telebirr <b class="gold">${esc(S.cfg.pay_number||'—')}</b><br>2️⃣ Enter transaction ID + screenshot</div>`}
-  <div class="col"><input id="b-ref" placeholder="${isU?'USDT TX hash':'Telebirr ID'}"><input id="b-f" type="file" accept="image/*"><button class="btn gold" id="b-go">Send · ${isU?u2(pk.birr/u.birr_per_usdt)+' USDT':fmt(pk.birr)+' Birr'}</button></div>`;
-   $$('[data-m]',m).forEach(c=>c.onclick=()=>{method=c.dataset.m;draw()});
-   $$('#pkgs .card',m).forEach(c=>c.onclick=()=>{pk=S.cfg.packages.find(p=>p.coins==c.dataset.c);draw()});
-   $('#b-go',m).onclick=e=>run(e.target,async()=>{const f=$('#b-f',m).files[0];if(!f)throw new Error('Attach screenshot');const fd=new FormData();fd.append('coins',pk.coins);fd.append('ref',$('#b-ref',m).value);fd.append('method',method);fd.append('file',await shrink(f),'s.jpg');
-    await api('/api/coins/buy',fd);m.close();toast('✅ Sent — credited after approval');renderWallet()})};
+  const draw=()=>{m.firstChild.innerHTML=`<h3>🪙 Buy Coins</h3>
+  <div class="ratebar">💳 <span class="sp">Payment method</span><b class="gold">Telebirr</b></div>
+  <div class="grid2" id="pkgs">${S.cfg.packages.map(p=>`<div class="card" data-c="${p.coins}" style="text-align:center;margin:0;${p.coins===pk.coins?'border-color:var(--gold)':''}"><b>${fmt(p.coins)} 🪙</b><div class="mut">${fmt(p.birr)} Birr</div></div>`).join('')}</div>
+  <div class="card" style="margin-top:10px">1️⃣ Send <b class="gold">${fmt(pk.birr)} Birr</b> to Telebirr <b class="gold">${esc(S.cfg.pay_number||'—')}</b><br>2️⃣ Enter transaction ID and attach payment screenshot</div>
+  <div class="col"><input id="b-ref" placeholder="Telebirr transaction ID" maxlength="40"><input id="b-f" type="file" accept="image/*"><button class="btn gold" id="b-go">Send · ${fmt(pk.birr)} Birr</button></div>`;
+  $$('#pkgs .card',m).forEach(c=>c.onclick=()=>{pk=S.cfg.packages.find(p=>p.coins==c.dataset.c);draw()});
+  $('#b-go',m).onclick=e=>run(e.target,async()=>{const f=$('#b-f',m).files[0];if(!f)throw new Error('Attach screenshot');const fd=new FormData();fd.append('coins',pk.coins);fd.append('ref',$('#b-ref',m).value);fd.append('method','telebirr');fd.append('file',await shrink(f),'s.jpg');
+   const d=await api('/api/coins/buy',fd);m.close();toast(d.duplicate?'This request was already submitted':'✅ Sent — credited after admin verification');renderWallet()})};
   draw()}
 function withModal(){const m=modal('');
    const draw=()=>{const rate=S.cfg.withdraw_rate||0.1;const avail=(S.me.earnings||0)+(S.me.comm||0);
